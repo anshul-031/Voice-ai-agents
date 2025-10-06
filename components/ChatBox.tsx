@@ -67,15 +67,15 @@ export default function ChatBox({
                                     }`}>
                                     {/* Message bubble */}
                                     <div className={`px-4 py-3 rounded-lg ${message.source === 'user'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-700 text-white'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-slate-700 text-white'
                                         }`}>
                                         {/* Message header */}
                                         <div className="flex items-center justify-between mb-2 text-xs">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center ${message.source === 'user'
-                                                        ? 'bg-blue-500'
-                                                        : 'bg-slate-600'
+                                                    ? 'bg-blue-500'
+                                                    : 'bg-slate-600'
                                                     }`}>
                                                     {message.source === 'user' ? (
                                                         <User size={12} />

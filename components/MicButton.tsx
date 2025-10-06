@@ -34,8 +34,8 @@ export default function MicButton({ isListening, isOpen, onToggle }: MicButtonPr
 
             <div
                 className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border border-white ${isListening ? 'bg-red-500' :
-                        isOpen ? 'bg-yellow-500' :
-                            'bg-green-500'
+                    isOpen ? 'bg-yellow-500' :
+                        'bg-green-500'
                     }`}
             />
         </div>

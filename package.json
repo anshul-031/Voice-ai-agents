@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "test": "node run-tests.js",
+    "test:api": "node run-tests.js --api-only",
+    "test:e2e": "node run-tests.js --e2e-only",
+    "test:ui": "node run-tests.js --ui-only",
+    "test:components": "node test-components-static.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

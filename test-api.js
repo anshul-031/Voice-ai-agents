@@ -5,7 +5,7 @@
  * Run with: node test-api.js
  */
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = 'http://localhost:3000';
 
 // Test 1: Configuration Status
 async function testConfig() {
