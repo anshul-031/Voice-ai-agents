@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { RotateCcw, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { RotateCcw, X, Send, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import MicButton from '@/components/MicButton';
 import ChatBox from '@/components/ChatBox';
 import TopModelBoxes from '@/components/TopModelBoxes';
@@ -31,6 +31,11 @@ export default function Home() {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
+
+    // Text chat state
+    const [showTextInput, setShowTextInput] = useState(false);
+    const [textMessage, setTextMessage] = useState('');
+    const textInputRef = useRef<HTMLInputElement>(null);
 
     // Confirmation dialog state
     const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -297,6 +302,132 @@ export default function Home() {
         console.log('[Home] Conversation ended');
     }, [isListening, stopRecording]);
 
+    // Handle text message sending
+    const handleSendTextMessage = useCallback(async () => {
+        if (!textMessage.trim() || isProcessing) return;
+
+        console.log('[Home] Sending text message:', textMessage);
+
+        // Open chat if not already open
+        if (!isChatOpen) {
+            setIsChatOpen(true);
+        }
+
+        const userMessageText = textMessage.trim();
+        setTextMessage(''); // Clear input immediately
+
+        try {
+            // Add user message
+            const userMessage: Message = {
+                id: Date.now().toString(),
+                text: userMessageText,
+                source: 'user',
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, userMessage]);
+
+            setProcessingStep('Generating response...');
+
+            // Step 2: Get LLM response (skip STT since we have text directly)
+            const llmPayload = {
+                prompt: initialPrompt,
+                userText: userMessageText,
+            };
+
+            console.log('[Home] Sending request to LLM...');
+            const llmResponse = await fetch('/api/llm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(llmPayload),
+            });
+
+            if (!llmResponse.ok) {
+                const errorData = await llmResponse.json();
+                console.error('[Home] LLM failed:', errorData);
+                throw new Error(errorData.error || 'LLM processing failed');
+            }
+
+            const llmData: LLMResponse = await llmResponse.json();
+            console.log('[Home] LLM response:', llmData.llmText);
+
+            // Add assistant message
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                text: llmData.llmText,
+                source: 'assistant',
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+
+            setProcessingStep('Generating speech...');
+
+            // Step 3: Convert to speech (optional - you can skip this for text-only)
+            const ttsResponse = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: llmData.llmText }),
+            });
+
+            if (!ttsResponse.ok) {
+                console.warn('[Home] TTS failed, continuing without audio');
+            } else {
+                const ttsData: TTSResponse = await ttsResponse.json();
+
+                if (ttsData.audioData) {
+                    console.log('[Home] TTS audio generated, playing...');
+                    const audioBytes = Uint8Array.from(atob(ttsData.audioData), c => c.charCodeAt(0));
+                    const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const audio = new Audio(audioUrl);
+                    audio.play().catch(err => console.error('[Home] Audio playback error:', err));
+
+                    audio.addEventListener('ended', () => {
+                        URL.revokeObjectURL(audioUrl);
+                    });
+                }
+            }
+
+        } catch (error) {
+            console.error('[Home] Text message processing error:', error);
+
+            let errorText = 'Sorry, I encountered an error processing your message.';
+
+            if (error instanceof Error) {
+                if (error.message.includes('LLM service not configured')) {
+                    errorText = 'Please configure your Gemini API key in .env.local to use AI responses.';
+                }
+            }
+
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                text: errorText,
+                source: 'assistant',
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setProcessingStep('');
+        }
+    }, [textMessage, isProcessing, isChatOpen, initialPrompt]);
+
+    // Toggle text input visibility
+    const toggleTextInput = useCallback(() => {
+        setShowTextInput(prev => !prev);
+        if (!showTextInput) {
+            // Focus input when showing
+            setTimeout(() => textInputRef.current?.focus(), 100);
+        }
+    }, [showTextInput]);
+
+    // Handle enter key in text input
+    const handleTextInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendTextMessage();
+        }
+    }, [handleSendTextMessage]);
+
     return (
         <div className="min-h-screen bg-slate-900 text-white">
             {/* Header */}
@@ -364,6 +495,21 @@ export default function Home() {
                                 <span className="text-xs text-gray-400">
                                     {isListening ? 'Listening' : isProcessing ? 'Processing' : 'Ready'}
                                 </span>
+
+                                {/* Text Chat Button */}
+                                <motion.button
+                                    onClick={toggleTextInput}
+                                    className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all ${showTextInput
+                                            ? 'bg-purple-600 hover:bg-purple-700'
+                                            : 'bg-slate-700 hover:bg-slate-600'
+                                        }`}
+                                    title="Toggle text chat"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <MessageSquare size={20} className="text-white" />
+                                </motion.button>
+
                                 <MicButton
                                     isListening={isListening}
                                     isOpen={isChatOpen}
@@ -371,6 +517,42 @@ export default function Home() {
                                 />
                             </div>
                         </div>
+
+                        {/* Text Input Area */}
+                        <AnimatePresence>
+                            {showTextInput && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="flex items-center gap-2 pt-3">
+                                        <input
+                                            ref={textInputRef}
+                                            type="text"
+                                            value={textMessage}
+                                            onChange={(e) => setTextMessage(e.target.value)}
+                                            onKeyDown={handleTextInputKeyDown}
+                                            placeholder="Type your message here..."
+                                            disabled={isProcessing}
+                                            className="flex-1 px-4 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        />
+                                        <motion.button
+                                            onClick={handleSendTextMessage}
+                                            disabled={!textMessage.trim() || isProcessing}
+                                            className="flex items-center justify-center w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Send message"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <Send size={18} />
+                                        </motion.button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Conversation Tips */}
                         {isListening && (
