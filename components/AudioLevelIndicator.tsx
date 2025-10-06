@@ -20,8 +20,8 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
             <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                 <div
                     className={`h-full transition-all duration-100 ${isListening
-                            ? percentage > 0.5 ? 'bg-green-500' : 'bg-yellow-500'
-                            : 'bg-gray-500'
+                        ? percentage > 0.5 ? 'bg-green-500' : 'bg-yellow-500'
+                        : 'bg-gray-500'
                         }`}
                     style={{ width: `${percentage}%` }}
                 />

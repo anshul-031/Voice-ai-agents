@@ -20,7 +20,7 @@ describe('ChatBox', () => {
 
     it('should not show messages when not open', () => {
       const messages = [createMockMessage({ text: 'Test message' })]
-      
+
       render(
         <ChatBox
           messages={messages}
@@ -234,7 +234,8 @@ describe('ChatBox', () => {
         />
       )
 
-      const userBubble = container.querySelector('.bg-blue-600')
+      // Updated to match new gradient class: bg-gradient-to-r from-blue-600 to-blue-500
+      const userBubble = container.querySelector('[class*="from-blue-600"]')
       expect(userBubble).toBeInTheDocument()
     })
 
