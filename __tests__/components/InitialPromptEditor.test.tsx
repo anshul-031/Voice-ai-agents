@@ -39,7 +39,7 @@ describe('InitialPromptEditor', () => {
       render(<InitialPromptEditor value={testValue} onChange={mockOnChange} />)
 
       expect(screen.getByText('11')).toBeInTheDocument()
-      expect(screen.getByText('/1000')).toBeInTheDocument()
+      expect(screen.getByText('/5000')).toBeInTheDocument()
     })
 
     it('should update character count when value changes', () => {
@@ -60,11 +60,11 @@ describe('InitialPromptEditor', () => {
       expect(screen.getByText('0')).toBeInTheDocument()
     })
 
-    it('should handle exactly 1000 characters', () => {
-      const maxValue = 'A'.repeat(1000)
+    it('should handle exactly 5000 characters', () => {
+      const maxValue = 'A'.repeat(5000)
       render(<InitialPromptEditor value={maxValue} onChange={mockOnChange} />)
 
-      expect(screen.getByText('1000')).toBeInTheDocument()
+      expect(screen.getByText('5000')).toBeInTheDocument()
     })
   })
 
@@ -93,7 +93,7 @@ describe('InitialPromptEditor', () => {
       render(<InitialPromptEditor value="" onChange={mockOnChange} />)
 
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
-      expect(textarea.maxLength).toBe(1000)
+      expect(textarea.maxLength).toBe(5000)
     })
   })
 
@@ -101,10 +101,25 @@ describe('InitialPromptEditor', () => {
     it('should render all suggestion buttons', () => {
       render(<InitialPromptEditor value="" onChange={mockOnChange} />)
 
+      expect(screen.getByText('Riya - PNB EMI Collection')).toBeInTheDocument()
       expect(screen.getByText('Professional & Empathetic')).toBeInTheDocument()
       expect(screen.getByText('Focus on Solutions')).toBeInTheDocument()
       expect(screen.getByText('Clear Communication')).toBeInTheDocument()
       expect(screen.getByText('Payment Assistance')).toBeInTheDocument()
+    })
+
+    it('should apply "Riya - PNB EMI Collection" template', () => {
+      render(<InitialPromptEditor value="" onChange={mockOnChange} />)
+
+      const button = screen.getByText('Riya - PNB EMI Collection')
+      fireEvent.click(button)
+
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.stringContaining('Role: You are Riya')
+      )
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.stringContaining('Punjab National Bank')
+      )
     })
 
     it('should apply "Professional & Empathetic" template', () => {
