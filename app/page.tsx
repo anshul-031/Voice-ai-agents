@@ -10,6 +10,7 @@ import InitialPromptEditor from '@/components/InitialPromptEditor';
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { Message, ModelConfig, TranscriptionResponse, LLMResponse, TTSResponse } from '@/types';
 
 interface ConfigStatus {
@@ -65,6 +66,9 @@ export default function Home() {
             });
     }, []);
 
+    // Unique ID generator for stable keys
+    const uid = useCallback(() => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, []);
+
     // Handle audio segment processing
     const handleAudioSegment = useCallback(async (audioBlob: Blob) => {
         console.log('[Home] handleAudioSegment called');
@@ -110,7 +114,7 @@ export default function Home() {
 
             // Add user message
             const userMessage: Message = {
-                id: Date.now().toString(),
+                id: uid(),
                 text: transcriptionData.text,
                 source: 'user',
                 timestamp: new Date(),
@@ -146,7 +150,7 @@ export default function Home() {
 
             // Add assistant message
             const assistantMessage: Message = {
-                id: (Date.now() + 1).toString(),
+                id: uid(),
                 text: llmData.llmText,
                 source: 'assistant',
                 timestamp: new Date(),
@@ -221,7 +225,7 @@ export default function Home() {
             }
 
             const errorMessage: Message = {
-                id: Date.now().toString(),
+                id: uid(),
                 text: errorText,
                 source: 'assistant',
                 timestamp: new Date(),
@@ -232,9 +236,95 @@ export default function Home() {
             console.log('[Home] Clearing processing step');
             setProcessingStep('');
         }
-    }, [initialPrompt]);
+    }, [initialPrompt, uid]);
 
-    // Voice recorder hook with optimized settings
+    // Real-time speech recognition (Web Speech API) for immediate transcripts
+    const {
+        supported: sttSupported,
+        isListening: sttIsListening,
+        interimTranscript,
+        startListening: sttStart,
+        stopListening: sttStop,
+        pause: sttPause,
+        resume: sttResume,
+    } = useSpeechRecognition({
+        onFinal: async (finalText) => {
+            // Mimic the same flow as handleAudioSegment but with direct text
+            if (!finalText?.trim()) return;
+            try {
+                setProcessingStep('Generating response...');
+
+                const userMessage: Message = {
+                    id: uid(),
+                    text: finalText,
+                    source: 'user',
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, userMessage]);
+
+                const llmResponse = await fetch('/api/llm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: initialPrompt, userText: finalText }),
+                });
+                if (!llmResponse.ok) {
+                    const err = await llmResponse.json();
+                    throw new Error(err.error || 'LLM request failed');
+                }
+                const llmData: LLMResponse = await llmResponse.json();
+
+                const assistantMessage: Message = {
+                    id: uid(),
+                    text: llmData.llmText,
+                    source: 'assistant',
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, assistantMessage]);
+
+                setProcessingStep('Generating speech...');
+
+                // Pause mic while bot speaks to avoid feedback
+                sttPause();
+                const ttsResponse = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: llmData.llmText }),
+                });
+                if (ttsResponse.ok) {
+                    const ttsData: TTSResponse = await ttsResponse.json();
+                    if (ttsData.audioData) {
+                        const audioBytes = Uint8Array.from(atob(ttsData.audioData), c => c.charCodeAt(0));
+                        const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play().catch(err => console.error('[Home] Audio playback error:', err));
+                        audio.addEventListener('ended', () => {
+                            URL.revokeObjectURL(audioUrl);
+                            // Resume listening after bot finishes
+                            sttResume();
+                        });
+                    } else {
+                        sttResume();
+                    }
+                } else {
+                    sttResume();
+                }
+            } catch (error) {
+                console.error('[Home] Real-time STT flow error:', error);
+                const errorMessage: Message = {
+                    id: uid(),
+                    text: 'Error processing speech. Please try again.',
+                    source: 'assistant',
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, errorMessage]);
+            } finally {
+                setProcessingStep('');
+            }
+        },
+    });
+
+    // Voice recorder hook with optimized settings (fallback segmented flow)
     const { isListening, isProcessing, audioLevel, startRecording, stopRecording } = useVoiceRecorder({
         onSegmentReady: handleAudioSegment,
         silenceTimeout: 750, // Increased from 350ms to allow for more natural pauses
@@ -248,22 +338,26 @@ export default function Home() {
         if (isChatOpen) {
             console.log('[Home] Closing chat and stopping recording...');
             setIsChatOpen(false);
-            if (isListening) {
-                stopRecording();
-            }
+            if (sttSupported) sttStop();
+            if (isListening) stopRecording();
         } else {
             console.log('[Home] Opening chat and starting recording...');
             setIsChatOpen(true);
             try {
-                await startRecording();
-                console.log('[Home] Recording started successfully');
+                if (sttSupported) {
+                    sttStart();
+                    console.log('[Home] Real-time STT started successfully');
+                } else {
+                    await startRecording();
+                    console.log('[Home] Segment recorder started successfully');
+                }
             } catch (error) {
                 console.error('[Home] Failed to start recording:', error);
                 setIsChatOpen(false);
                 alert('Failed to access microphone. Please check permissions and try again.');
             }
         }
-    }, [isChatOpen, isListening, startRecording, stopRecording]);
+    }, [isChatOpen, isListening, sttSupported, sttStart, sttStop, startRecording, stopRecording]);
 
     // Handle restart conversation
     const handleRestartConversation = useCallback(() => {
@@ -285,12 +379,11 @@ export default function Home() {
     }, []);
 
     const confirmEndConversation = useCallback(() => {
-        console.log('[Home] Ending conversation...');
+    console.log('[Home] Ending conversation...');
 
         // Stop recording if active
-        if (isListening) {
-            stopRecording();
-        }
+        if (sttSupported) sttStop();
+        if (isListening) stopRecording();
 
         // Close chat
         setIsChatOpen(false);
@@ -300,7 +393,7 @@ export default function Home() {
 
         setShowEndDialog(false);
         console.log('[Home] Conversation ended');
-    }, [isListening, stopRecording]);
+    }, [isListening, stopRecording, sttSupported, sttStop]);
 
     // Handle text message sending
     const handleSendTextMessage = useCallback(async () => {
@@ -319,7 +412,7 @@ export default function Home() {
         try {
             // Add user message
             const userMessage: Message = {
-                id: Date.now().toString(),
+                id: uid(),
                 text: userMessageText,
                 source: 'user',
                 timestamp: new Date(),
@@ -352,7 +445,7 @@ export default function Home() {
 
             // Add assistant message
             const assistantMessage: Message = {
-                id: (Date.now() + 1).toString(),
+                id: uid(),
                 text: llmData.llmText,
                 source: 'assistant',
                 timestamp: new Date(),
@@ -400,7 +493,7 @@ export default function Home() {
             }
 
             const errorMessage: Message = {
-                id: Date.now().toString(),
+                id: uid(),
                 text: errorText,
                 source: 'assistant',
                 timestamp: new Date(),
@@ -409,7 +502,7 @@ export default function Home() {
         } finally {
             setProcessingStep('');
         }
-    }, [textMessage, isProcessing, isChatOpen, initialPrompt]);
+    }, [textMessage, isProcessing, isChatOpen, initialPrompt, uid]);
 
     // Toggle text input visibility
     const toggleTextInput = useCallback(() => {
@@ -488,13 +581,17 @@ export default function Home() {
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-red-500' :
-                                    isProcessing ? 'bg-yellow-500' :
-                                        'bg-green-500'
-                                    }`}></div>
-                                <span className="text-xs text-gray-400">
-                                    {isListening ? 'Listening' : isProcessing ? 'Processing' : 'Ready'}
-                                </span>
+                                {(() => {
+                                    const activeListening = sttSupported ? sttIsListening : isListening;
+                                    const color = activeListening ? 'bg-red-500' : (isProcessing ? 'bg-yellow-500' : 'bg-green-500');
+                                    const label = activeListening ? 'Listening' : (isProcessing ? 'Processing' : 'Ready');
+                                    return (
+                                        <>
+                                            <div className={`w-2 h-2 rounded-full ${color}`}></div>
+                                            <span className="text-xs text-gray-400">{label}</span>
+                                        </>
+                                    );
+                                })()}
 
                                 {/* Text Chat Button */}
                                 <motion.button
@@ -511,7 +608,7 @@ export default function Home() {
                                 </motion.button>
 
                                 <MicButton
-                                    isListening={isListening}
+                                    isListening={sttSupported ? sttIsListening : isListening}
                                     isOpen={isChatOpen}
                                     onToggle={handleMicToggle}
                                 />
@@ -561,9 +658,15 @@ export default function Home() {
                             </p>
                         )}
 
-                        {/* Audio Level Indicator */}
-                        {isListening && (
-                            <AudioLevelIndicator level={audioLevel} isListening={isListening} />
+                        {/* Audio Level Indicator or interim text */}
+                        {sttSupported ? (
+                            sttIsListening && interimTranscript ? (
+                                <p className="text-xs text-gray-300">{interimTranscript}</p>
+                            ) : null
+                        ) : (
+                            isListening && (
+                                <AudioLevelIndicator level={audioLevel} isListening={isListening} />
+                            )
                         )}
                     </div>
 

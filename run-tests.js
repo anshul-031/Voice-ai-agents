@@ -95,7 +95,21 @@ async function runAllTests() {
         testsToRun.push({ script: 'test-e2e-enhanced.js', label: 'Enhanced End-to-End Tests' });
 
         if (!options.skipUi) {
-            testsToRun.push({ script: 'test-ui.js', label: 'UI Component Tests' });
+                // Skip UI tests if puppeteer is not installed to avoid runtime errors in environments
+                // where headless browser isn't available or puppeteer isn't installed.
+                let hasPuppeteer = false
+                try {
+                    require.resolve('puppeteer')
+                    hasPuppeteer = true
+                } catch (e) {
+                    hasPuppeteer = false
+                }
+
+                if (hasPuppeteer) {
+                    testsToRun.push({ script: 'test-ui.js', label: 'UI Component Tests' });
+                } else {
+                    log('\n⚠️ Skipping UI Component Tests because `puppeteer` is not installed. To enable, run `npm i -D puppeteer`', colors.yellow);
+                }
         }
     }
 
