@@ -3,6 +3,11 @@ import '@testing-library/jest-dom'
 
 // Only mock browser APIs if window is available (jsdom environment)
 if (typeof window !== 'undefined') {
+  // Avoid jsdom unimplemented scrollTo warnings from animation libs
+  if (!window.scrollTo) {
+  // @ts-ignore
+  window.scrollTo = jest.fn()
+  }
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
   writable: true,
