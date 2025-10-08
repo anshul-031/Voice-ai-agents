@@ -1,0 +1,10 @@
+# This file defines code owners who are automatically requested for review on PRs affecting matching paths.
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Note: GitHub Apps like GitHub Copilot cannot be code owners. Use users or teams.
+
+# Default owners for everything in the repo
+* @Mukul0610
+
+# Example: you can add more granular ownerships
+# /app/** @your-team
+# /components/** @your-team @another-user
