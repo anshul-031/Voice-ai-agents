@@ -1,3 +1,5 @@
+import dbConnect from '@/lib/mongodb';
+import Chat from '@/models/Chat';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -44,17 +46,41 @@ export async function POST(request: NextRequest) {
 
     try {
         console.log('[LLM] Parsing request body...');
-        const { prompt, userText, conversationHistory } = await request.json();
+        const { prompt, userText, sessionId, conversationHistory } = await request.json();
         console.log('[LLM] Request data:', {
             hasPrompt: !!prompt,
             promptLength: prompt?.length,
             userText: userText?.substring(0, 100),
+            sessionId,
             historyLength: conversationHistory?.length || 0
         });
 
         if (!userText?.trim()) {
             console.error('[LLM] No user text provided');
             return NextResponse.json({ error: 'No user text provided' }, { status: 400 });
+        }
+
+        // Connect to MongoDB for saving chat history
+        await dbConnect();
+        console.log('[LLM] Connected to MongoDB');
+
+        // Generate a session ID if not provided
+        const chatSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Save user message to database
+        try {
+            await Chat.create({
+                userId: 'mukul', // Hardcoded user for now
+                sessionId: chatSessionId,
+                role: 'user',
+                content: userText.trim(),
+                systemPrompt: prompt?.trim(),
+                timestamp: new Date(),
+            });
+            console.log('[LLM] User message saved to database');
+        } catch (dbError) {
+            console.error('[LLM] Failed to save user message:', dbError);
+            // Continue with LLM request even if DB save fails
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -150,7 +176,7 @@ export async function POST(request: NextRequest) {
                 // try a few common call shapes
                 try {
                     result = await (model as any).generate({ prompt: fullPrompt });
-                } catch (eGen) {
+                } catch (_eGen) {
                     console.log('[LLM] Retrying generate with direct string parameter');
                     // older SDKs might accept a single string
                     result = await (model as any).generate(fullPrompt);
@@ -172,7 +198,26 @@ export async function POST(request: NextRequest) {
             }
 
             console.log('[LLM] Successfully generated response, length:', llmText.length);
-            return NextResponse.json({ llmText: llmText.trim() });
+
+            // Save assistant response to database
+            try {
+                await Chat.create({
+                    userId: 'mukul', // Hardcoded user for now
+                    sessionId: chatSessionId,
+                    role: 'assistant',
+                    content: llmText.trim(),
+                    timestamp: new Date(),
+                });
+                console.log('[LLM] Assistant response saved to database');
+            } catch (dbError) {
+                console.error('[LLM] Failed to save assistant response:', dbError);
+                // Continue even if DB save fails
+            }
+
+            return NextResponse.json({
+                llmText: llmText.trim(),
+                sessionId: chatSessionId
+            });
 
         } catch (errGenerate: any) {
             console.error('[LLM] Error while calling model.generate/generateContent:', errGenerate);

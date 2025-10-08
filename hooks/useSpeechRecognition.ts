@@ -64,7 +64,7 @@ export function useSpeechRecognition({
           try {
             recognitionRef.current?.start();
             setIsListening(true);
-          } catch (e) {
+          } catch (_e) {
             // start can throw if called too soon; allow next onend to retry
           }
         }
@@ -85,7 +85,7 @@ export function useSpeechRecognition({
     return () => {
       try {
         recognitionRef.current?.stop();
-      } catch {}
+      } catch { }
       recognitionRef.current = null;
     };
   }, [lang, interimResults, continuous, onInterim, onFinal]);
@@ -97,7 +97,7 @@ export function useSpeechRecognition({
     try {
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (e) {
+    } catch (_e) {
       // Ignore if already started
     }
   }, [supported]);
@@ -108,7 +108,7 @@ export function useSpeechRecognition({
     pausedRef.current = true;
     try {
       recognitionRef.current.stop();
-    } catch {}
+    } catch { }
     setIsListening(false);
     setInterimTranscript('');
   }, []);
@@ -119,7 +119,7 @@ export function useSpeechRecognition({
     pausedRef.current = true;
     try {
       recognitionRef.current.stop();
-    } catch {}
+    } catch { }
     setIsListening(false);
   }, []);
 
@@ -130,7 +130,7 @@ export function useSpeechRecognition({
     try {
       recognitionRef.current.start();
       setIsListening(true);
-    } catch {}
+    } catch { }
   }, [supported]);
 
   return {

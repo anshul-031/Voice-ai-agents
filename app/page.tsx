@@ -2,6 +2,7 @@
 
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
 import ChatBox from '@/components/ChatBox';
+import ChatHistory from '@/components/ChatHistory';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import InitialPromptEditor from '@/components/InitialPromptEditor';
 import MicButton from '@/components/MicButton';
@@ -10,7 +11,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { LLMResponse, Message, ModelConfig, TranscriptionResponse, TTSResponse } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, RotateCcw, Send, X } from 'lucide-react';
+import { Clock, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
@@ -25,6 +26,9 @@ interface ConfigStatus {
 
 export default function Home() {
     console.log('[Home] Component mounted/re-rendered');
+
+    // Session management
+    const [sessionId, setSessionId] = useState<string>('');
 
     // App state
     const [messages, setMessages] = useState<Message[]>([]);
@@ -86,7 +90,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
 "नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?"`);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
-    const [configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
+    const [_configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
 
     // Text chat state
     const [showTextInput, setShowTextInput] = useState(false);
@@ -96,6 +100,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
     // Confirmation dialog state
     const [showRestartDialog, setShowRestartDialog] = useState(false);
     const [showEndDialog, setShowEndDialog] = useState(false);
+    const [showChatHistory, setShowChatHistory] = useState(false);
 
     // Model configuration
     const [modelConfig] = useState<ModelConfig>({
@@ -107,6 +112,12 @@ $130,000 should be "one hundred and thirty thousand dollars"
     // Check configuration status on mount
     useEffect(() => {
         console.log('[Home] Checking API configuration status...');
+
+        // Generate session ID on component mount
+        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(newSessionId);
+        console.log('[Home] Generated session ID:', newSessionId);
+
         fetch('/api/config-status')
             .then(res => {
                 console.log('[Home] Config status response received:', res.status);
@@ -195,6 +206,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 body: JSON.stringify({
                     prompt: initialPrompt,
                     userText: transcriptionData.text,
+                    sessionId: sessionId,
                     conversationHistory: currentMessages.slice(0, -1).map(m => ({
                         text: m.text,
                         source: m.source
@@ -343,6 +355,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
                             text: m.text,
                             source: m.source
                         })),
+                        sessionId: sessionId
                     }),
                 });
                 if (!llmResponse.ok) {
@@ -446,6 +459,12 @@ $130,000 should be "one hundred and thirty thousand dollars"
     const confirmRestartConversation = useCallback(() => {
         console.log('[Home] Restarting conversation...');
         setMessages([]);
+
+        // Generate new session ID for the new conversation
+        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(newSessionId);
+        console.log('[Home] Generated new session ID:', newSessionId);
+
         setShowRestartDialog(false);
         console.log('[Home] Conversation cleared');
     }, []);
@@ -468,6 +487,11 @@ $130,000 should be "one hundred and thirty thousand dollars"
 
         // Clear messages
         setMessages([]);
+
+        // Generate new session ID for next conversation
+        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(newSessionId);
+        console.log('[Home] Generated new session ID for next conversation:', newSessionId);
 
         setShowEndDialog(false);
         console.log('[Home] Conversation ended');
@@ -509,6 +533,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
             const llmPayload = {
                 prompt: initialPrompt,
                 userText: userMessageText,
+                sessionId: sessionId,
                 conversationHistory: currentMessages.slice(0, -1).map(m => ({
                     text: m.text,
                     source: m.source
@@ -635,37 +660,53 @@ $130,000 should be "one hundred and thirty thousand dollars"
                                 <h3 className="text-base font-medium">Conversation</h3>
 
                                 {/* Conversation Control Buttons */}
-                                {messages.length > 0 && (
-                                    <motion.div
-                                        className="flex items-center gap-2"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ duration: 0.2 }}
+                                <motion.div
+                                    className="flex items-center gap-2"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {/* History Button - Always Visible */}
+                                    <motion.button
+                                        onClick={() => setShowChatHistory(true)}
+                                        className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="View chat history"
+                                        disabled={isProcessing}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
-                                        <motion.button
-                                            onClick={handleRestartConversation}
-                                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Restart conversation (clear messages)"
-                                            disabled={isProcessing}
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <RotateCcw size={12} />
-                                            <span>Restart</span>
-                                        </motion.button>
-                                        <motion.button
-                                            onClick={handleEndConversation}
-                                            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="End conversation (stop and clear)"
-                                            disabled={isProcessing}
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <X size={12} />
-                                            <span>End</span>
-                                        </motion.button>
-                                    </motion.div>
-                                )}
+                                        <Clock size={12} />
+                                        <span>History</span>
+                                    </motion.button>
+
+                                    {/* Restart and End buttons - Only when messages exist */}
+                                    {messages.length > 0 && (
+                                        <>
+                                            <motion.button
+                                                onClick={handleRestartConversation}
+                                                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Restart conversation (clear messages)"
+                                                disabled={isProcessing}
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                <RotateCcw size={12} />
+                                                <span>Restart</span>
+                                            </motion.button>
+                                            <motion.button
+                                                onClick={handleEndConversation}
+                                                className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="End conversation (stop and clear)"
+                                                disabled={isProcessing}
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                <X size={12} />
+                                                <span>End</span>
+                                            </motion.button>
+                                        </>
+                                    )}
+                                </motion.div>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -792,6 +833,12 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 confirmColor="red"
                 onConfirm={confirmEndConversation}
                 onCancel={() => setShowEndDialog(false)}
+            />
+
+            {/* Chat History Dialog */}
+            <ChatHistory
+                isOpen={showChatHistory}
+                onClose={() => setShowChatHistory(false)}
             />
         </div>
     );
