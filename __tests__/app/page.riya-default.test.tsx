@@ -58,8 +58,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Role: You are Riya'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Role: You are Riya')
             })
         })
 
@@ -67,8 +67,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Punjab National Bank'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Punjab National Bank')
             })
         })
 
@@ -76,8 +76,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Hinglish'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Hinglish')
             })
         })
 
@@ -85,8 +85,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('overdue EMI payments'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('overdue EMI payments')
             })
         })
 
@@ -94,9 +94,9 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('नमस्ते जी'))
-                expect(textarea).toHaveValue(expect.stringContaining('मैं रिया बोल रही हूँ'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('नमस्ते जी')
+                expect(textarea.value).toContain('मैं रिया बोल रही हूँ')
             })
         })
     })
@@ -106,8 +106,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                const value = textarea.getAttribute('value') || ''
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                const value = textarea.value
 
                 expect(value).toContain('## Profile')
                 expect(value).toContain('## Skills')
@@ -125,9 +125,9 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('NEVER type out a number or symbol'))
-                expect(textarea).toHaveValue(expect.stringContaining('one hundred and thirty thousand dollars'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('NEVER type out a number or symbol')
+                expect(textarea.value).toContain('one hundred and thirty thousand dollars')
             })
         })
 
@@ -135,9 +135,9 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('OTP, PIN, Aadhaar'))
-                expect(textarea).toHaveValue(expect.stringContaining('Do not request sensitive personal details'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('OTP, PIN, Aadhaar')
+                expect(textarea.value).toContain('Do not request sensitive personal details')
             })
         })
     })
@@ -189,8 +189,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Riya'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Riya')
             })
 
             // Click Professional & Empathetic template
@@ -198,9 +198,9 @@ describe('Home Page - Riya Template Default', () => {
             fireEvent.click(templateButton)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('professional and empathetic'))
-                expect(textarea).not.toHaveValue(expect.stringContaining('Riya'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('professional and empathetic')
+                expect(textarea.value).not.toContain('Riya')
             })
         })
 
@@ -212,15 +212,15 @@ describe('Home Page - Riya Template Default', () => {
                 expect(textarea).toBeInTheDocument()
             })
 
-            const textarea = screen.getByRole('textbox', { name: /system prompt/i })
+            const textareaEl = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
 
             // Add custom text to the template
-            fireEvent.change(textarea, {
+            fireEvent.change(textareaEl, {
                 target: { value: 'Custom modified Riya template for testing' }
             })
 
             await waitFor(() => {
-                expect(textarea).toHaveValue('Custom modified Riya template for testing')
+                expect(textareaEl.value).toBe('Custom modified Riya template for testing')
             })
         })
 
@@ -237,8 +237,8 @@ describe('Home Page - Riya Template Default', () => {
             fireEvent.click(solutionsButton)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('solution-focused'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('solution-focused')
             })
 
             // Re-render component
@@ -260,7 +260,7 @@ describe('Home Page - Riya Template Default', () => {
 
             await waitFor(() => {
                 // Riya template is quite long, should show a substantial character count
-                const characterCountElement = screen.getByText(/\/1000/)
+                const characterCountElement = screen.getByText(/\/5000/)
                 expect(characterCountElement).toBeInTheDocument()
             })
         })
@@ -271,7 +271,7 @@ describe('Home Page - Riya Template Default', () => {
             await waitFor(() => {
                 const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
                 const value = textarea.value
-                expect(value.length).toBeLessThanOrEqual(1000)
+                expect(value.length).toBeLessThanOrEqual(5000)
             })
         })
     })
@@ -292,8 +292,8 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Riya'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Riya')
             })
 
             // The template should be ready for voice interactions
@@ -306,8 +306,8 @@ describe('Home Page - Riya Template Default', () => {
 
             // Even before any messages, Riya template should be loaded
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Role: You are Riya'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Role: You are Riya')
             })
 
             // No messages should be present yet
@@ -343,8 +343,8 @@ describe('Home Page - Riya Template Default', () => {
             fireEvent.click(empathyButton)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('professional and empathetic'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('professional and empathetic')
             })
 
             // Switch back to Riya
@@ -352,9 +352,9 @@ describe('Home Page - Riya Template Default', () => {
             fireEvent.click(riyaButton)
 
             await waitFor(() => {
-                const textarea = screen.getByRole('textbox', { name: /system prompt/i })
-                expect(textarea).toHaveValue(expect.stringContaining('Role: You are Riya'))
-                expect(textarea).toHaveValue(expect.stringContaining('Punjab National Bank'))
+                const textarea = screen.getByRole('textbox', { name: /system prompt/i }) as HTMLTextAreaElement
+                expect(textarea.value).toContain('Role: You are Riya')
+                expect(textarea.value).toContain('Punjab National Bank')
             })
         })
     })

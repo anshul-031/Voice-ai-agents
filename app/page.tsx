@@ -7,12 +7,16 @@ import MicButton from '@/components/MicButton';
 import ChatBox from '@/components/ChatBox';
 import TopModelBoxes from '@/components/TopModelBoxes';
 import InitialPromptEditor from '@/components/InitialPromptEditor';
-import AudioLevelIndicator from '@/components/AudioLevelIndicator';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import ChatHistory from '@/components/ChatHistory';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import AudioLevelIndicator from '@/components/AudioLevelIndicator';
+import ChatBox from '@/components/ChatBox';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { Message, ModelConfig, TranscriptionResponse, LLMResponse, TTSResponse } from '@/types';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { LLMResponse, Message, ModelConfig, TranscriptionResponse, TTSResponse } from '@/types';
+import { AnimatePresence, motion } from 'framer-motion';
+import { MessageSquare, RotateCcw, Send, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
     services: {
@@ -186,12 +190,18 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 timestamp: new Date(),
             };
             console.log('[Home] Adding user message to chat:', userMessage);
-            setMessages(prev => [...prev, userMessage]);
+
+            // Update messages state and capture current conversation history
+            let currentMessages: Message[] = [];
+            setMessages(prev => {
+                currentMessages = [...prev, userMessage];
+                return currentMessages;
+            });
 
             setProcessingStep('Generating response...');
-            console.log('[Home] Step 2: Requesting LLM response...');
+            console.log('[Home] Step 2: Requesting LLM response with conversation history...');
 
-            // Step 2: Get LLM response
+            // Step 2: Get LLM response with conversation history
             const llmResponse = await fetch('/api/llm', {
                 method: 'POST',
                 headers: {
@@ -201,6 +211,10 @@ $130,000 should be "one hundred and thirty thousand dollars"
                     prompt: initialPrompt,
                     userText: transcriptionData.text,
                     sessionId: sessionId,
+                    conversationHistory: currentMessages.slice(0, -1).map(m => ({
+                        text: m.text,
+                        source: m.source
+                    })),
                 }),
             });
 
@@ -327,12 +341,26 @@ $130,000 should be "one hundred and thirty thousand dollars"
                     source: 'user',
                     timestamp: new Date(),
                 };
-                setMessages(prev => [...prev, userMessage]);
+
+                // Update messages state and capture current conversation history
+                let currentMessages: Message[] = [];
+                setMessages(prev => {
+                    currentMessages = [...prev, userMessage];
+                    return currentMessages;
+                });
 
                 const llmResponse = await fetch('/api/llm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: initialPrompt, userText: finalText, sessionId: sessionId }),
+                    body: JSON.stringify({
+                        prompt: initialPrompt,
+                        userText: finalText,
+                        conversationHistory: currentMessages.slice(0, -1).map(m => ({
+                            text: m.text,
+                            source: m.source
+                        })),
+                        sessionId: sessionId
+                    }),
                 });
                 if (!llmResponse.ok) {
                     const err = await llmResponse.json();
@@ -495,7 +523,13 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 source: 'user',
                 timestamp: new Date(),
             };
-            setMessages(prev => [...prev, userMessage]);
+
+            // Update messages state and capture current conversation history
+            let currentMessages: Message[] = [];
+            setMessages(prev => {
+                currentMessages = [...prev, userMessage];
+                return currentMessages;
+            });
 
             setProcessingStep('Generating response...');
 
@@ -504,9 +538,13 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 prompt: initialPrompt,
                 userText: userMessageText,
                 sessionId: sessionId,
+                conversationHistory: currentMessages.slice(0, -1).map(m => ({
+                    text: m.text,
+                    source: m.source
+                })),
             };
 
-            console.log('[Home] Sending request to LLM...');
+            console.log('[Home] Sending request to LLM with conversation history...');
             const llmResponse = await fetch('/api/llm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

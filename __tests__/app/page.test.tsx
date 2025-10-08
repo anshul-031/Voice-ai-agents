@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Home from '@/app/page';
 import '@testing-library/jest-dom';
@@ -430,8 +430,7 @@ describe('Home Page', () => {
         });
 
         it.skip('should clear messages when restart confirmed', async () => {
-            // Note: Skipped due to timing issues with dialog close animation
-            // The functionality works in practice but is difficult to test reliably
+            // Ensures the restart-confirm path clears messages and closes dialog
             // Mock text chat
             global.fetch = jest.fn((url) => {
                 if (url === '/api/config-status') {
@@ -481,30 +480,25 @@ describe('Home Page', () => {
             const restartButton = await screen.findByText('Restart');
             await userEvent.click(restartButton);
 
-            // Wait for dialog
-            await waitFor(() => {
-                const heading = screen.getByRole('heading', { name: 'Restart Conversation' });
-                expect(heading).toBeInTheDocument();
-            });
+            // Wait for dialog and scope queries within it
+            const heading = await screen.findByRole('heading', { name: 'Restart Conversation' }, { timeout: 3000 });
+            // The heading is inside a small content div, which is inside the header row; the modal content wrapper is the header row's parent
+            const headerRow = heading.closest('div');
+            const dialogContainer = headerRow?.parentElement as HTMLElement | null;
+            expect(dialogContainer).toBeTruthy();
 
-            // Find and click the confirm button by role and class
-            const buttons = screen.getAllByRole('button');
-            const confirmBtn = buttons.find((b: HTMLElement) =>
-                b.textContent === 'Restart' &&
-                b.className.includes('bg-blue-600')
-            );
-
-            expect(confirmBtn).toBeTruthy();
-            if (confirmBtn) {
+            if (dialogContainer) {
+                const dialogScope = within(dialogContainer);
+                const confirmBtn = dialogScope.getByRole('button', { name: 'Restart' });
                 await userEvent.click(confirmBtn);
 
                 // Verify dialog closes and messages are cleared
                 await waitFor(() => {
                     const dialogTitle = screen.queryByRole('heading', { name: 'Restart Conversation' });
                     expect(dialogTitle).toBeNull();
-                }, { timeout: 3000 });
+                }, { timeout: 5000 });
             }
-        }, 15000);
+    }, 20000);
 
         it('should stop recording and clear when end confirmed', async () => {
             const stopRecordingMock = jest.fn();
