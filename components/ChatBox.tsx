@@ -132,9 +132,9 @@
 //     );
 // }
 
+import { Bot, Mic, User } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Message } from '../types';
-import { User, Bot, Mic } from 'lucide-react';
 
 interface ChatBoxProps {
     messages: Message[];

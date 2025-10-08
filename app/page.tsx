@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { RotateCcw, X, Send, MessageSquare, Clock } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import MicButton from '@/components/MicButton';
-import ChatBox from '@/components/ChatBox';
-import TopModelBoxes from '@/components/TopModelBoxes';
-import InitialPromptEditor from '@/components/InitialPromptEditor';
-import ChatHistory from '@/components/ChatHistory';
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
+import ChatBox from '@/components/ChatBox';
+import ChatHistory from '@/components/ChatHistory';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import InitialPromptEditor from '@/components/InitialPromptEditor';
+import MicButton from '@/components/MicButton';
+import TopModelBoxes from '@/components/TopModelBoxes';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { LLMResponse, Message, ModelConfig, TranscriptionResponse, TTSResponse } from '@/types';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Clock, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
     services: {

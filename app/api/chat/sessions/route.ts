@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import dbConnect, { clearMongoConnection } from '@/lib/mongodb';
 import Chat from '@/models/Chat';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     console.log('[Sessions API] GET request received');

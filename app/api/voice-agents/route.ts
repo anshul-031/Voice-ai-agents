@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import dbConnect, { clearMongoConnection } from '@/lib/mongodb';
 import VoiceAgent from '@/models/VoiceAgent';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET - Fetch all voice agents for a user
 export async function GET(request: NextRequest) {

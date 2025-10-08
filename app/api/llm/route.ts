@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
 // TODO: Add content filtering/safety checks
