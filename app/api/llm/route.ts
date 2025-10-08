@@ -1,20 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextRequest, NextResponse } from 'next/server';
 
-// TODO: Add conversation history support for multi-turn conversations
 // TODO: Add content filtering/safety checks
 // TODO: Consider adding streaming responses for better UX
+
+interface MessageHistory {
+    text: string;
+    source: 'user' | 'assistant';
+}
+
+/**
+ * Format conversation history for Gemini API
+ * Takes the last N messages and formats them as a conversation
+ */
+function formatConversationHistory(messages: MessageHistory[], systemPrompt: string, currentUserText: string, maxMessages: number = 20): string {
+    console.log('[LLM] Formatting conversation history, total messages:', messages.length);
+
+    // Get the last N messages (excluding the current one which will be added separately)
+    const recentMessages = messages.slice(-maxMessages);
+
+    // Start with system prompt
+    let formattedPrompt = systemPrompt.trim() + '\n\n';
+
+    // Add conversation history
+    if (recentMessages.length > 0) {
+        formattedPrompt += '## Previous Conversation:\n';
+        recentMessages.forEach((msg) => {
+            const role = msg.source === 'user' ? 'User' : 'Assistant';
+            formattedPrompt += `${role}: ${msg.text}\n`;
+        });
+        formattedPrompt += '\n';
+    }
+
+    // Add current user message
+    formattedPrompt += `User: ${currentUserText.trim()}`;
+
+    console.log('[LLM] Formatted prompt with', recentMessages.length, 'previous messages');
+    return formattedPrompt;
+}
 
 export async function POST(request: NextRequest) {
     console.log('[LLM] POST request received');
 
     try {
         console.log('[LLM] Parsing request body...');
-        const { prompt, userText } = await request.json();
+        const { prompt, userText, conversationHistory } = await request.json();
         console.log('[LLM] Request data:', {
             hasPrompt: !!prompt,
             promptLength: prompt?.length,
-            userText: userText?.substring(0, 100)
+            userText: userText?.substring(0, 100),
+            historyLength: conversationHistory?.length || 0
         });
 
         if (!userText?.trim()) {
@@ -52,10 +87,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Combine system prompt with user input
-        const fullPrompt = prompt?.trim()
-            ? `${prompt.trim()}\n\nUser: ${userText.trim()}`
-            : `User: ${userText.trim()}`;
+        // Combine system prompt with conversation history and user input
+        const systemPrompt = prompt?.trim() || '';
+        const history: MessageHistory[] = conversationHistory || [];
+
+        const fullPrompt = formatConversationHistory(history, systemPrompt, userText.trim());
 
         console.log('[LLM] Full prompt length:', fullPrompt.length);
         console.log('[LLM] Sending prompt to Gemini (trimmed preview):', fullPrompt.substring(0, 200));
