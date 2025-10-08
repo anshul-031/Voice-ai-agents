@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         // Connect to MongoDB
         try {
             await dbConnect();
-        } catch (connError) {
+        } catch (_connError) {
             console.error('[Sessions API] Connection error, clearing cache and retrying...');
             await clearMongoConnection();
             await dbConnect();

@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
                 // try a few common call shapes
                 try {
                     result = await (model as any).generate({ prompt: fullPrompt });
-                } catch (eGen) {
+                } catch (_eGen) {
                     console.log('[LLM] Retrying generate with direct string parameter');
                     // older SDKs might accept a single string
                     result = await (model as any).generate(fullPrompt);

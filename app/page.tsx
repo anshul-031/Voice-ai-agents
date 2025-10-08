@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { PhoneCall, RotateCcw, X, Send, MessageSquare, Clock } from 'lucide-react';
+import { RotateCcw, X, Send, MessageSquare, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MicButton from '@/components/MicButton';
 import ChatBox from '@/components/ChatBox';
@@ -9,14 +9,10 @@ import TopModelBoxes from '@/components/TopModelBoxes';
 import InitialPromptEditor from '@/components/InitialPromptEditor';
 import ChatHistory from '@/components/ChatHistory';
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
-import ChatBox from '@/components/ChatBox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { LLMResponse, Message, ModelConfig, TranscriptionResponse, TTSResponse } from '@/types';
-import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, RotateCcw, Send, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
     services: {
@@ -94,7 +90,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
 "नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?"`);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
-    const [configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
+    const [_configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
 
     // Text chat state
     const [showTextInput, setShowTextInput] = useState(false);

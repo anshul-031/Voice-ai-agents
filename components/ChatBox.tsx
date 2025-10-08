@@ -147,7 +147,7 @@ interface ChatBoxProps {
 export default function ChatBox({
     messages,
     isOpen,
-    isListening,
+    isListening: _isListening,
     isProcessing,
     processingStep
 }: ChatBoxProps) {

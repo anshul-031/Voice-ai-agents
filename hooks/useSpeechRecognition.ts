@@ -64,7 +64,7 @@ export function useSpeechRecognition({
           try {
             recognitionRef.current?.start();
             setIsListening(true);
-          } catch (e) {
+          } catch (_e) {
             // start can throw if called too soon; allow next onend to retry
           }
         }
@@ -97,7 +97,7 @@ export function useSpeechRecognition({
     try {
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (e) {
+    } catch (_e) {
       // Ignore if already started
     }
   }, [supported]);

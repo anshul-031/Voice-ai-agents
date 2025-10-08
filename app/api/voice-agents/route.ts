@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
         try {
             await dbConnect();
-        } catch (connError) {
+        } catch (_connError) {
             console.error('[Voice Agents API] Connection error, clearing cache and retrying...');
             await clearMongoConnection();
             await dbConnect();
