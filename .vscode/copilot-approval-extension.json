@@ -1,0 +1,86 @@
+{
+  "name": "copilot-command-approval",
+  "displayName": "GitHub Copilot Command Approval",
+  "description": "Manages command approval for GitHub Copilot terminal suggestions",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "copilot-approval.addCommand",
+        "title": "Add Command to Auto-Approval",
+        "category": "Copilot Approval"
+      },
+      {
+        "command": "copilot-approval.removeCommand", 
+        "title": "Remove Command from Auto-Approval",
+        "category": "Copilot Approval"
+      },
+      {
+        "command": "copilot-approval.listCommands",
+        "title": "List Auto-Approved Commands",
+        "category": "Copilot Approval"
+      },
+      {
+        "command": "copilot-approval.checkCommand",
+        "title": "Check Command Approval Status",
+        "category": "Copilot Approval"
+      }
+    ],
+    "configuration": {
+      "title": "GitHub Copilot Command Approval",
+      "properties": {
+        "copilot-approval.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable command approval system for GitHub Copilot"
+        },
+        "copilot-approval.autoApproveEnabled": {
+          "type": "boolean", 
+          "default": true,
+          "description": "Allow auto-approval of safe commands"
+        },
+        "copilot-approval.promptMessage": {
+          "type": "string",
+          "default": "This command requires approval. Would you like me to add it to the auto-approval list for future use?",
+          "description": "Message shown when requesting command approval"
+        },
+        "copilot-approval.rememberApproval": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remember user approvals for future commands"
+        },
+        "copilot-approval.dangerousCommands": {
+          "type": "array",
+          "default": [
+            "rm -rf *",
+            "git reset --hard *", 
+            "git push --force *",
+            "sudo *",
+            "chmod *",
+            "chown *"
+          ],
+          "description": "Commands that always require manual approval"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "16.x",
+    "eslint": "^8.41.0",
+    "typescript": "^5.1.3"
+  }
+}
