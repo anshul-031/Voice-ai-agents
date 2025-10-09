@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/llm/route'
 
 // Reset table-mocks per test
@@ -39,10 +38,7 @@ describe('API: /api/llm extra branches', () => {
       }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'hello' }),
-    })
+    const req: any = { json: async () => ({ userText: 'hello' }) }
 
     const res = await POST(req)
     const data = await res.json()
@@ -63,10 +59,7 @@ describe('API: /api/llm extra branches', () => {
       }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'hello' }),
-    })
+    const req: any = { json: async () => ({ userText: 'hello' }) }
 
     const res = await POST(req)
     const data = await res.json()
@@ -88,10 +81,7 @@ describe('API: /api/llm extra branches', () => {
         }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'hello' }),
-    })
+    const req: any = { json: async () => ({ userText: 'hello' }) }
 
     const res = await POST(req)
     const data = await res.json()
@@ -106,10 +96,7 @@ describe('API: /api/llm extra branches', () => {
       getGenerativeModel: jest.fn().mockImplementationOnce(bad).mockImplementationOnce(bad),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'hello' }),
-    })
+    const req: any = { json: async () => ({ userText: 'hello' }) }
 
     const res = await POST(req)
     expect(res.status).toBe(500)
@@ -123,11 +110,7 @@ describe('API: /api/llm extra branches', () => {
       }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'hello' }),
-    })
-
+    const req: any = { json: async () => ({ userText: 'hello' }) }
     const res = await POST(req)
     expect(res.status).toBe(500)
   })

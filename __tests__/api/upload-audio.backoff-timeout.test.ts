@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/upload-audio/route'
 
 describe('API: /api/upload-audio polling backoff and timeout', () => {
@@ -40,7 +39,7 @@ describe('API: /api/upload-audio polling backoff and timeout', () => {
       return Promise.reject(new Error('unexpected url'))
     })
 
-    const req = new NextRequest('http://localhost/api/upload-audio', { method: 'POST', body: form as any })
+  const req: any = { formData: async () => form as FormData }
     const p = POST(req)
     // Advance timers sufficiently to exceed attempts, accounting for 60 attempts with backoff from 1000ms capped to 5000ms.
     // We will fast-forward a generous amount.

@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/llm/route'
 
 // We'll override the GoogleGenerativeAI mock per test to return different shapes
@@ -35,10 +34,7 @@ describe('API: /api/llm extractText variants', () => {
       }),
     }))
 
-    const request = new NextRequest('http://localhost:3000/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'Hello' }),
-    })
+    const request: any = { json: async () => ({ userText: 'Hello' }) }
 
     const response = await POST(request)
     const data = await response.json()
@@ -57,10 +53,7 @@ describe('API: /api/llm extractText variants', () => {
       }),
     }))
 
-    const request = new NextRequest('http://localhost:3000/api/llm', {
-      method: 'POST',
-      body: JSON.stringify({ userText: 'Hello' }),
-    })
+    const request: any = { json: async () => ({ userText: 'Hello' }) }
 
     const response = await POST(request)
     const data = await response.json()

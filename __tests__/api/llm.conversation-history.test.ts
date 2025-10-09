@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 import { POST } from '@/app/api/llm/route'
-import { NextRequest } from 'next/server'
 
 // Mock the Google Generative AI module
 jest.mock('@google/generative-ai', () => ({
@@ -50,14 +49,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Your EMI is ₹3,000', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a helpful assistant',
-                    userText: 'When is it due?',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a helpful assistant',
+                userText: 'When is it due?',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -67,13 +63,10 @@ describe('API: /api/llm - Conversation History', () => {
         })
 
         it('should work without conversationHistory (backwards compatible)', async () => {
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a helpful assistant',
-                    userText: 'Hello',
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a helpful assistant',
+                userText: 'Hello',
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -83,14 +76,11 @@ describe('API: /api/llm - Conversation History', () => {
         })
 
         it('should handle empty conversationHistory array', async () => {
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a helpful assistant',
-                    userText: 'Hello',
-                    conversationHistory: [],
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a helpful assistant',
+                userText: 'Hello',
+                conversationHistory: [],
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -100,14 +90,11 @@ describe('API: /api/llm - Conversation History', () => {
         })
 
         it('should handle null conversationHistory', async () => {
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a helpful assistant',
-                    userText: 'Hello',
-                    conversationHistory: null,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a helpful assistant',
+                userText: 'Hello',
+                conversationHistory: null,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -137,14 +124,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Your EMI amount is ₹3,000', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a banking assistant',
-                    userText: 'When is it due?',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a banking assistant',
+                userText: 'When is it due?',
+                conversationHistory,
+            }) }
 
             await POST(request)
 
@@ -191,14 +175,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Response 3', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             await POST(request)
 
@@ -229,7 +210,7 @@ describe('API: /api/llm - Conversation History', () => {
             }))
 
             // Create 50 messages (25 exchanges = 50 messages, should only use last 20)
-            const conversationHistory = []
+            const conversationHistory: Array<{ text: string; source: 'user' | 'assistant' }> = []
             for (let i = 1; i <= 25; i++) {
                 conversationHistory.push(
                     { text: `User message ${i}`, source: 'user' as const },
@@ -238,14 +219,11 @@ describe('API: /api/llm - Conversation History', () => {
             }
             // Total: 50 messages. Last 20 should be messages 31-50, which corresponds to exchanges 16-25
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Latest message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Latest message',
+                conversationHistory,
+            }) }
 
             await POST(request)
 
@@ -288,14 +266,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: '  Your EMI is ₹3,000  ', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: '  System prompt  ',
-                    userText: '  Current message  ',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: '  System prompt  ',
+                userText: '  Current message  ',
+                conversationHistory,
+            }) }
 
             await POST(request)
 
@@ -315,14 +290,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Message 2', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -337,14 +309,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Response 2', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -359,14 +328,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'The amount is $1,000 (50% discount)', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Tell me more',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Tell me more',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -381,14 +347,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Response with\nmultiple lines', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Continue',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Continue',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -404,14 +367,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Short response', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Continue',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Continue',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -426,14 +386,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Response to empty', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Real message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Real message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -448,13 +405,10 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Hi there!', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    userText: 'How are you?',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                userText: 'How are you?',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -464,19 +418,16 @@ describe('API: /api/llm - Conversation History', () => {
         })
 
         it('should handle exactly 20 messages in history', async () => {
-            const conversationHistory = []
+            const conversationHistory: { text: string; source: 'user' | 'assistant' }[] = []
             for (let i = 1; i <= 20; i++) {
                 conversationHistory.push({ text: `Message ${i}`, source: 'user' as const })
             }
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Latest',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Latest',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -490,14 +441,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Single message', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Next message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Next message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -513,14 +461,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Previous message', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: '   ',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: '   ',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -536,14 +481,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Previous message', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -564,14 +506,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Previous message', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -592,14 +531,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Previous message', source: 'user' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'System prompt',
-                    userText: 'Current message',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'System prompt',
+                userText: 'Current message',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -629,14 +565,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'Your EMI amount is ₹3,000 due on 20th', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a banking assistant',
-                    userText: 'I want to pay it',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a banking assistant',
+                userText: 'I want to pay it',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -658,14 +591,11 @@ describe('API: /api/llm - Conversation History', () => {
                 { text: 'जी हां, आप इसे अभी pay कर सकते हैं', source: 'assistant' as const },
             ]
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a Hinglish banking assistant',
-                    userText: 'कैसे करूं payment?',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a Hinglish banking assistant',
+                userText: 'कैसे करूं payment?',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()
@@ -675,7 +605,7 @@ describe('API: /api/llm - Conversation History', () => {
         })
 
         it('should maintain context across 10+ exchanges', async () => {
-            const conversationHistory = []
+            const conversationHistory: { text: string; source: 'user' | 'assistant' }[] = []
             for (let i = 1; i <= 10; i++) {
                 conversationHistory.push(
                     { text: `Question ${i}`, source: 'user' as const },
@@ -683,14 +613,11 @@ describe('API: /api/llm - Conversation History', () => {
                 )
             }
 
-            const request = new NextRequest('http://localhost:3000/api/llm', {
-                method: 'POST',
-                body: JSON.stringify({
-                    prompt: 'You are a helpful assistant',
-                    userText: 'What did we discuss?',
-                    conversationHistory,
-                }),
-            })
+            const request: any = { json: async () => ({
+                prompt: 'You are a helpful assistant',
+                userText: 'What did we discuss?',
+                conversationHistory,
+            }) }
 
             const response = await POST(request)
             const data = await response.json()

@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/upload-audio/route'
 import { createMockAudioBlob } from '../test-utils'
 
@@ -46,10 +45,10 @@ describe('API: /api/upload-audio poll error branch', () => {
     const audioBlob = createMockAudioBlob()
     formData.append('audio', audioBlob, 'test.webm')
 
-    const request = new NextRequest('http://localhost:3000/api/upload-audio', {
-      method: 'POST',
-      body: formData,
-    })
+    // Use a simple stub with formData() to match the route's usage in tests
+    const request: any = {
+      formData: async () => formData,
+    }
 
     const res = await POST(request)
     const data = await res.json()
