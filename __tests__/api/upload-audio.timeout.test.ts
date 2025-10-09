@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/upload-audio/route'
 import { createMockAudioBlob } from '../test-utils'
 
@@ -51,10 +50,7 @@ describe('API: /api/upload-audio timeout branch', () => {
     const audioBlob = createMockAudioBlob()
     formData.append('audio', audioBlob, 'test.webm')
 
-    const request = new NextRequest('http://localhost:3000/api/upload-audio', {
-      method: 'POST',
-      body: formData,
-    })
+    const request: any = { formData: async () => formData }
 
     // Run POST in parallel, then flush timers loop-by-loop until it resolves
     const promise = POST(request)

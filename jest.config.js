@@ -7,11 +7,25 @@ const createJestConfig = nextJest({
 
 // Add any custom config to be passed to Jest
 const customJestConfig = {
+  cache: false,
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
+    // Specific mocks for server/db modules used in API routes
+    '^next/server(\\.js)?$': '<rootDir>/__mocks__/next-server.ts',
+  '^@/lib/mongodb$': '<rootDir>/__mocks__/lib/mongodb.ts',
+  // Also map potential bundler-resolved bare or relative specifiers
+  '^lib/mongodb(\\.ts)?$': '<rootDir>/__mocks__/lib/mongodb.ts',
+  '(.*/)?lib/mongodb(\\.ts)?$': '<rootDir>/__mocks__/lib/mongodb.ts',
+  '^@/models/Chat$': '<rootDir>/__mocks__/models/Chat.ts',
+  '^models/Chat(\\.ts)?$': '<rootDir>/__mocks__/models/Chat.ts',
+  '(.*/)?models/Chat(\\.ts)?$': '<rootDir>/__mocks__/models/Chat.ts',
+  '^@/models/VoiceAgent$': '<rootDir>/__mocks__/models/VoiceAgent.ts',
+  '^models/VoiceAgent(\\.ts)?$': '<rootDir>/__mocks__/models/VoiceAgent.ts',
+  '(.*/)?models/VoiceAgent(\\.ts)?$': '<rootDir>/__mocks__/models/VoiceAgent.ts',
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/$1',
+    '^mongoose$': '<rootDir>/__mocks__/mongoose.js',
   },
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
@@ -31,6 +45,8 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
+    '/__tests__/app/',
+    '<rootDir>/__tests__/app/',
     '/test-e2e.ts',
     '/test-e2e-enhanced.js',
     '/run-tests.js',

@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true,
+  "incremental": false,
     "plugins": [
       {
         "name": "next"
@@ -22,6 +22,31 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "global.d.ts",
+    "next.config.ts",
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    "types/**/*",
+    "lib/**/*",
+    "models/**/*",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/**",
+    "tests/**",
+    "coverage/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test.js",
+    "**/*.test.jsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.spec.js",
+    "**/*.spec.jsx",
+    "scripts/**"
+  ]
 }

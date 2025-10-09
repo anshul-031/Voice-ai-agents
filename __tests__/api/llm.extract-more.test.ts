@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/llm/route'
 
 jest.mock('@google/generative-ai', () => ({
@@ -28,7 +27,7 @@ describe('API: /api/llm extractText remaining shapes', () => {
       }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', { method: 'POST', body: JSON.stringify({ userText: 'hi' }) })
+  const req: any = { json: async () => ({ userText: 'hi' }) }
     const res = await POST(req)
     const data = await res.json()
     expect(res.status).toBe(200)
@@ -43,7 +42,7 @@ describe('API: /api/llm extractText remaining shapes', () => {
       }),
     }))
 
-    const req = new NextRequest('http://localhost/api/llm', { method: 'POST', body: JSON.stringify({ userText: 'hello' }) })
+  const req: any = { json: async () => ({ userText: 'hello' }) }
     const res = await POST(req)
     const data = await res.json()
     expect(res.status).toBe(200)

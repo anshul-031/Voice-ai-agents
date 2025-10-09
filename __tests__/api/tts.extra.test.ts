@@ -1,7 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/tts/route'
 
 global.fetch = jest.fn()
@@ -24,7 +23,7 @@ describe('API: /api/tts extra branches', () => {
       headers: new Headers(),
     })
 
-    const req = new NextRequest('http://localhost/api/tts', { method: 'POST', body: JSON.stringify({ text: 'x' }) })
+  const req: any = { json: async () => ({ text: 'x' }) }
     const res = await POST(req)
     const data = await res.json()
     expect(res.status).toBe(200)
