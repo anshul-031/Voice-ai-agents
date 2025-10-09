@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-  "test:coverage": "jest --config jest.coverage.config.js --coverage --detectOpenHandles --runInBand",
+    "test:coverage": "jest --config jest.coverage.config.js --coverage --detectOpenHandles --runInBand",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "check:coverage": "node scripts/check-coverage.js 90",
     "test:api": "node run-tests.js --api-only",
