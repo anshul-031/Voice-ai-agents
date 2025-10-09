@@ -156,14 +156,10 @@ export default function ChatBox({
 
     useEffect(() => {
         if (scrollRef.current) {
-            if (typeof scrollRef.current.scrollTo === 'function') {
-                scrollRef.current.scrollTo({
-                    top: scrollRef.current.scrollHeight,
-                    behavior: 'smooth'
-                });
-            } else {
-                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            }
+            scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     }, [messages]);
 
