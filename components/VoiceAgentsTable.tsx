@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, MoreVertical, Edit, Trash2, User } from 'lucide-react'
+import { Edit, MoreVertical, Plus, Trash2, User } from 'lucide-react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 interface VoiceAgent {
     id: string
     title: string
     prompt: string
+    llmModel: string
+    sttModel: string
+    ttsModel: string
     userId: string
     lastUpdated: string
     createdAt: string
@@ -121,7 +125,12 @@ export default function VoiceAgentsTable({ onAddAgent, onEditAgent }: VoiceAgent
                                         <User className="w-5 h-5 text-gray-400" />
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="text-white font-medium truncate">{agent.title}</div>
+                                        <Link 
+                                            href={`/agents/${agent.id}`}
+                                            className="text-white font-medium truncate hover:text-emerald-400 transition-colors cursor-pointer block"
+                                        >
+                                            {agent.title}
+                                        </Link>
                                         <div className="text-sm text-gray-400 truncate">{agent.prompt.substring(0, 80)}...</div>
                                     </div>
                                 </div>
