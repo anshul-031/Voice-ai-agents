@@ -78,7 +78,7 @@ describe('Sidebar Component', () => {
         render(<Sidebar {...defaultProps} />);
 
     const agentsTab = screen.getByText('Agents');
-    fireEvent.click(agentsTab);
+        fireEvent.click(agentsTab);
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith('/api/voice-agents?userId=mukul');
