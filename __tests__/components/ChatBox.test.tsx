@@ -1,6 +1,5 @@
-import { render, screen } from '../test-utils'
-import { createMockMessage } from '../test-utils'
 import ChatBox from '@/components/ChatBox'
+import { createMockMessage, render, screen } from '../test-utils'
 
 describe('ChatBox', () => {
   describe('Initial State (Not Open)', () => {
@@ -45,7 +44,7 @@ describe('ChatBox', () => {
         />
       )
 
-      expect(screen.getByText('Listening...')).toBeInTheDocument()
+      expect(screen.getByText('🎤 Listening...')).toBeInTheDocument()
       expect(screen.getByText(/Speak naturally and clearly/i)).toBeInTheDocument()
     })
 
@@ -256,7 +255,7 @@ describe('ChatBox', () => {
         />
       )
 
-      const assistantBubble = container.querySelector('.bg-slate-700')
+      const assistantBubble = container.querySelector('.glass-card')
       expect(assistantBubble).toBeInTheDocument()
     })
   })
