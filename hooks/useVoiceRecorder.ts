@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
 import { VoiceRecorderState } from '@/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseVoiceRecorderOptions {
     onSegmentReady: (audioBlob: Blob) => void;
