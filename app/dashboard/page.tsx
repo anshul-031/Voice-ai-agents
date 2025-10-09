@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import AgentModal from '@/components/AgentModal'
+import CallLogsTable from '@/components/CallLogsTable'
+import ChatHistory from '@/components/ChatHistory'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import VoiceAgentsTable from '@/components/VoiceAgentsTable'
-import AgentModal from '@/components/AgentModal'
-import ChatHistory from '@/components/ChatHistory'
-import CallLogsTable from '@/components/CallLogsTable'
+import { useState } from 'react'
 
 interface VoiceAgent {
     id: string
     title: string
     prompt: string
+    llmModel: string
+    sttModel: string
+    ttsModel: string
     userId: string
     lastUpdated: string
     createdAt: string

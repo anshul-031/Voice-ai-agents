@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import AgentModal from '@/components/AgentModal'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { mockFetchResponse } from '../test-utils'
 
 // Mock fetch
@@ -64,6 +64,9 @@ describe('AgentModal', () => {
             id: 'agent-1',
             title: 'EMI Reminder',
             prompt: 'You are a professional EMI collection assistant...',
+            llmModel: 'Gemini 1.5 Flash',
+            sttModel: 'AssemblyAI Universal',
+            ttsModel: 'Deepgram Aura Luna',
             userId: 'mukul',
             lastUpdated: '2025-10-08T10:00:00Z',
             createdAt: '2025-10-01T10:00:00Z',
@@ -197,6 +200,9 @@ describe('AgentModal', () => {
                             userId: 'mukul',
                             title: 'Test Agent',
                             prompt: 'Test prompt',
+                            llmModel: 'Gemini 1.5 Flash',
+                            sttModel: 'AssemblyAI Universal',
+                            ttsModel: 'Deepgram Aura Luna',
                         }),
                     })
                 )
@@ -281,6 +287,9 @@ describe('AgentModal', () => {
             id: 'agent-1',
             title: 'EMI Reminder',
             prompt: 'Original prompt',
+            llmModel: 'Gemini 1.5 Flash',
+            sttModel: 'AssemblyAI Universal',
+            ttsModel: 'Deepgram Aura Luna',
             userId: 'mukul',
             lastUpdated: '2025-10-08T10:00:00Z',
             createdAt: '2025-10-01T10:00:00Z',
@@ -318,6 +327,9 @@ describe('AgentModal', () => {
                             id: 'agent-1',
                             title: 'Updated Agent',
                             prompt: 'Updated prompt',
+                            llmModel: 'Gemini 1.5 Flash',
+                            sttModel: 'AssemblyAI Universal',
+                            ttsModel: 'Deepgram Aura Luna',
                         }),
                     })
                 )
@@ -455,6 +467,9 @@ describe('AgentModal', () => {
                             userId: 'mukul',
                             title: '  Test Agent  ',
                             prompt: '  Test prompt  ',
+                            llmModel: 'Gemini 1.5 Flash',
+                            sttModel: 'AssemblyAI Universal',
+                            ttsModel: 'Deepgram Aura Luna',
                         }),
                     })
                 )

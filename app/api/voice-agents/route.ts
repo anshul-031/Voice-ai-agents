@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
                 userId: agent.userId,
                 title: agent.title,
                 prompt: agent.prompt,
+                llmModel: agent.llmModel,
+                sttModel: agent.sttModel,
+                ttsModel: agent.ttsModel,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             })),
@@ -61,8 +64,8 @@ export async function POST(request: NextRequest) {
         await dbConnect();
         console.log('[Voice Agents API] Connected to MongoDB');
 
-        const { userId, title, prompt } = await request.json();
-        console.log('[Voice Agents API] Request data:', { userId, title, promptLength: prompt?.length });
+        const { userId, title, prompt, llmModel, sttModel, ttsModel } = await request.json();
+        console.log('[Voice Agents API] Request data:', { userId, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel });
 
         if (!title || !prompt) {
             console.error('[Voice Agents API] Missing required fields');
@@ -76,6 +79,9 @@ export async function POST(request: NextRequest) {
             userId: userId || 'mukul',
             title: title.trim(),
             prompt: prompt.trim(),
+            llmModel: llmModel || 'Gemini 1.5 Flash',
+            sttModel: sttModel || 'AssemblyAI Universal',
+            ttsModel: ttsModel || 'Deepgram Aura Luna',
             lastUpdated: new Date(),
             createdAt: new Date(),
         });
@@ -90,6 +96,9 @@ export async function POST(request: NextRequest) {
                 userId: agent.userId,
                 title: agent.title,
                 prompt: agent.prompt,
+                llmModel: agent.llmModel,
+                sttModel: agent.sttModel,
+                ttsModel: agent.ttsModel,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             },
@@ -114,12 +123,12 @@ export async function PUT(request: NextRequest) {
     try {
         await dbConnect();
 
-        const { id, title, prompt } = await request.json();
-        console.log('[Voice Agents API] Update request:', { id, title, promptLength: prompt?.length });
+        const { id, title, prompt, llmModel, sttModel, ttsModel } = await request.json();
+        console.log('[Voice Agents API] Update request:', { id, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel });
 
-        if (!id || (!title && !prompt)) {
+        if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel)) {
             return NextResponse.json(
-                { error: 'Missing required fields: id and at least one of (title, prompt)' },
+                { error: 'Missing required fields: id and at least one of (title, prompt, llmModel, sttModel, ttsModel)' },
                 { status: 400 }
             );
         }
@@ -127,6 +136,9 @@ export async function PUT(request: NextRequest) {
         const updateData: any = { lastUpdated: new Date() };
         if (title) updateData.title = title.trim();
         if (prompt) updateData.prompt = prompt.trim();
+        if (llmModel) updateData.llmModel = llmModel;
+        if (sttModel) updateData.sttModel = sttModel;
+        if (ttsModel) updateData.ttsModel = ttsModel;
 
         const agent = await VoiceAgent.findByIdAndUpdate(
             id,
@@ -150,6 +162,9 @@ export async function PUT(request: NextRequest) {
                 userId: agent.userId,
                 title: agent.title,
                 prompt: agent.prompt,
+                llmModel: agent.llmModel,
+                sttModel: agent.sttModel,
+                ttsModel: agent.ttsModel,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             },

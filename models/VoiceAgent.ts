@@ -1,9 +1,12 @@
-import mongoose, { Schema, model, models, Document } from 'mongoose';
+import { Document, Schema, model, models } from 'mongoose';
 
 export interface IVoiceAgent extends Document {
     userId: string;
     title: string;
     prompt: string;
+    llmModel: string;
+    sttModel: string;
+    ttsModel: string;
     lastUpdated: Date;
     createdAt: Date;
 }
@@ -23,6 +26,21 @@ const VoiceAgentSchema = new Schema<IVoiceAgent>({
     prompt: {
         type: String,
         required: true,
+    },
+    llmModel: {
+        type: String,
+        required: true,
+        default: 'Gemini 1.5 Flash',
+    },
+    sttModel: {
+        type: String,
+        required: true,
+        default: 'AssemblyAI Universal',
+    },
+    ttsModel: {
+        type: String,
+        required: true,
+        default: 'Deepgram Aura Luna',
     },
     lastUpdated: {
         type: Date,

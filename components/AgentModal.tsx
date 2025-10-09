@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface VoiceAgent {
     id: string
     title: string
     prompt: string
+    llmModel: string
+    sttModel: string
+    ttsModel: string
     userId: string
     lastUpdated: string
     createdAt: string
@@ -22,15 +25,24 @@ interface AgentModalProps {
 export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentModalProps) {
     const [title, setTitle] = useState('')
     const [prompt, setPrompt] = useState('')
+    const [llmModel, setLlmModel] = useState('Gemini 1.5 Flash')
+    const [sttModel, setSttModel] = useState('AssemblyAI Universal')
+    const [ttsModel, setTtsModel] = useState('Deepgram Aura Luna')
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
         if (agent) {
             setTitle(agent.title)
             setPrompt(agent.prompt)
+            setLlmModel(agent.llmModel || 'Gemini 1.5 Flash')
+            setSttModel(agent.sttModel || 'AssemblyAI Universal')
+            setTtsModel(agent.ttsModel || 'Deepgram Aura Luna')
         } else {
             setTitle('')
             setPrompt('')
+            setLlmModel('Gemini 1.5 Flash')
+            setSttModel('AssemblyAI Universal')
+            setTtsModel('Deepgram Aura Luna')
         }
     }, [agent, isOpen])
 
@@ -41,8 +53,8 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
         try {
             const method = agent ? 'PUT' : 'POST'
             const body = agent
-                ? JSON.stringify({ id: agent.id, title, prompt })
-                : JSON.stringify({ userId: 'mukul', title, prompt })
+                ? JSON.stringify({ id: agent.id, title, prompt, llmModel, sttModel, ttsModel })
+                : JSON.stringify({ userId: 'mukul', title, prompt, llmModel, sttModel, ttsModel })
 
             const res = await fetch('/api/voice-agents', {
                 method,
@@ -55,6 +67,9 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 onClose()
                 setTitle('')
                 setPrompt('')
+                setLlmModel('Gemini 1.5 Flash')
+                setSttModel('AssemblyAI Universal')
+                setTtsModel('Deepgram Aura Luna')
             }
         } catch (error) {
             console.error('Error saving agent:', error)
@@ -97,6 +112,59 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                             required
                             className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                         />
+                    </div>
+
+                    {/* Model Selection Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label htmlFor="llmModel" className="block text-sm font-medium text-gray-300 mb-2">
+                                LLM Model
+                            </label>
+                            <select
+                                id="llmModel"
+                                value={llmModel}
+                                onChange={(e) => setLlmModel(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                            >
+                                <option value="Gemini 1.5 Flash">Gemini 1.5 Flash</option>
+                                <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+                                <option value="GPT-4">GPT-4</option>
+                                <option value="GPT-3.5 Turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="sttModel" className="block text-sm font-medium text-gray-300 mb-2">
+                                STT Model
+                            </label>
+                            <select
+                                id="sttModel"
+                                value={sttModel}
+                                onChange={(e) => setSttModel(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                            >
+                                <option value="AssemblyAI Universal">AssemblyAI Universal</option>
+                                <option value="Whisper">Whisper</option>
+                                <option value="Google Speech-to-Text">Google Speech-to-Text</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="ttsModel" className="block text-sm font-medium text-gray-300 mb-2">
+                                TTS Model
+                            </label>
+                            <select
+                                id="ttsModel"
+                                value={ttsModel}
+                                onChange={(e) => setTtsModel(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                            >
+                                <option value="Deepgram Aura Luna">Deepgram Aura Luna</option>
+                                <option value="Deepgram Aura Asteria">Deepgram Aura Asteria</option>
+                                <option value="ElevenLabs">ElevenLabs</option>
+                                <option value="Google Text-to-Speech">Google Text-to-Speech</option>
+                            </select>
+                        </div>
                     </div>
 
                     {/* Prompt Field */}
