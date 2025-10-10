@@ -194,13 +194,12 @@ export function processWhatsAppCallback(callbackResponse: any): void {
         const entry = callbackResponse?.entry?.[0];
         const change = entry?.changes?.[0];
         const value = change?.value;
-        const contact = value?.contacts?.[0];
-        const waId = contact?.wa_id;
         const message = value?.messages?.[0];
+        const userMobile = message?.from;
         const userMessage = message?.text?.body;
 
         // Example: Log extracted values
-        console.info('User Phone Number:', waId);
+        console.info('User Mobile (from):', userMobile);
         console.info('User Message:', userMessage);
         // Add further processing logic here if needed
     } catch (e) {

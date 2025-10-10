@@ -1,7 +1,24 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
-// You should set this in your environment variables for security
-const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'verificationToken';
+import { processWhatsAppCallback } from '@/lib/whatsAppService';
+
+const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN;
+
+export async function POST(req: NextRequest) {
+  try {
+    const callbackResponse = await req.text(); // Get raw body as string
+    console.info(callbackResponse);
+    const parsedResponse = JSON.parse(callbackResponse); // Parse body as JSON
+    processWhatsAppCallback(parsedResponse);
+
+    return NextResponse.json({ message: 'SUCCESS' }, { status: 200 });
+  } catch (e: any) {
+    console.error('Exception while metaMetlifeCallback', e?.message);
+    return NextResponse.json({ message: 'ERROR', error: e?.message }, { status: 500 });
+  }
+}
+
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,4 +35,3 @@ export async function GET(req: NextRequest) {
   }
   return new NextResponse('MISSING_PARAMETERS', { status: 400 });
 }
-
