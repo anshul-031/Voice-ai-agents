@@ -21,11 +21,12 @@ export async function POST(request: NextRequest) {
 
     // Accept optional parameters from Exotel or upstream flow
     const sampleRate = (body['sample-rate'] || body.sampleRate || body.sample_rate || '16000').toString();
-    const custom: Record<string, string> = {};
-    // Prioritize common metadata into first three params
-    if (body.userId) custom.param1 = String(body.userId);
-    if (body.from) custom.param2 = String(body.from);
-    if (body.to) custom.param3 = String(body.to);
+  const custom: Record<string, string> = {};
+  // Prioritize common metadata into first three params and propagate Exotel fields
+  if (body.userId) custom.param1 = String(body.userId);
+  if (body.from || body.From) custom.param2 = String(body.from || body.From);
+  if (body.to || body.To) custom.param3 = String(body.to || body.To);
+  if (body.CallSid) custom.callSid = String(body.CallSid);
 
     // If caller already provided param1/2/3, do not override
     for (const k of ['param1','param2','param3'] as const) {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Build the ws(s) URL. In dev we use ws://, in prod prefer wss://
     // Prefer the incoming request host so the returned WSS URL matches the domain Exotel called.
-    const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || undefined;
     const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
     const incomingOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
 
