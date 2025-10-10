@@ -19,13 +19,13 @@ describe('Home page - text input focus on toggle', () => {
   it('focuses text input shortly after toggling on', async () => {
     render(<Home />)
 
-    const toggle = await screen.findByTitle('Toggle text chat')
+    const toggle = await screen.findByTitle('Text chat mode')
     await userEvent.click(toggle)
 
     // wait for the 100ms timer inside toggleTextInput to fire and focus
     await new Promise(res => setTimeout(res, 150))
 
-    const input = screen.getByPlaceholderText('Type your message here...') as HTMLInputElement
+    const input = screen.getByPlaceholderText('Type your message...') as HTMLInputElement
     await waitFor(() => {
       expect(input).toHaveFocus()
     })

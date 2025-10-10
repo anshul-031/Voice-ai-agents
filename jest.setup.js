@@ -42,6 +42,96 @@ if (typeof window !== 'undefined') {
   unobserve() {}
   }
 
+  // Mock HTMLCanvasElement.getContext for canvas-based components
+  HTMLCanvasElement.prototype.getContext = jest.fn((contextType) => {
+    if (contextType === '2d') {
+      return {
+        clearRect: jest.fn(),
+        fillRect: jest.fn(),
+        strokeRect: jest.fn(),
+        fillText: jest.fn(),
+        strokeText: jest.fn(),
+        measureText: jest.fn(() => ({ width: 0 })),
+        getImageData: jest.fn(() => ({ data: [] })),
+        putImageData: jest.fn(),
+        createImageData: jest.fn(() => ({ data: [] })),
+        setTransform: jest.fn(),
+        resetTransform: jest.fn(),
+        transform: jest.fn(),
+        translate: jest.fn(),
+        rotate: jest.fn(),
+        scale: jest.fn(),
+        drawImage: jest.fn(),
+        save: jest.fn(),
+        restore: jest.fn(),
+        beginPath: jest.fn(),
+        closePath: jest.fn(),
+        moveTo: jest.fn(),
+        lineTo: jest.fn(),
+        quadraticCurveTo: jest.fn(),
+        bezierCurveTo: jest.fn(),
+        arc: jest.fn(),
+        arcTo: jest.fn(),
+        rect: jest.fn(),
+        fill: jest.fn(),
+        stroke: jest.fn(),
+        clip: jest.fn(),
+        isPointInPath: jest.fn(() => false),
+        isPointInStroke: jest.fn(() => false),
+        createLinearGradient: jest.fn(() => ({
+          addColorStop: jest.fn(),
+        })),
+        createRadialGradient: jest.fn(() => ({
+          addColorStop: jest.fn(),
+        })),
+        createPattern: jest.fn(() => ({})),
+        getLineDash: jest.fn(() => []),
+        setLineDash: jest.fn(),
+        // Properties
+        fillStyle: '#000000',
+        strokeStyle: '#000000',
+        lineWidth: 1,
+        lineCap: 'butt',
+        lineJoin: 'miter',
+        miterLimit: 10,
+        shadowBlur: 0,
+        shadowColor: 'rgba(0, 0, 0, 0)',
+        shadowOffsetX: 0,
+        shadowOffsetY: 0,
+        globalAlpha: 1,
+        globalCompositeOperation: 'source-over',
+        font: '10px sans-serif',
+        textAlign: 'start',
+        textBaseline: 'alphabetic',
+      };
+    }
+    return null;
+  });
+
+  // Mock canvas dimensions
+  Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
+    writable: true,
+    value: 300,
+  });
+  Object.defineProperty(HTMLCanvasElement.prototype, 'height', {
+    writable: true,
+    value: 150,
+  });
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getBoundingClientRect', {
+    writable: true,
+    value: jest.fn(() => ({
+      width: 300,
+      height: 150,
+      top: 0,
+      left: 0,
+      right: 300,
+      bottom: 150,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    })),
+  });
+
   // Mock AudioContext
   global.AudioContext = jest.fn().mockImplementation(() => ({
   createMediaStreamSource: jest.fn(() => ({
