@@ -132,6 +132,7 @@
 //     );
 // }
 
+import { motion } from 'framer-motion';
 import { Bot, Mic, User } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Message } from '../types';
@@ -155,7 +156,14 @@ export default function ChatBox({
 
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            if (typeof scrollRef.current.scrollTo === 'function') {
+                scrollRef.current.scrollTo({
+                    top: scrollRef.current.scrollHeight,
+                    behavior: 'smooth'
+                });
+            } else {
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
         }
     }, [messages]);
 
@@ -163,59 +171,85 @@ export default function ChatBox({
         <div className="h-full flex flex-col relative">
             {!isOpen && (
                 <div className="flex-1 flex items-center justify-center p-8">
-                    <div className="text-center max-w-md">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-center max-w-md"
+                    >
                         <div className="mb-6">
-                            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                <Mic className="h-10 w-10 text-white" />
-                            </div>
+                            <motion.div
+                                className="w-24 h-24 mx-auto glass-button rounded-3xl flex items-center justify-center glow-blue"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                            >
+                                <Mic className="h-12 w-12 text-blue-300 drop-shadow-lg" />
+                            </motion.div>
                         </div>
 
-                        <h3 className="text-xl font-semibold text-white mb-2">Ready to Start</h3>
+                        <h3 className="text-2xl font-bold text-white mb-3 text-gradient-blue">Ready to Start</h3>
                         <p className="text-gray-400 leading-relaxed">
                             Click the microphone button to begin your conversation with the AI assistant.
                         </p>
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
             {isOpen && (
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                     {messages.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
-                                <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                            </div>
-                            <h3 className="text-lg font-medium text-white mb-2">Listening...</h3>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center py-12"
+                        >
+                            <motion.div
+                                className="inline-flex items-center justify-center w-20 h-20 rounded-full glass-card mb-4 border border-red-400/30"
+                                animate={{
+                                    boxShadow: [
+                                        '0 0 20px rgba(239, 68, 68, 0.3)',
+                                        '0 0 40px rgba(239, 68, 68, 0.5)',
+                                        '0 0 20px rgba(239, 68, 68, 0.3)'
+                                    ]
+                                }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse shadow-lg"></div>
+                            </motion.div>
+                            <h3 className="text-lg font-semibold text-white mb-2">🎤 Listening...</h3>
                             <p className="text-gray-400">
                                 Speak naturally and clearly.
                             </p>
-                        </div>
+                        </motion.div>
                     ) : (
-                        messages.map((message) => (
-                            <div
+                        messages.map((message, index) => (
+                            <motion.div
                                 key={message.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
                                 className={`flex ${message.source === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`max-w-[85%] ${message.source === 'user' ? 'ml-4' : 'mr-4'}`}>
-                                    <div className={`px-4 py-3 rounded-2xl shadow-lg ${message.source === 'user'
-                                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white'
-                                        : 'bg-slate-700 text-white'
+                                    <div className={`px-5 py-3.5 rounded-2xl shadow-xl backdrop-blur-sm border transition-all duration-300 hover:shadow-2xl ${message.source === 'user'
+                                        ? 'bg-gradient-to-br from-blue-600/90 to-blue-500/90 border-blue-400/30 text-white'
+                                        : 'glass-card border-slate-600/30 text-white'
                                         }`}>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${message.source === 'user'
-                                                ? 'bg-blue-500'
-                                                : 'bg-slate-600'
+                                        <div className="flex items-center gap-2.5 mb-2.5">
+                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shadow-md ${message.source === 'user'
+                                                ? 'bg-blue-400'
+                                                : 'bg-gradient-to-br from-slate-600 to-slate-700'
                                                 }`}>
                                                 {message.source === 'user' ? (
-                                                    <User size={14} />
+                                                    <User size={14} className="text-white drop-shadow" />
                                                 ) : (
-                                                    <Bot size={14} />
+                                                    <Bot size={14} className="text-blue-300 drop-shadow" />
                                                 )}
                                             </div>
-                                            <span className="text-xs font-medium opacity-90">
+                                            <span className="text-xs font-semibold opacity-90">
                                                 {message.source === 'user' ? 'You' : 'AI Assistant'}
                                             </span>
-                                            <span className="text-xs opacity-70 ml-auto">
+                                            <span className="text-xs opacity-60 ml-auto font-mono">
                                                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
@@ -223,32 +257,59 @@ export default function ChatBox({
                                         <div className="text-sm leading-relaxed">
                                             <p className="whitespace-pre-wrap">{message.text}</p>
                                         </div>
+
+                                        {/* Glass shine effect */}
+                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
                     )}
 
                     {isProcessing && (
-                        <div className="flex justify-start">
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex justify-start"
+                        >
                             <div className="max-w-[85%] mr-4">
-                                <div className="px-4 py-3 rounded-2xl bg-slate-700 text-white shadow-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center">
-                                            <Bot size={14} />
+                                <div className="relative px-5 py-3.5 rounded-2xl glass-card border border-blue-400/20 text-white shadow-xl">
+                                    <div className="flex items-center gap-2.5 mb-2.5">
+                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-md">
+                                            <Bot size={14} className="text-blue-300 drop-shadow" />
                                         </div>
-                                        <span className="text-xs font-medium opacity-90">AI Assistant</span>
-                                        <span className="text-xs opacity-70 ml-auto">
+                                        <span className="text-xs font-semibold opacity-90">AI Assistant</span>
+                                        <span className="text-xs opacity-60 ml-auto font-mono">
                                             {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <div className="w-4 h-4 border-2 border-t-transparent border-blue-400 rounded-full animate-spin"></div>
-                                        <div className="text-gray-300">{processingStep || 'Processing your request...'}</div>
+                                        {/* Animated dots */}
+                                        <div className="flex gap-1.5">
+                                            {[0, 1, 2].map((i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className="w-2 h-2 rounded-full bg-blue-400"
+                                                    animate={{
+                                                        scale: [1, 1.3, 1],
+                                                        opacity: [0.5, 1, 0.5]
+                                                    }}
+                                                    transition={{
+                                                        duration: 1,
+                                                        repeat: Infinity,
+                                                        delay: i * 0.2
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="text-gray-300 font-medium">{processingStep || 'Processing your request...'}</div>
                                     </div>
+
+                                    {/* Glass shine */}
+                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
                 </div>
             )}
