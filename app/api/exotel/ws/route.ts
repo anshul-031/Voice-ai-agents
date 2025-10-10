@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   // sample-rate default 16000 recommended by docs; Exotel defaults to 8000 otherwise
   const sampleRate = Number(searchParams.get('sample-rate') || '16000');
+  const callSid = searchParams.get('CallSid') || searchParams.get('callSid') || undefined;
+  const from = searchParams.get('From') || searchParams.get('from') || undefined;
+  const to = searchParams.get('To') || searchParams.get('to') || undefined;
 
   const { 0: client, 1: server } = new (globalThis as any).WebSocketPair();
 
@@ -31,6 +34,8 @@ export async function GET(req: NextRequest) {
   let processing = false;
   const incomingPcmChunks: Uint8Array[] = [];
   const PROCESS_THRESHOLD_BYTES = Math.max(3200, Math.round(sampleRate * 2 * 2)); // ~2s of audio at given rate
+  let mediaCount = 0;
+  let bytesReceived = 0;
 
   // @ts-ignore - accept is available on Edge runtime WebSocket
   (server as any).accept();
@@ -44,6 +49,13 @@ export async function GET(req: NextRequest) {
   }
 
   const originUrl = new URL(req.url);
+  console.log('[Exotel WS] accepted upgrade', {
+    path: originUrl.pathname,
+    sampleRate,
+    callSid,
+    from,
+    to,
+  });
 
   async function processBuffersAndRespond() {
     if (processing) return;
@@ -64,6 +76,7 @@ export async function GET(req: NextRequest) {
   form.append('audio', new Blob([ab], { type: 'audio/wav' }), 'chunk.wav');
 
       const baseHttp = `${originUrl.protocol}//${originUrl.host}`;
+      console.log('[Exotel WS] STT request', { baseHttp, bytes: wav.byteLength });
       const sttRes = await fetch(`${baseHttp}/api/upload-audio`, { method: 'POST', body: form });
       if (!sttRes.ok) {
         console.warn('[Exotel WS] STT failed', sttRes.status);
@@ -75,6 +88,7 @@ export async function GET(req: NextRequest) {
         console.log('[Exotel WS] Empty STT result, skipping TTS');
         return;
       }
+      console.log('[Exotel WS] STT text', { len: userText.length, preview: userText.slice(0, 120) });
 
       // Call LLM for response text
       const llmRes = await fetch(`${baseHttp}/api/llm`, {
@@ -89,6 +103,7 @@ export async function GET(req: NextRequest) {
       const llmJson = await llmRes.json();
       const botText: string = (llmJson.llmText || '').toString().trim();
       if (!botText) return;
+      console.log('[Exotel WS] LLM text', { len: botText.length, preview: botText.slice(0, 120) });
 
       // TTS the bot text
       const ttsRes = await fetch(`${baseHttp}/api/tts`, {
@@ -108,6 +123,7 @@ export async function GET(req: NextRequest) {
       const wavBytes = base64ToUint8(base64Audio);
       const { pcm: ttsPcm /*, sampleRate: ttsRate */ } = pcm16FromWav(wavBytes);
       const chunks = splitForExotel(ttsPcm, 3200); // ~100ms-ish
+      console.log('[Exotel WS] TTS ready', { pcmBytes: ttsPcm.length, chunks: chunks.length });
 
       for (const c of chunks) {
         const payload = uint8ToBase64(c);
@@ -137,6 +153,7 @@ export async function GET(req: NextRequest) {
       if (msg.event === 'start') {
         streamSid = msg.start?.stream_sid || msg.stream_sid || streamSid || `exotel_${Date.now()}`;
         seq = (msg.sequence_number ?? 0) as number;
+        console.log('[Exotel WS] start', { streamSid, seq });
         // Optionally, send an acknowledgement
         (server as WebSocket).send(textFrame({ event: 'mark', sequence_number: ++seq, stream_sid: streamSid, mark: { name: 'start-ack' } }));
         return;
@@ -149,7 +166,12 @@ export async function GET(req: NextRequest) {
           lastChunk = (msg.media?.chunk ?? lastChunk) as number;
           const bytes = base64ToUint8(payloadB64);
           incomingPcmChunks.push(bytes);
+          mediaCount += 1;
+          bytesReceived += bytes.length;
           const total = incomingPcmChunks.reduce((s, c) => s + c.length, 0);
+          if (mediaCount % 25 === 0) {
+            console.log('[Exotel WS] media', { mediaCount, queuedBytes: total, bytesReceived });
+          }
           if (total >= PROCESS_THRESHOLD_BYTES) {
             // Fire and forget; mutex ensures single run at a time
             processBuffersAndRespond();
@@ -160,21 +182,25 @@ export async function GET(req: NextRequest) {
 
       if (msg.event === 'dtmf') {
         // You may handle DTMF during call (e.g., interrupt / clear)
+        console.log('[Exotel WS] dtmf', { digit: msg.dtmf?.digit, duration: msg.dtmf?.duration });
         return;
       }
 
       if (msg.event === 'stop') {
+        console.log('[Exotel WS] stop received');
         try { (server as WebSocket).send(textFrame({ event: 'mark', sequence_number: ++seq, stream_sid: streamSid, mark: { name: 'stopped' } })); } catch {}
         try { (server as WebSocket).close(1000, 'bye'); } catch {}
         return;
       }
-    } catch {
+    } catch (err) {
+      console.warn('[Exotel WS] message parse error', err);
       try { (server as WebSocket).send(textFrame({ event: 'clear', stream_sid: streamSid })); } catch {}
     }
   });
 
   (server as WebSocket).addEventListener('close', () => {
     // cleanup resources if any
+    console.log('[Exotel WS] connection closed');
   });
 
   // @ts-ignore - webSocket is supported in Edge runtime ResponseInit
