@@ -33,20 +33,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Build the ws(s) URL. In dev we use ws://, in prod prefer wss://
-    // Build base using incoming origin if available
-    const incomingOrigin = request.headers.get('x-forwarded-host')
-      ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host')}`
+    // Prefer the incoming request host so the returned WSS URL matches the domain Exotel called.
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+    const incomingOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
+
+    // Build a WSS base from incoming origin if present; otherwise fallback to VERCEL_URL; then to localhost.
+    const wssFromIncoming = incomingOrigin
+      ? (incomingOrigin.startsWith('http:') ? incomingOrigin.replace('http:', 'ws:') : incomingOrigin.replace('https:', 'wss:'))
       : undefined;
-    const base = process.env.VERCEL_URL
-      ? `wss://${process.env.VERCEL_URL}`
-      : incomingOrigin
-        ? (incomingOrigin.startsWith('http:') ? incomingOrigin.replace('http:', 'ws:') : incomingOrigin.replace('https:', 'wss:'))
-        : `ws://localhost:3000`;
+    const base = wssFromIncoming
+      || (process.env.VERCEL_URL ? `wss://${process.env.VERCEL_URL}` : undefined)
+      || `ws://localhost:3000`;
+
+    // Debug logs to help diagnose connectivity issues (safe, no secrets)
+    console.log('[Exotel Passthrough] resolved base:', base, 'incomingOrigin:', incomingOrigin, 'VERCEL_URL:', process.env.VERCEL_URL);
 
     const params = new URLSearchParams({ 'sample-rate': sampleRate });
     for (const [k, v] of Object.entries(custom)) params.set(k, v);
 
     const wsUrl = `${base}/api/exotel/ws?${params.toString()}`;
+
+    console.log('[Exotel Passthrough] returning wsUrl:', wsUrl);
 
     return NextResponse.json({ url: wsUrl });
   } catch (e) {
