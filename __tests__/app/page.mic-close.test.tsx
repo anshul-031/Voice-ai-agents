@@ -49,23 +49,19 @@ describe('Home call toggle branch', () => {
   it('ends call and stops processing when call toggled off', async () => {
     const { useContinuousCall } = require('@/hooks/useContinuousCall')
     
-    // Mock as inactive initially
+    // Mock as active (call in progress)
     useContinuousCall.mockReturnValue({
-      callState: 'idle',
-      audioLevel: 0,
+      callState: 'active',
+      audioLevel: 0.5,
       startCall,
       endCall,
-      isCallActive: false,
+      isCallActive: true,
     })
 
     render(<Home />)
 
-    // First click: start call
-    const startBtn = await screen.findByRole('button', { name: /start call/i })
-    await userEvent.click(startBtn)
-
-    // Second click: end call, should call endCall
-    const endBtn = await screen.findByRole('button', { name: /end call/i })
+    // Find and click the end call button (since call is already active)
+    const endBtn = await screen.findByTitle('End Call')
     await userEvent.click(endBtn)
 
     await waitFor(() => {

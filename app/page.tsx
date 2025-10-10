@@ -10,7 +10,7 @@ import { useContinuousCall } from '@/hooks/useContinuousCall';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { LLMResponse, Message, ModelConfig, TTSResponse } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, MessageSquare, Phone, PhoneOff, RotateCcw, Send, X } from 'lucide-react';
+import { Clock, MessageSquare, Phone, PhoneOff, RotateCcw, Send } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
@@ -31,6 +31,8 @@ export default function Home() {
 
     // App state
     const [messages, setMessages] = useState<Message[]>([]);
+    const [chatMessages, setChatMessages] = useState<Message[]>([]); // Separate state for text chat history
+    const [isTextChatMode, setIsTextChatMode] = useState(false); // Track if we're in text chat mode vs call mode
     const [isProcessing, setIsProcessing] = useState(false);
     const [initialPrompt, setInitialPrompt] = useState(`# Role: You are Riya for collecting overdue EMI payments from customers of Punjab National Bank
 
@@ -98,7 +100,6 @@ $130,000 should be "one hundred and thirty thousand dollars"
     const textInputRef = useRef<HTMLInputElement>(null);
 
     // Confirmation dialog state
-    const [showRestartDialog, setShowRestartDialog] = useState(false);
     const [showEndDialog, setShowEndDialog] = useState(false);
     const [showChatHistory, setShowChatHistory] = useState(false);
 
@@ -228,8 +229,14 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 // Check again if call is still active before playing audio
                 if (!isCallActiveRef.current) {
                     console.log('[Home] Call ended during TTS generation, aborting');
+                    setProcessingStep('');
+                    setIsProcessing(false);
                     return;
                 }
+                
+                // Clear processing state once TTS response is received
+                setProcessingStep('');
+                setIsProcessing(false);
                 
                 if (ttsResponse.ok) {
                     const ttsData: TTSResponse = await ttsResponse.json();
@@ -284,7 +291,65 @@ $130,000 should be "one hundred and thirty thousand dollars"
         },
     });
 
-    // Handle call button toggle - simple start/end call
+    // Send automatic greeting when call connects
+    const sendGreetingMessage = useCallback(async () => {
+        const greetingText = 'नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?';
+        
+        console.log('[Home] Sending automatic greeting message');
+        
+        // Add assistant greeting to messages
+        const greetingMessage: Message = {
+            id: `greeting-${Date.now()}`,
+            text: greetingText,
+            source: 'assistant',
+            timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, greetingMessage]);
+        
+        // Generate TTS for greeting
+        try {
+            setProcessingStep('Generating greeting...');
+            setIsProcessing(true);
+            
+            const ttsResponse = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: greetingText }),
+            });
+            
+            setProcessingStep('');
+            setIsProcessing(false);
+            
+            if (!isCallActiveRef.current) {
+                console.log('[Home] Call ended before greeting TTS completed');
+                return;
+            }
+            
+            if (ttsResponse.ok) {
+                const ttsData = await ttsResponse.json();
+                if (ttsData.audio && isCallActiveRef.current) {
+                    const audio = new Audio(`data:audio/mpeg;base64,${ttsData.audio}`);
+                    currentAudioRef.current = audio;
+                    
+                    audio.onended = () => {
+                        console.log('[Home] Greeting audio playback ended');
+                        currentAudioRef.current = null;
+                    };
+                    
+                    await audio.play();
+                    console.log('[Home] Playing greeting audio');
+                }
+            } else {
+                console.warn('[Home] Greeting TTS failed');
+            }
+        } catch (error) {
+            console.error('[Home] Error sending greeting:', error);
+            setProcessingStep('');
+            setIsProcessing(false);
+        }
+    }, []);
+
+    // Handle call button toggle - simple start/end call (FRESH CALL EACH TIME)
     const handleCallToggle = useCallback(async () => {
         console.log('[Home] handleCallToggle called, isCallActive:', isCallActive, 'isChatOpen:', isChatOpen);
 
@@ -311,13 +376,31 @@ $130,000 should be "one hundred and thirty thousand dollars"
             // Close chat UI
             setIsChatOpen(false);
             
+            // Clear call messages (fresh call each time)
+            setMessages([]);
+            
             // Clear any processing state
             setProcessingStep('');
             setIsProcessing(false);
             
+            // Generate new session ID for next call
+            const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            setSessionId(newSessionId);
+            console.log('[Home] Generated new session ID for next call:', newSessionId);
+            
             console.log('[Home] Call ended successfully');
         } else {
-            console.log('[Home] Starting call...');
+            console.log('[Home] Starting fresh call...');
+            
+            // Clear messages for fresh call
+            setMessages([]);
+            setIsTextChatMode(false); // This is a call, not text chat
+            
+            // Generate new session ID
+            const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            setSessionId(newSessionId);
+            console.log('[Home] Generated new session ID for call:', newSessionId);
+            
             setIsChatOpen(true);
             try {
                 // Set flag to allow processing speech
@@ -330,6 +413,9 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 sttStart();
                 
                 console.log('[Home] Call started successfully');
+                
+                // Send automatic greeting message
+                sendGreetingMessage();
             } catch (error) {
                 console.error('[Home] Failed to start call:', error);
                 isCallActiveRef.current = false;
@@ -339,23 +425,20 @@ $130,000 should be "one hundred and thirty thousand dollars"
         }
     }, [isCallActive, isChatOpen, startCall, endCall, sttStart, sttStop]);
 
-    // Handle restart conversation
+    // Handle restart conversation (for TEXT CHAT mode only)
     const handleRestartConversation = useCallback(() => {
-        console.log('[Home] Restart conversation requested');
-        setShowRestartDialog(true);
-    }, []);
-
-    const confirmRestartConversation = useCallback(() => {
-        console.log('[Home] Restarting conversation...');
+        console.log('[Home] Clear chat requested');
+        
+        // Clear both chat and display messages
         setMessages([]);
+        setChatMessages([]);
 
-        // Generate new session ID for the new conversation
+        // Generate new session ID for the new chat
         const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         setSessionId(newSessionId);
         console.log('[Home] Generated new session ID:', newSessionId);
 
-        setShowRestartDialog(false);
-        console.log('[Home] Conversation cleared');
+        console.log('[Home] Chat cleared');
     }, []);
 
     // Handle end conversation
@@ -401,19 +484,21 @@ $130,000 should be "one hundred and thirty thousand dollars"
         console.log('[Home] Conversation ended');
     }, [endCall, sttStop]);
 
-    // Handle text message sending
+    // Handle text message sending (MAINTAINS HISTORY UNTIL REFRESH)
     const handleSendTextMessage = useCallback(async () => {
         if (!textMessage.trim() || isProcessing) return;
 
         console.log('[Home] Sending text message:', textMessage);
 
-        // Open chat if not already open
+        // Open chat if not already open and set to text chat mode
         if (!isChatOpen) {
             setIsChatOpen(true);
+            setIsTextChatMode(true); // This is text chat mode
         }
 
         const userMessageText = textMessage.trim();
         setTextMessage(''); // Clear input immediately
+        setIsProcessing(true);
 
         try {
             // Add user message
@@ -424,12 +509,12 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 timestamp: new Date(),
             };
 
-            // Update messages state and capture current conversation history
-            let currentMessages: Message[] = [];
-            setMessages(prev => {
-                currentMessages = [...prev, userMessage];
-                return currentMessages;
-            });
+            // Update CHAT messages state (persists until refresh)
+            const updatedMessages = [...chatMessages, userMessage];
+            setChatMessages(updatedMessages);
+            setMessages(updatedMessages);
+            
+            let currentMessages = updatedMessages;
 
             setProcessingStep('Generating response...');
 
@@ -467,7 +552,11 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 source: 'assistant',
                 timestamp: new Date(),
             };
-            setMessages(prev => [...prev, assistantMessage]);
+            
+            // Update chat messages state
+            const finalMessages = [...currentMessages, assistantMessage];
+            setChatMessages(finalMessages);
+            setMessages(finalMessages);
 
             setProcessingStep('Generating speech...');
 
@@ -477,6 +566,10 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: llmData.llmText }),
             });
+
+            // Clear processing state after TTS response
+            setProcessingStep('');
+            setIsProcessing(false);
 
             if (!ttsResponse.ok) {
                 console.warn('[Home] TTS failed, continuing without audio');
@@ -515,20 +608,30 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 source: 'assistant',
                 timestamp: new Date(),
             };
-            setMessages(prev => [...prev, errorMessage]);
+            const errorMessages = [...chatMessages, errorMessage];
+            setChatMessages(errorMessages);
+            setMessages(errorMessages);
         } finally {
             setProcessingStep('');
+            setIsProcessing(false);
         }
-    }, [textMessage, isProcessing, isChatOpen, initialPrompt, uid]);
+    }, [textMessage, isProcessing, isChatOpen, initialPrompt, sessionId, chatMessages, uid]);
 
     // Toggle text input visibility
     const toggleTextInput = useCallback(() => {
-        setShowTextInput(prev => !prev);
-        if (!showTextInput) {
+        const willShow = !showTextInput;
+        setShowTextInput(willShow);
+        
+        if (willShow) {
+            // When opening text chat, make sure we're in text chat mode
+            if (!isChatOpen) {
+                setIsChatOpen(true);
+                setIsTextChatMode(true);
+            }
             // Focus input when showing
             setTimeout(() => textInputRef.current?.focus(), 100);
         }
-    }, [showTextInput]);
+    }, [showTextInput, isChatOpen]);
 
     // Handle enter key in text input
     const handleTextInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -539,187 +642,239 @@ $130,000 should be "one hundred and thirty thousand dollars"
     }, [handleSendTextMessage]);
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white">
-            {/* Header */}
-            <div className="bg-slate-800 px-4 py-3">
-                <div className="max-w-4xl mx-auto">
-                    <h1 className="text-xl font-medium text-white">AI Voice Assistant</h1>
+        <div className="min-h-screen text-white">
+            {/* Modern Header */}
+            <header className="glass-panel border-b border-white/5 sticky top-0 z-50 backdrop-blur-xl">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+                            AI Voice Assistant
+                        </h1>
+                        <div className="flex items-center gap-3">
+                            <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60">
+                                v2.0
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             {/* Main Content */}
-            <div className="max-w-4xl mx-auto p-4">
-                {/* Model Configuration */}
-                <TopModelBoxes config={modelConfig} />
+            <main className="max-w-7xl mx-auto px-6 py-8">
+                <div className="space-y-6">
+                    {/* Model Configuration */}
+                    <TopModelBoxes config={modelConfig} />
 
-                {/* System Prompt */}
-                <InitialPromptEditor value={initialPrompt} onChange={setInitialPrompt} />
+                    {/* System Prompt */}
+                    <InitialPromptEditor value={initialPrompt} onChange={setInitialPrompt} />
 
-                {/* Chat Interface */}
-                <div className="bg-slate-800 rounded-md border border-slate-700 h-[500px] flex flex-col">
-                    {/* Chat Header */}
-                    <div className="p-3 border-b border-slate-700 space-y-3">
+                    {/* Chat Interface - Modern Design */}
+                    <div className="glass-panel rounded-2xl overflow-hidden h-[600px] flex flex-col animate-scale-in">
+                    {/* Modern Chat Header */}
+                    <div className="p-4 border-b border-white/5 bg-black/20 backdrop-blur-sm space-y-4">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <h3 className="text-base font-medium">Conversation</h3>
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-semibold text-white/90">Conversation</h3>
 
-                                {/* Conversation Control Buttons */}
+                                {/* Control Buttons */}
                                 <motion.div
                                     className="flex items-center gap-2"
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3 }}
                                 >
-                                    {/* History Button - Always Visible */}
+                                    {/* History Button */}
                                     <motion.button
                                         onClick={() => setShowChatHistory(true)}
-                                        className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
                                         title="View chat history"
                                         disabled={isProcessing}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                     >
-                                        <Clock size={12} />
+                                        <Clock size={13} />
                                         <span>History</span>
                                     </motion.button>
 
-                                    {/* Restart and End buttons - Only when messages exist */}
-                                    {messages.length > 0 && (
-                                        <>
-                                            <motion.button
-                                                onClick={handleRestartConversation}
-                                                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Restart conversation (clear messages)"
-                                                disabled={isProcessing}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                            >
-                                                <RotateCcw size={12} />
-                                                <span>Restart</span>
-                                            </motion.button>
-                                            <motion.button
-                                                onClick={handleEndConversation}
-                                                className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="End conversation (stop and clear)"
-                                                disabled={isProcessing}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                            >
-                                                <X size={12} />
-                                                <span>End</span>
-                                            </motion.button>
-                                        </>
+                                    {/* Clear Chat - Only for TEXT CHAT mode */}
+                                    {isTextChatMode && messages.length > 0 && !isCallActive && (
+                                        <motion.button
+                                            onClick={handleRestartConversation}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
+                                            title="Clear chat messages"
+                                            disabled={isProcessing}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            <RotateCcw size={13} />
+                                            <span>Clear</span>
+                                        </motion.button>
                                     )}
                                 </motion.div>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                {/* Call Status Indicator */}
+                            <div className="flex items-center gap-4">
+                                {/* Modern Status Indicator */}
                                 {(() => {
-                                    const color = isCallActive ? 'bg-green-500' : (isProcessing ? 'bg-yellow-500' : 'bg-gray-500');
-                                    const label = isCallActive ? `Call Active ${sttIsListening ? '(Listening)' : ''}` : (isProcessing ? 'Processing' : 'Ready');
+                                    const statusConfig = isCallActive 
+                                        ? { color: 'bg-green-500', glow: 'shadow-[0_0_12px_rgba(48,209,88,0.5)]', label: 'On Call', sublabel: sttIsListening ? 'Listening' : 'Active' }
+                                        : isProcessing
+                                        ? { color: 'bg-blue-500', glow: 'shadow-[0_0_12px_rgba(10,132,255,0.5)]', label: 'Processing', sublabel: '' }
+                                        : { color: 'bg-white/20', glow: '', label: 'Ready', sublabel: '' };
+                                    
                                     return (
-                                        <>
-                                            <div className={`w-2 h-2 rounded-full ${color} ${isCallActive ? 'animate-pulse' : ''}`}></div>
-                                            <span className="text-xs text-gray-400">{label}</span>
-                                        </>
+                                        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                                            <div className={`w-2 h-2 rounded-full ${statusConfig.color} ${statusConfig.glow} ${isCallActive ? 'animate-pulse' : ''}`}></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-medium text-white/90">{statusConfig.label}</span>
+                                                {statusConfig.sublabel && (
+                                                    <span className="text-[10px] text-white/50">{statusConfig.sublabel}</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     );
                                 })()}
 
                                 {/* Text Chat Button */}
                                 <motion.button
                                     onClick={toggleTextInput}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all ${showTextInput
-                                        ? 'bg-purple-600 hover:bg-purple-700'
-                                        : 'bg-slate-700 hover:bg-slate-600'
-                                        }`}
-                                    title="Toggle text chat"
+                                    className={`flex items-center justify-center w-11 h-11 rounded-xl transition-all border ${
+                                        showTextInput
+                                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400/30 shadow-lg shadow-blue-500/25'
+                                            : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
+                                    }`}
+                                    title="Text chat mode"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
                                     <MessageSquare size={20} className="text-white" />
                                 </motion.button>
 
-                                {/* Call Button - Start/End Call */}
+                                {/* Call Button - Modern Design */}
                                 <motion.button
                                     onClick={handleCallToggle}
-                                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isCallActive || isChatOpen
-                                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-green-600 hover:bg-green-700 text-white'
-                                        }`}
-                                    title={isCallActive || isChatOpen ? "End Call" : "Start Call"}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold transition-all border shadow-lg ${
+                                        isCallActive
+                                            ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-400/30 shadow-red-500/25 hover:shadow-red-500/40 text-white'
+                                            : 'bg-gradient-to-br from-green-500 to-green-600 border-green-400/30 shadow-green-500/25 hover:shadow-green-500/40 text-white'
+                                    }`}
+                                    title={isCallActive ? "End Call" : "Start Call"}
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
                                     disabled={callState === 'connecting' || callState === 'ending'}
                                 >
-                                    {isCallActive || isChatOpen ? (
+                                    {isCallActive ? (
                                         <>
-                                            <PhoneOff size={18} />
-                                            <span>End Call</span>
+                                            <PhoneOff size={19} strokeWidth={2.5} />
+                                            <span className="text-sm">End Call</span>
                                         </>
                                     ) : (
                                         <>
-                                            <Phone size={18} />
-                                            <span>Start Call</span>
+                                            <Phone size={19} strokeWidth={2.5} />
+                                            <span className="text-sm">Start Call</span>
                                         </>
                                     )}
                                 </motion.button>
                             </div>
                         </div>
 
-                        {/* Text Input Area */}
+                        {/* Modern Text Input Area */}
                         <AnimatePresence>
                             {showTextInput && (
                                 <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.2 }}
+                                    initial={{ opacity: 0, height: 0, y: -10 }}
+                                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                                    exit={{ opacity: 0, height: 0, y: -10 }}
+                                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-2 pt-3">
-                                        <input
-                                            ref={textInputRef}
-                                            type="text"
-                                            value={textMessage}
-                                            onChange={(e) => setTextMessage(e.target.value)}
-                                            onKeyDown={handleTextInputKeyDown}
-                                            placeholder="Type your message here..."
-                                            disabled={isProcessing}
-                                            className="flex-1 px-4 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        />
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative flex-1">
+                                            <input
+                                                ref={textInputRef}
+                                                type="text"
+                                                value={textMessage}
+                                                onChange={(e) => setTextMessage(e.target.value)}
+                                                onKeyDown={handleTextInputKeyDown}
+                                                placeholder="Type your message..."
+                                                disabled={isProcessing}
+                                                className="w-full px-4 py-3 bg-white/5 text-white border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder-white/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all backdrop-blur-sm"
+                                            />
+                                        </div>
                                         <motion.button
                                             onClick={handleSendTextMessage}
                                             disabled={!textMessage.trim() || isProcessing}
-                                            className="flex items-center justify-center w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="flex items-center justify-center w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 border border-blue-400/30"
                                             title="Send message"
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                         >
-                                            <Send size={18} />
+                                            <Send size={19} strokeWidth={2.5} />
                                         </motion.button>
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        {/* Call Tips */}
+                        {/* Modern Call Status */}
                         {isCallActive && (
-                            <p className="text-xs text-green-400">
-                                📞 Call active - speak naturally, end call anytime
-                            </p>
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg"
+                            >
+                                <p className="text-xs font-medium text-green-400 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                                    Call active - Speak naturally
+                                </p>
+                            </motion.div>
                         )}
 
-                        {/* Audio Level Indicator and Interim Transcript */}
+                        {/* Split View: Transcription + Visualizer */}
                         {isCallActive && (
-                            <div className="space-y-2">
-                                {/* Show interim transcript if available */}
-                                {sttIsListening && interimTranscript && (
-                                    <p className="text-xs text-gray-300 italic">💬 {interimTranscript}</p>
-                                )}
-                                {/* Show audio level */}
-                                <AudioLevelIndicator level={audioLevel} isListening={isCallActive} />
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                            >
+                                {/* Left: Transcription Section */}
+                                <div className="glass-panel rounded-2xl p-4 border border-white/10 min-h-[200px]">
+                                    <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                                        <span className="text-blue-400">💬</span>
+                                        Live Transcription
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {sttIsListening && interimTranscript && (
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className="px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg"
+                                            >
+                                                <p className="text-sm text-blue-300 italic">
+                                                    {interimTranscript}
+                                                </p>
+                                            </motion.div>
+                                        )}
+                                        {!interimTranscript && (
+                                            <p className="text-xs text-white/40 italic">
+                                                Speak to see your words transcribed here...
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Right: Audio Visualizer Section */}
+                                <div className="glass-panel rounded-2xl p-4 border border-white/10">
+                                    <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                                        <span className="text-green-400">🎙️</span>
+                                        Audio Visualizer
+                                    </h3>
+                                    <AudioLevelIndicator level={audioLevel} isListening={isCallActive} />
+                                </div>
+                            </motion.div>
                         )}
                     </div>
 
@@ -734,25 +889,15 @@ $130,000 should be "one hundred and thirty thousand dollars"
                         />
                     </div>
                 </div>
-            </div>
+                </div>
+            </main>
 
-            {/* Confirmation Dialogs */}
-            <ConfirmDialog
-                isOpen={showRestartDialog}
-                title="Restart Conversation"
-                message="Are you sure you want to restart the conversation? This will clear all messages but keep the microphone active."
-                confirmLabel="Restart"
-                cancelLabel="Cancel"
-                confirmColor="blue"
-                onConfirm={confirmRestartConversation}
-                onCancel={() => setShowRestartDialog(false)}
-            />
-
+            {/* Confirmation Dialog for ending call */}
             <ConfirmDialog
                 isOpen={showEndDialog}
-                title="End Conversation"
-                message="Are you sure you want to end the conversation? This will stop recording and clear all messages."
-                confirmLabel="End Conversation"
+                title="End Call"
+                message="Are you sure you want to end the call? This will stop recording and clear all messages."
+                confirmLabel="End Call"
                 cancelLabel="Cancel"
                 confirmColor="red"
                 onConfirm={confirmEndConversation}

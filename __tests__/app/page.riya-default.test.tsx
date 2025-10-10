@@ -147,15 +147,15 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             // Open text chat
-            const textChatButton = screen.getByTitle('Toggle text chat')
+            const textChatButton = screen.getByTitle('Text chat mode')
             fireEvent.click(textChatButton)
 
             await waitFor(() => {
-                expect(screen.getByPlaceholderText('Type your message here...')).toBeInTheDocument()
+                expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument()
             })
 
             // Type and send message
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             fireEvent.change(input, { target: { value: 'Hello' } })
 
             const sendButton = screen.getByTitle('Send message')

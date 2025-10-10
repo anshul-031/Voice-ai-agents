@@ -6,7 +6,7 @@ describe('AudioLevelIndicator', () => {
     it('should render the component with audio level', () => {
       render(<AudioLevelIndicator level={0.05} isListening={true} />)
       
-      expect(screen.getByText('Audio Active')).toBeInTheDocument()
+      expect(screen.getByText('Listening')).toBeInTheDocument()
       expect(screen.getByText('50', { exact: false })).toBeInTheDocument()
       expect(screen.getByText('%', { exact: false })).toBeInTheDocument()
     })
@@ -25,39 +25,40 @@ describe('AudioLevelIndicator', () => {
       expect(screen.getByText('%', { exact: false })).toBeInTheDocument()
     })
 
-    it('should show Audio Idle when not listening', () => {
+    it('should show Idle when not listening', () => {
       render(<AudioLevelIndicator level={0.5} isListening={false} />)
       
-      expect(screen.getByText('Audio Idle')).toBeInTheDocument()
+      expect(screen.getByText('Idle')).toBeInTheDocument()
     })
 
-    it('should show Audio Active when listening', () => {
+    it('should show Listening when listening', () => {
       render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      expect(screen.getByText('Audio Active')).toBeInTheDocument()
+      expect(screen.getByText('Listening')).toBeInTheDocument()
     })
   })
 
-  describe('Frequency Bars', () => {
-    it('should render 32 frequency bars', () => {
+  describe('Canvas Visualizer', () => {
+    it('should render canvas element', () => {
       const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      const bars = container.querySelectorAll('.rounded-full.flex-1')
-      expect(bars).toHaveLength(32)
+      const canvas = container.querySelector('canvas')
+      expect(canvas).toBeInTheDocument()
     })
 
-    it('should show blue gradient when listening', () => {
+    it('should show green indicator when listening', () => {
       const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      const bar = container.querySelector('.from-blue-600')
-      expect(bar).toBeInTheDocument()
+      // Look for the green pulsing dot indicator
+      const greenIndicator = container.querySelector('.bg-gradient-to-br.from-green-400')
+      expect(greenIndicator).toBeInTheDocument()
     })
 
-    it('should show slate gradient when not listening', () => {
-      const { container } = render(<AudioLevelIndicator level={0.5} isListening={false} />)
+    it('should not show green indicator when not listening', () => {
+      const { container} = render(<AudioLevelIndicator level={0.5} isListening={false} />)
       
-      const bar = container.querySelector('.from-slate-700')
-      expect(bar).toBeInTheDocument()
+      const greenIndicator = container.querySelector('.bg-gradient-to-br.from-green-400')
+      expect(greenIndicator).not.toBeInTheDocument()
     })
   })
 
@@ -65,8 +66,10 @@ describe('AudioLevelIndicator', () => {
     it('should have glass-card styling', () => {
       const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      const glassCards = container.querySelectorAll('.glass-card')
-      expect(glassCards.length).toBeGreaterThan(0)
+      // Component uses backdrop-blur and glass effects (rounded-2xl, border, bg-gradient)
+      const visualizerContainer = container.querySelector('.rounded-2xl')
+      expect(visualizerContainer).toBeInTheDocument()
+      expect(visualizerContainer).toHaveClass('bg-gradient-to-br')
     })
   })
 

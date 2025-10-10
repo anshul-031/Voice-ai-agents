@@ -1,5 +1,51 @@
 @import "tailwindcss";
 
+:root {
+  /* Modern Apple-inspired Color Palette */
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #0a0a0a;
+  --color-bg-tertiary: #141414;
+  --color-bg-elevated: #1a1a1a;
+  
+  --color-surface: #1e1e1e;
+  --color-surface-hover: #252525;
+  --color-surface-active: #2a2a2a;
+  
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-tertiary: rgba(255, 255, 255, 0.5);
+  
+  --color-accent-blue: #0a84ff;
+  --color-accent-blue-dark: #0066cc;
+  --color-accent-blue-glow: rgba(10, 132, 255, 0.3);
+  
+  --color-success: #30d158;
+  --color-success-glow: rgba(48, 209, 88, 0.3);
+  
+  --color-danger: #ff453a;
+  --color-danger-glow: rgba(255, 69, 58, 0.3);
+  
+  --blur-glass: 40px;
+  --blur-strong: 20px;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.8);
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 html,
 body,
 #__next {
@@ -8,9 +54,12 @@ body,
 
 @layer base {
   body {
-    @apply text-white antialiased;
-    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f172a 100%);
+    color: white;
+    background: radial-gradient(ellipse at top, #0a0a0a 0%, #000000 50%, #000000 100%);
     background-attachment: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -24,79 +73,229 @@ body,
     display: none;
   }
 
-  /* Premium Glassmorphism Effects */
+  /* Modern Apple-Inspired Glass Effects */
   .glass-panel {
-    background: rgba(15, 23, 42, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(59, 130, 246, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37),
-                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-  }
-
-  .glass-card {
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(71, 85, 105, 0.3);
-    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.25),
+    background: rgba(26, 26, 26, 0.7);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg),
                 inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
   }
 
+  .glass-card {
+    background: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(var(--blur-strong));
+    -webkit-backdrop-filter: blur(var(--blur-strong));
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
+  }
+
   .glass-button {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.15) 0%, rgba(0, 102, 204, 0.15) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2),
-                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(10, 132, 255, 0.2);
+    box-shadow: 0 2px 12px rgba(10, 132, 255, 0.15),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    transition: var(--transition-base);
   }
 
   .glass-button:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.3) 100%);
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4),
-                inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.25) 0%, rgba(0, 102, 204, 0.25) 100%);
+    border-color: rgba(10, 132, 255, 0.4);
+    box-shadow: 0 4px 20px rgba(10, 132, 255, 0.3),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
   }
 
-  /* Glow Effects */
+  /* Modern Glow Effects */
   .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5),
-                0 0 40px rgba(59, 130, 246, 0.3),
-                0 0 60px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 20px var(--color-accent-blue-glow),
+                0 0 40px var(--color-accent-blue-glow),
+                0 0 60px rgba(10, 132, 255, 0.1);
   }
 
   .glow-blue-intense {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.7),
-                0 0 60px rgba(59, 130, 246, 0.5),
-                0 0 90px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 30px var(--color-accent-blue-glow),
+                0 0 60px rgba(10, 132, 255, 0.4),
+                0 0 90px rgba(10, 132, 255, 0.2);
+    animation: pulse-blue 2s ease-in-out infinite;
   }
 
   .glow-red {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5),
-                0 0 40px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 20px var(--color-danger-glow),
+                0 0 40px var(--color-danger-glow);
   }
 
   .glow-green {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5),
-                0 0 40px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 20px var(--color-success-glow),
+                0 0 40px var(--color-success-glow);
   }
 
   /* Smooth Transitions */
   .transition-smooth {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: var(--transition-base);
   }
 
   .transition-bounce {
     transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 
-  /* Custom Scrollbar */
+  /* Premium Button Styles */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-accent-blue) 0%, var(--color-accent-blue-dark) 100%);
+    border: 1px solid rgba(10, 132, 255, 0.3);
+    box-shadow: 0 2px 12px rgba(10, 132, 255, 0.25),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    transition: var(--transition-base);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1a94ff 0%, #0a84ff 100%);
+    box-shadow: 0 4px 20px rgba(10, 132, 255, 0.4),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, var(--color-success) 0%, #28c247 100%);
+    border: 1px solid rgba(48, 209, 88, 0.3);
+    box-shadow: 0 2px 12px rgba(48, 209, 88, 0.25),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    transition: var(--transition-base);
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #40e168 0%, #30d158 100%);
+    box-shadow: 0 4px 20px rgba(48, 209, 88, 0.4),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, var(--color-danger) 0%, #ff3429 100%);
+    border: 1px solid rgba(255, 69, 58, 0.3);
+    box-shadow: 0 2px 12px rgba(255, 69, 58, 0.25),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    transition: var(--transition-base);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ff554a 0%, #ff453a 100%);
+    box-shadow: 0 4px 20px rgba(255, 69, 58, 0.4),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+
+  /* Custom Scrollbar - Modern Design */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: var(--transition-fast);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Premium Surface Effects */
+  .surface-elevated {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+
+  .surface-interactive {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    transition: var(--transition-base);
+  }
+
+  .surface-interactive:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+  }
+
+  /* Modern Animations */
+  @keyframes pulse-blue {
+    0%, 100% {
+      box-shadow: 0 0 20px var(--color-accent-blue-glow),
+                  0 0 40px rgba(10, 132, 255, 0.3),
+                  0 0 60px rgba(10, 132, 255, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 30px var(--color-accent-blue-glow),
+                  0 0 60px rgba(10, 132, 255, 0.5),
+                  0 0 90px rgba(10, 132, 255, 0.3);
+    }
+  }
+
+  @keyframes pulse-green {
+    0%, 100% {
+      box-shadow: 0 0 20px var(--color-success-glow),
+                  0 0 40px rgba(48, 209, 88, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 30px var(--color-success-glow),
+                  0 0 60px rgba(48, 209, 88, 0.4);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in {
+    animation: slideInRight 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {

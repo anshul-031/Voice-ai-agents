@@ -89,9 +89,10 @@ describe('Continuous Call Feature', () => {
         it('should show "Start Call" button when call is not active', () => {
             render(<Home />);
             
-            const startButton = screen.getByRole('button', { name: /start call/i });
+            const startButton = screen.getByTitle('Start Call');
             expect(startButton).toBeInTheDocument();
-            expect(startButton).toHaveClass('bg-green-600');
+            expect(startButton).toHaveClass('from-green-500');
+            expect(startButton).toHaveClass('to-green-600');
         });
 
         it('should show "End Call" button when call is active', () => {
@@ -105,9 +106,10 @@ describe('Continuous Call Feature', () => {
 
             render(<Home />);
             
-            const endButton = screen.getByRole('button', { name: /end call/i });
+            const endButton = screen.getByTitle('End Call');
             expect(endButton).toBeInTheDocument();
-            expect(endButton).toHaveClass('bg-red-600');
+            expect(endButton).toHaveClass('from-red-500');
+            expect(endButton).toHaveClass('to-red-600');
         });
 
         it('should disable button during connecting state', () => {
@@ -334,7 +336,7 @@ describe('Continuous Call Feature', () => {
 
             render(<Home />);
             
-            expect(screen.getByText(/call active \(listening\)/i)).toBeInTheDocument();
+            expect(screen.getByText(/Call active - Speak naturally/i)).toBeInTheDocument();
         });
 
         it('should show pulse animation when call is active', () => {
@@ -365,13 +367,13 @@ describe('Continuous Call Feature', () => {
 
             render(<Home />);
             
-            expect(screen.getByText(/call active - speak naturally, end call anytime/i)).toBeInTheDocument();
+            expect(screen.getByText(/Call active - Speak naturally/i)).toBeInTheDocument();
         });
 
         it('should not show call tips when call is not active', () => {
             render(<Home />);
             
-            const callTips = screen.queryByText(/call active - speak naturally/i);
+            const callTips = screen.queryByText(/Call active - Speak naturally/i);
             expect(callTips).not.toBeInTheDocument();
         });
 
@@ -387,7 +389,7 @@ describe('Continuous Call Feature', () => {
             render(<Home />);
             
             // AudioLevelIndicator should be rendered
-            expect(screen.getByText(/audio active/i)).toBeInTheDocument();
+            expect(screen.getByText(/Listening/i)).toBeInTheDocument();
         });
 
         it('should show interim transcript when available', () => {
@@ -411,7 +413,8 @@ describe('Continuous Call Feature', () => {
 
             render(<Home />);
             
-            expect(screen.getByText(/💬 hello this is a test/i)).toBeInTheDocument();
+            // Interim transcript is now shown in the split layout transcription panel
+            expect(screen.getByText('Hello this is a test')).toBeInTheDocument();
         });
     });
 

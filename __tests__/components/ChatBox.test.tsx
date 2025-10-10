@@ -3,7 +3,7 @@ import { createMockMessage, render, screen } from '../test-utils'
 
 describe('ChatBox', () => {
   describe('Initial State (Not Open)', () => {
-    it('should show ready to start message when not open', () => {
+    it('should show Ready to Connect message when not open', () => {
       render(
         <ChatBox
           messages={[]}
@@ -13,8 +13,8 @@ describe('ChatBox', () => {
         />
       )
 
-      expect(screen.getByText('Ready to Start')).toBeInTheDocument()
-      expect(screen.getByText(/Click the microphone button/i)).toBeInTheDocument()
+      expect(screen.getByText('Ready to Connect')).toBeInTheDocument()
+      expect(screen.getByText(/Start a call or send a text message/i)).toBeInTheDocument()
     })
 
     it('should not show messages when not open', () => {
@@ -34,7 +34,7 @@ describe('ChatBox', () => {
   })
 
   describe('Chat Open State', () => {
-    it('should show listening message when open with no messages', () => {
+    it('should show waiting message when open with no messages', () => {
       render(
         <ChatBox
           messages={[]}
@@ -44,8 +44,7 @@ describe('ChatBox', () => {
         />
       )
 
-      expect(screen.getByText('🎤 Listening...')).toBeInTheDocument()
-      expect(screen.getByText(/Speak naturally and clearly/i)).toBeInTheDocument()
+      expect(screen.getByText('Waiting for messages...')).toBeInTheDocument()
     })
 
     it('should display user messages correctly', () => {
@@ -181,37 +180,36 @@ describe('ChatBox', () => {
           isOpen={true}
           isListening={false}
           isProcessing={true}
-          processingStep="Transcribing audio..."
         />
       )
 
-      expect(screen.getByText('Transcribing audio...')).toBeInTheDocument()
+      expect(screen.getByText('Generating...')).toBeInTheDocument()
     })
 
-    it('should show different processing steps', () => {
-      const { rerender } = render(
+    it('should show simple loader with generating text', () => {
+      render(
         <ChatBox
           messages={[]}
           isOpen={true}
           isListening={false}
           isProcessing={true}
-          processingStep="Generating response..."
         />
       )
 
-      expect(screen.getByText('Generating response...')).toBeInTheDocument()
+      expect(screen.getByText('Generating...')).toBeInTheDocument()
+    })
 
-      rerender(
+    it('should hide loader when not processing', () => {
+      render(
         <ChatBox
           messages={[]}
           isOpen={true}
           isListening={false}
-          isProcessing={true}
-          processingStep="Generating speech..."
+          isProcessing={false}
         />
       )
 
-      expect(screen.getByText('Generating speech...')).toBeInTheDocument()
+      expect(screen.queryByText('Generating...')).not.toBeInTheDocument()
     })
   })
 

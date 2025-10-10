@@ -155,7 +155,7 @@ export default function ChatBox({
     const scrollRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        if (scrollRef.current) {
+        if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
             scrollRef.current.scrollTo({
                 top: scrollRef.current.scrollHeight,
                 behavior: 'smooth'
@@ -170,22 +170,33 @@ export default function ChatBox({
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-center max-w-md"
+                        transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                        className="text-center max-w-lg"
                     >
-                        <div className="mb-6">
+                        <div className="mb-8">
                             <motion.div
-                                className="w-24 h-24 mx-auto glass-button rounded-3xl flex items-center justify-center glow-blue"
-                                whileHover={{ scale: 1.05 }}
-                                transition={{ type: "spring", stiffness: 300 }}
+                                className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-500/20 to-cyan-500/10 rounded-[2rem] flex items-center justify-center border border-blue-500/20 backdrop-blur-sm shadow-2xl"
+                                whileHover={{ scale: 1.05, rotate: 5 }}
+                                animate={{ 
+                                    boxShadow: [
+                                        '0 0 30px rgba(10, 132, 255, 0.2)',
+                                        '0 0 50px rgba(10, 132, 255, 0.4)',
+                                        '0 0 30px rgba(10, 132, 255, 0.2)'
+                                    ]
+                                }}
+                                transition={{ 
+                                    boxShadow: { duration: 2, repeat: Infinity }
+                                }}
                             >
-                                <Mic className="h-12 w-12 text-blue-300 drop-shadow-lg" />
+                                <Mic className="h-16 w-16 text-blue-400 drop-shadow-2xl" strokeWidth={1.5} />
                             </motion.div>
                         </div>
 
-                        <h3 className="text-2xl font-bold text-white mb-3 text-gradient-blue">Ready to Start</h3>
-                        <p className="text-gray-400 leading-relaxed">
-                            Click the microphone button to begin your conversation with the AI assistant.
+                        <h3 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+                            Ready to Connect
+                        </h3>
+                        <p className="text-white/60 text-lg leading-relaxed">
+                            Start a call or send a text message to begin your conversation
                         </p>
                     </motion.div>
                 </div>
@@ -197,25 +208,22 @@ export default function ChatBox({
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="text-center py-12"
+                            className="flex items-center justify-center h-full"
                         >
-                            <motion.div
-                                className="inline-flex items-center justify-center w-20 h-20 rounded-full glass-card mb-4 border border-red-400/30"
-                                animate={{
-                                    boxShadow: [
-                                        '0 0 20px rgba(239, 68, 68, 0.3)',
-                                        '0 0 40px rgba(239, 68, 68, 0.5)',
-                                        '0 0 20px rgba(239, 68, 68, 0.3)'
-                                    ]
-                                }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse shadow-lg"></div>
-                            </motion.div>
-                            <h3 className="text-lg font-semibold text-white mb-2">🎤 Listening...</h3>
-                            <p className="text-gray-400">
-                                Speak naturally and clearly.
-                            </p>
+                            <div className="text-center">
+                                <motion.div
+                                    className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 border border-white/10 mb-4"
+                                    animate={{
+                                        scale: [1, 1.05, 1],
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                >
+                                    <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
+                                </motion.div>
+                                <p className="text-sm text-white/50">
+                                    Waiting for messages...
+                                </p>
+                            </div>
                         </motion.div>
                     ) : (
                         messages.map((message, index) => (
@@ -264,46 +272,30 @@ export default function ChatBox({
 
                     {isProcessing && (
                         <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="flex justify-start"
                         >
-                            <div className="max-w-[85%] mr-4">
-                                <div className="relative px-5 py-3.5 rounded-2xl glass-card border border-blue-400/20 text-white shadow-xl">
-                                    <div className="flex items-center gap-2.5 mb-2.5">
-                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-md">
-                                            <Bot size={14} className="text-blue-300 drop-shadow" />
-                                        </div>
-                                        <span className="text-xs font-semibold opacity-90">AI Assistant</span>
-                                        <span className="text-xs opacity-60 ml-auto font-mono">
-                                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                        {/* Animated dots */}
-                                        <div className="flex gap-1.5">
-                                            {[0, 1, 2].map((i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    className="w-2 h-2 rounded-full bg-blue-400"
-                                                    animate={{
-                                                        scale: [1, 1.3, 1],
-                                                        opacity: [0.5, 1, 0.5]
-                                                    }}
-                                                    transition={{
-                                                        duration: 1,
-                                                        repeat: Infinity,
-                                                        delay: i * 0.2
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className="text-gray-300 font-medium">{processingStep || 'Processing your request...'}</div>
-                                    </div>
-
-                                    {/* Glass shine */}
-                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                {/* Simple pulsing dots */}
+                                <div className="flex gap-1">
+                                    {[0, 1, 2].map((i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="w-1.5 h-1.5 rounded-full bg-blue-400"
+                                            animate={{
+                                                opacity: [0.3, 1, 0.3]
+                                            }}
+                                            transition={{
+                                                duration: 1,
+                                                repeat: Infinity,
+                                                delay: i * 0.15
+                                            }}
+                                        />
+                                    ))}
                                 </div>
+                                <span className="text-xs text-blue-300">Generating...</span>
                             </div>
                         </motion.div>
                     )}
