@@ -5,13 +5,12 @@ import ChatBox from '@/components/ChatBox';
 import ChatHistory from '@/components/ChatHistory';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import InitialPromptEditor from '@/components/InitialPromptEditor';
-import MicButton from '@/components/MicButton';
 import TopModelBoxes from '@/components/TopModelBoxes';
+import { useContinuousCall } from '@/hooks/useContinuousCall';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { LLMResponse, Message, ModelConfig, TranscriptionResponse, TTSResponse } from '@/types';
+import { LLMResponse, Message, ModelConfig, TTSResponse } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, MessageSquare, RotateCcw, Send, X } from 'lucide-react';
+import { Clock, MessageSquare, Phone, PhoneOff, RotateCcw, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ConfigStatus {
@@ -32,6 +31,7 @@ export default function Home() {
 
     // App state
     const [messages, setMessages] = useState<Message[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [initialPrompt, setInitialPrompt] = useState(`# Role: You are Riya for collecting overdue EMI payments from customers of Punjab National Bank
 
 ## Profile
@@ -102,6 +102,10 @@ $130,000 should be "one hundred and thirty thousand dollars"
     const [showEndDialog, setShowEndDialog] = useState(false);
     const [showChatHistory, setShowChatHistory] = useState(false);
 
+    // Audio playback tracking
+    const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+    const isCallActiveRef = useRef<boolean>(false);
+
     // Model configuration
     const [modelConfig] = useState<ModelConfig>({
         llmModel: 'Gemini 1.5 Flash',
@@ -135,185 +139,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
     // Unique ID generator for stable keys
     const uid = useCallback(() => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, []);
 
-    // Handle audio segment processing
-    const handleAudioSegment = useCallback(async (audioBlob: Blob) => {
-        console.log('[Home] handleAudioSegment called');
-        console.log('[Home] Audio blob size:', audioBlob.size, 'bytes');
-        console.log('[Home] Audio blob type:', audioBlob.type);
-
-        try {
-            setProcessingStep('Transcribing audio...');
-            console.log('[Home] Step 1: Starting transcription...');
-
-            // Step 1: Upload and transcribe audio
-            const formData = new FormData();
-            // Append with proper filename and type
-            const filename = audioBlob.type.includes('webm') ? 'audio.webm' :
-                audioBlob.type.includes('mp4') ? 'audio.mp4' :
-                    audioBlob.type.includes('wav') ? 'audio.wav' : 'audio.webm';
-
-            console.log('[Home] Using filename:', filename);
-            formData.append('audio', audioBlob, filename);
-
-            console.log('[Home] Sending audio to /api/upload-audio...');
-            const transcriptionResponse = await fetch('/api/upload-audio', {
-                method: 'POST',
-                body: formData,
-            });
-
-            console.log('[Home] Transcription response status:', transcriptionResponse.status);
-
-            if (!transcriptionResponse.ok) {
-                const errorData = await transcriptionResponse.json();
-                console.error('[Home] Transcription failed:', errorData);
-                throw new Error(errorData.error || 'Transcription failed');
-            }
-
-            const transcriptionData: TranscriptionResponse = await transcriptionResponse.json();
-            console.log('[Home] Transcription successful:', transcriptionData.text);
-
-            if (!transcriptionData.text?.trim()) {
-                console.log('[Home] No speech detected in audio, skipping...');
-                setProcessingStep('');
-                return; // No speech detected, skip
-            }
-
-            // Add user message
-            const userMessage: Message = {
-                id: uid(),
-                text: transcriptionData.text,
-                source: 'user',
-                timestamp: new Date(),
-            };
-            console.log('[Home] Adding user message to chat:', userMessage);
-
-            // Update messages state and capture current conversation history
-            let currentMessages: Message[] = [];
-            setMessages(prev => {
-                currentMessages = [...prev, userMessage];
-                return currentMessages;
-            });
-
-            setProcessingStep('Generating response...');
-            console.log('[Home] Step 2: Requesting LLM response with conversation history...');
-
-            // Step 2: Get LLM response with conversation history
-            const llmResponse = await fetch('/api/llm', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    prompt: initialPrompt,
-                    userText: transcriptionData.text,
-                    sessionId: sessionId,
-                    conversationHistory: currentMessages.slice(0, -1).map(m => ({
-                        text: m.text,
-                        source: m.source
-                    })),
-                }),
-            });
-
-            console.log('[Home] LLM response status:', llmResponse.status);
-
-            if (!llmResponse.ok) {
-                const errorData = await llmResponse.json();
-                console.error('[Home] LLM request failed:', errorData);
-                throw new Error(errorData.error || 'LLM request failed');
-            }
-
-            const llmData: LLMResponse = await llmResponse.json();
-            console.log('[Home] LLM response received:', llmData.llmText);
-
-            // Add assistant message
-            const assistantMessage: Message = {
-                id: uid(),
-                text: llmData.llmText,
-                source: 'assistant',
-                timestamp: new Date(),
-            };
-            console.log('[Home] Adding assistant message to chat:', assistantMessage);
-            setMessages(prev => [...prev, assistantMessage]);
-
-            setProcessingStep('Generating speech...');
-            console.log('[Home] Step 3: Generating TTS audio...');
-
-            // Step 3: Generate and play TTS
-            const ttsResponse = await fetch('/api/tts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: llmData.llmText,
-                }),
-            });
-
-            console.log('[Home] TTS response status:', ttsResponse.status);
-
-            if (!ttsResponse.ok) {
-                const errorData = await ttsResponse.json();
-                console.error('[Home] TTS request failed:', errorData);
-                throw new Error(errorData.error || 'TTS request failed');
-            }
-
-            const ttsData: TTSResponse = await ttsResponse.json();
-
-            if (ttsData.audioData) {
-                console.log('[Home] TTS audio generated, size:', ttsData.audioData.length, 'bytes (base64)');
-                console.log('[Home] Converting and playing audio...');
-                // Convert base64 to audio and play
-                const audioBytes = Uint8Array.from(atob(ttsData.audioData), c => c.charCodeAt(0));
-                const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-
-                const audio = new Audio(audioUrl);
-                console.log('[Home] Starting audio playback...');
-                audio.play().catch(err => console.error('[Home] Audio playback error:', err));
-
-                // Clean up URL after playing
-                audio.addEventListener('ended', () => {
-                    console.log('[Home] Audio playback ended');
-                    URL.revokeObjectURL(audioUrl);
-                });
-            }
-
-            console.log('[Home] Audio segment processing completed successfully');
-
-        } catch (error) {
-            console.error('[Home] Audio processing error:', error);
-
-            // Add error message with specific error details
-            let errorText = 'Sorry, I encountered an error processing your request. Please try again.';
-
-            if (error instanceof Error) {
-                console.error('[Home] Error message:', error.message);
-                console.error('[Home] Error stack:', error.stack);
-
-                if (error.message.includes('Speech-to-text service not configured')) {
-                    errorText = 'Please configure your AssemblyAI API key in .env.local to use speech recognition.';
-                } else if (error.message.includes('LLM service not configured')) {
-                    errorText = 'Please configure your Gemini API key in .env.local to use AI responses.';
-                } else if (error.message.includes('TTS service not configured')) {
-                    errorText = 'Please configure your Deepgram API key in .env.local to use text-to-speech.';
-                } else if (error.message.includes('service not configured')) {
-                    errorText = 'Please configure your API keys in .env.local to use all features.';
-                }
-            }
-
-            const errorMessage: Message = {
-                id: uid(),
-                text: errorText,
-                source: 'assistant',
-                timestamp: new Date(),
-            };
-            console.log('[Home] Adding error message to chat:', errorMessage);
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            console.log('[Home] Clearing processing step');
-            setProcessingStep('');
-        }
-    }, [initialPrompt, uid]);
+    // Note: Removed handleAudioSegment - now using continuous call mode with real-time STT
 
     // Real-time speech recognition (Web Speech API) for immediate transcripts
     const {
@@ -326,8 +152,18 @@ $130,000 should be "one hundred and thirty thousand dollars"
         resume: sttResume,
     } = useSpeechRecognition({
         onFinal: async (finalText) => {
+            // Check if call is still active before processing
+            if (!isCallActiveRef.current) {
+                console.log('[Home] Call ended, ignoring speech input');
+                return;
+            }
+
             // Mimic the same flow as handleAudioSegment but with direct text
             if (!finalText?.trim()) return;
+            
+            console.log('[Home] Processing speech:', finalText);
+            setIsProcessing(true);
+            
             try {
                 setProcessingStep('Generating response...');
 
@@ -358,6 +194,13 @@ $130,000 should be "one hundred and thirty thousand dollars"
                         sessionId: sessionId
                     }),
                 });
+                
+                // Check again if call is still active
+                if (!isCallActiveRef.current) {
+                    console.log('[Home] Call ended during LLM processing, aborting');
+                    return;
+                }
+                
                 if (!llmResponse.ok) {
                     const err = await llmResponse.json();
                     throw new Error(err.error || 'LLM request failed');
@@ -381,24 +224,42 @@ $130,000 should be "one hundred and thirty thousand dollars"
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: llmData.llmText }),
                 });
+                
+                // Check again if call is still active before playing audio
+                if (!isCallActiveRef.current) {
+                    console.log('[Home] Call ended during TTS generation, aborting');
+                    return;
+                }
+                
                 if (ttsResponse.ok) {
                     const ttsData: TTSResponse = await ttsResponse.json();
-                    if (ttsData.audioData) {
+                    if (ttsData.audioData && isCallActiveRef.current) {
                         const audioBytes = Uint8Array.from(atob(ttsData.audioData), c => c.charCodeAt(0));
                         const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         const audio = new Audio(audioUrl);
+                        
+                        // Track current audio for cleanup
+                        currentAudioRef.current = audio;
+                        
                         audio.play().catch(err => console.error('[Home] Audio playback error:', err));
                         audio.addEventListener('ended', () => {
                             URL.revokeObjectURL(audioUrl);
-                            // Resume listening after bot finishes
-                            sttResume();
+                            currentAudioRef.current = null;
+                            // Resume listening after bot finishes (only if call still active)
+                            if (isCallActiveRef.current) {
+                                sttResume();
+                            }
                         });
                     } else {
-                        sttResume();
+                        if (isCallActiveRef.current) {
+                            sttResume();
+                        }
                     }
                 } else {
-                    sttResume();
+                    if (isCallActiveRef.current) {
+                        sttResume();
+                    }
                 }
             } catch (error) {
                 console.error('[Home] Real-time STT flow error:', error);
@@ -411,44 +272,72 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 setMessages(prev => [...prev, errorMessage]);
             } finally {
                 setProcessingStep('');
+                setIsProcessing(false);
             }
         },
     });
 
-    // Voice recorder hook with optimized settings (fallback segmented flow)
-    const { isListening, isProcessing, audioLevel, startRecording, stopRecording } = useVoiceRecorder({
-        onSegmentReady: handleAudioSegment,
-        silenceTimeout: 750, // Increased from 350ms to allow for more natural pauses
-        silenceThreshold: 0.005, // More sensitive threshold for better speech detection
+    // Continuous call hook for phone-like behavior
+    const { callState, audioLevel, startCall, endCall, isCallActive } = useContinuousCall({
+        onAudioLevelChange: (level) => {
+            // Audio level monitoring for visual feedback
+        },
     });
 
-    // Handle mic button toggle
-    const handleMicToggle = useCallback(async () => {
-        console.log('[Home] handleMicToggle called, isChatOpen:', isChatOpen, 'isListening:', isListening);
+    // Handle call button toggle - simple start/end call
+    const handleCallToggle = useCallback(async () => {
+        console.log('[Home] handleCallToggle called, isCallActive:', isCallActive, 'isChatOpen:', isChatOpen);
 
-        if (isChatOpen) {
-            console.log('[Home] Closing chat and stopping recording...');
+        if (isCallActive || isChatOpen) {
+            console.log('[Home] Ending call...');
+            
+            // Set flag to stop processing new speech
+            isCallActiveRef.current = false;
+            
+            // Stop any currently playing audio
+            if (currentAudioRef.current) {
+                console.log('[Home] Stopping audio playback');
+                currentAudioRef.current.pause();
+                currentAudioRef.current.currentTime = 0;
+                currentAudioRef.current = null;
+            }
+            
+            // Stop STT first to prevent new transcriptions
+            sttStop();
+            
+            // End the call (stops microphone)
+            endCall();
+            
+            // Close chat UI
             setIsChatOpen(false);
-            if (sttSupported) sttStop();
-            if (isListening) stopRecording();
+            
+            // Clear any processing state
+            setProcessingStep('');
+            setIsProcessing(false);
+            
+            console.log('[Home] Call ended successfully');
         } else {
-            console.log('[Home] Opening chat and starting recording...');
+            console.log('[Home] Starting call...');
             setIsChatOpen(true);
             try {
-                if (sttSupported) {
-                    sttStart();
-                    console.log('[Home] Real-time STT started successfully');
-                } else {
-                    await startRecording();
-                    console.log('[Home] Segment recorder started successfully');
-                }
+                // Set flag to allow processing speech
+                isCallActiveRef.current = true;
+                
+                // Start continuous call
+                await startCall();
+                
+                // Start real-time STT
+                sttStart();
+                
+                console.log('[Home] Call started successfully');
             } catch (error) {
-                console.error('[Home] Failed to start recording:', error);
+                console.error('[Home] Failed to start call:', error);
+                isCallActiveRef.current = false;
                 setIsChatOpen(false);
                 alert('Failed to access microphone. Please check permissions and try again.');
             }
         }
-    }, [isChatOpen, isListening, sttSupported, sttStart, sttStop, startRecording, stopRecording]);
+    }, [isCallActive, isChatOpen, startCall, endCall, sttStart, sttStop]);
 
     // Handle restart conversation
     const handleRestartConversation = useCallback(() => {
@@ -478,15 +367,30 @@ $130,000 should be "one hundred and thirty thousand dollars"
     const confirmEndConversation = useCallback(() => {
         console.log('[Home] Ending conversation...');
 
-        // Stop recording if active
-        if (sttSupported) sttStop();
-        if (isListening) stopRecording();
+        // Set flag to stop processing new speech
+        isCallActiveRef.current = false;
+        
+        // Stop any currently playing audio
+        if (currentAudioRef.current) {
+            console.log('[Home] Stopping audio playback');
+            currentAudioRef.current.pause();
+            currentAudioRef.current.currentTime = 0;
+            currentAudioRef.current = null;
+        }
+
+        // Stop STT and call
+        sttStop();
+        endCall();
 
         // Close chat
         setIsChatOpen(false);
 
         // Clear messages
         setMessages([]);
+        
+        // Clear processing state
+        setProcessingStep('');
+        setIsProcessing(false);
 
         // Generate new session ID for next conversation
         const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -495,7 +399,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
 
         setShowEndDialog(false);
         console.log('[Home] Conversation ended');
-    }, [isListening, stopRecording, sttSupported, sttStop]);
+    }, [endCall, sttStop]);
 
     // Handle text message sending
     const handleSendTextMessage = useCallback(async () => {
@@ -710,13 +614,13 @@ $130,000 should be "one hundred and thirty thousand dollars"
                             </div>
 
                             <div className="flex items-center gap-3">
+                                {/* Call Status Indicator */}
                                 {(() => {
-                                    const activeListening = sttSupported ? sttIsListening : isListening;
-                                    const color = activeListening ? 'bg-red-500' : (isProcessing ? 'bg-yellow-500' : 'bg-green-500');
-                                    const label = activeListening ? 'Listening' : (isProcessing ? 'Processing' : 'Ready');
+                                    const color = isCallActive ? 'bg-green-500' : (isProcessing ? 'bg-yellow-500' : 'bg-gray-500');
+                                    const label = isCallActive ? `Call Active ${sttIsListening ? '(Listening)' : ''}` : (isProcessing ? 'Processing' : 'Ready');
                                     return (
                                         <>
-                                            <div className={`w-2 h-2 rounded-full ${color}`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${color} ${isCallActive ? 'animate-pulse' : ''}`}></div>
                                             <span className="text-xs text-gray-400">{label}</span>
                                         </>
                                     );
@@ -736,11 +640,30 @@ $130,000 should be "one hundred and thirty thousand dollars"
                                     <MessageSquare size={20} className="text-white" />
                                 </motion.button>
 
-                                <MicButton
-                                    isListening={sttSupported ? sttIsListening : isListening}
-                                    isOpen={isChatOpen}
-                                    onToggle={handleMicToggle}
-                                />
+                                {/* Call Button - Start/End Call */}
+                                <motion.button
+                                    onClick={handleCallToggle}
+                                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isCallActive || isChatOpen
+                                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                                        : 'bg-green-600 hover:bg-green-700 text-white'
+                                        }`}
+                                    title={isCallActive || isChatOpen ? "End Call" : "Start Call"}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    disabled={callState === 'connecting' || callState === 'ending'}
+                                >
+                                    {isCallActive || isChatOpen ? (
+                                        <>
+                                            <PhoneOff size={18} />
+                                            <span>End Call</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Phone size={18} />
+                                            <span>Start Call</span>
+                                        </>
+                                    )}
+                                </motion.button>
                             </div>
                         </div>
 
@@ -780,22 +703,23 @@ $130,000 should be "one hundred and thirty thousand dollars"
                             )}
                         </AnimatePresence>
 
-                        {/* Conversation Tips */}
-                        {isListening && (
+                        {/* Call Tips */}
+                        {isCallActive && (
                             <p className="text-xs text-green-400">
-                                Speak clearly and at a normal volume for best results
+                                📞 Call active - speak naturally, end call anytime
                             </p>
                         )}
 
-                        {/* Audio Level Indicator or interim text */}
-                        {sttSupported ? (
-                            sttIsListening && interimTranscript ? (
-                                <p className="text-xs text-gray-300">{interimTranscript}</p>
-                            ) : null
-                        ) : (
-                            isListening && (
-                                <AudioLevelIndicator level={audioLevel} isListening={isListening} />
-                            )
+                        {/* Audio Level Indicator and Interim Transcript */}
+                        {isCallActive && (
+                            <div className="space-y-2">
+                                {/* Show interim transcript if available */}
+                                {sttIsListening && interimTranscript && (
+                                    <p className="text-xs text-gray-300 italic">💬 {interimTranscript}</p>
+                                )}
+                                {/* Show audio level */}
+                                <AudioLevelIndicator level={audioLevel} isListening={isCallActive} />
+                            </div>
                         )}
                     </div>
 
@@ -804,7 +728,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
                         <ChatBox
                             messages={messages}
                             isOpen={isChatOpen}
-                            isListening={isListening}
+                            isListening={isCallActive}
                             isProcessing={isProcessing}
                             processingStep={processingStep}
                         />

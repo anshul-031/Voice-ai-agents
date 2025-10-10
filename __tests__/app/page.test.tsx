@@ -1,16 +1,29 @@
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import Home from '@/app/page';
 import '@testing-library/jest-dom';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
-// Mock the useVoiceRecorder hook
-jest.mock('@/hooks/useVoiceRecorder', () => ({
-    useVoiceRecorder: jest.fn(() => ({
-        isListening: false,
-        isProcessing: false,
+// Mock the useContinuousCall hook
+jest.mock('@/hooks/useContinuousCall', () => ({
+    useContinuousCall: jest.fn(() => ({
+        callState: 'idle',
         audioLevel: 0,
-        startRecording: jest.fn(),
-        stopRecording: jest.fn(),
+        startCall: jest.fn(),
+        endCall: jest.fn(),
+        isCallActive: false,
+    })),
+}));
+
+// Mock the useSpeechRecognition hook
+jest.mock('@/hooks/useSpeechRecognition', () => ({
+    useSpeechRecognition: jest.fn(() => ({
+        supported: true,
+        isListening: false,
+        interimTranscript: '',
+        startListening: jest.fn(),
+        stopListening: jest.fn(),
+        pause: jest.fn(),
+        resume: jest.fn(),
     })),
 }));
 
@@ -62,10 +75,10 @@ describe('Home Page', () => {
             expect(screen.getByText('Conversation')).toBeInTheDocument();
         });
 
-        it('should render microphone button', () => {
+        it('should render call control button', () => {
             render(<Home />);
-            const micButton = screen.getByLabelText(/start recording/i);
-            expect(micButton).toBeInTheDocument();
+            const callButton = screen.getByRole('button', { name: /start call/i });
+            expect(callButton).toBeInTheDocument();
         });
 
         it('should render text chat button', () => {
@@ -301,13 +314,13 @@ describe('Home Page', () => {
                 return Promise.reject(new Error('Not found'));
             }) as jest.Mock;
 
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
@@ -350,13 +363,13 @@ describe('Home Page', () => {
                 return Promise.reject(new Error('Not found'));
             }) as jest.Mock;
 
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
@@ -401,13 +414,13 @@ describe('Home Page', () => {
                 return Promise.reject(new Error('Not found'));
             }) as jest.Mock;
 
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
@@ -500,8 +513,8 @@ describe('Home Page', () => {
             }
     }, 20000);
 
-        it('should stop recording and clear when end confirmed', async () => {
-            const stopRecordingMock = jest.fn();
+        it('should stop call and clear when end confirmed', async () => {
+            const endCallMock = jest.fn();
 
             // Mock text chat
             global.fetch = jest.fn((url) => {
@@ -524,13 +537,13 @@ describe('Home Page', () => {
                 return Promise.reject(new Error('Not found'));
             }) as jest.Mock;
 
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: true,
-                isProcessing: false,
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'active',
                 audioLevel: 0.5,
-                startRecording: jest.fn(),
-                stopRecording: stopRecordingMock,
+                startCall: jest.fn(),
+                endCall: endCallMock,
+                isCallActive: true,
             });
 
             render(<Home />);
@@ -568,7 +581,7 @@ describe('Home Page', () => {
             }
 
             await waitFor(() => {
-                expect(stopRecordingMock).toHaveBeenCalled();
+                expect(endCallMock).toHaveBeenCalled();
             });
         });
 
@@ -594,13 +607,13 @@ describe('Home Page', () => {
                 return Promise.reject(new Error('Not found'));
             }) as jest.Mock;
 
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
@@ -647,98 +660,111 @@ describe('Home Page', () => {
             }, { timeout: 3000 });
         });
 
-        it('should show Listening status when listening', async () => {
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: true,
-                isProcessing: false,
+        it('should show Call Active status when call is active', async () => {
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'active',
                 audioLevel: 0.5,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: true,
+            });
+
+            const { useSpeechRecognition } = require('@/hooks/useSpeechRecognition');
+            useSpeechRecognition.mockReturnValue({
+                supported: true,
+                isListening: true,
+                interimTranscript: '',
+                startListening: jest.fn(),
+                stopListening: jest.fn(),
+                pause: jest.fn(),
+                resume: jest.fn(),
             });
 
             render(<Home />);
             await waitFor(() => {
-                expect(screen.getByText('Listening')).toBeInTheDocument();
+                const callActiveElements = screen.getAllByText(/call active/i);
+                expect(callActiveElements.length).toBeGreaterThan(0);
             }, { timeout: 3000 });
         });
 
-        it('should show Processing status when processing', async () => {
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: true,
+        it('should show Ready status when call is not active', async () => {
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
             await waitFor(() => {
-                expect(screen.getByText('Processing')).toBeInTheDocument();
+                const readyElements = screen.getAllByText(/ready/i);
+                expect(readyElements.length).toBeGreaterThan(0);
             }, { timeout: 3000 });
         });
     });
 
     describe('Audio Level Indicator', () => {
-        it('should show audio level indicator when listening', async () => {
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: true,
-                isProcessing: false,
+        it('should show audio level indicator when call is active', async () => {
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'active',
                 audioLevel: 0.75,
-                startRecording: jest.fn(),
-                stopRecording: jest.fn(),
+                startCall: jest.fn(),
+                endCall: jest.fn(),
+                isCallActive: true,
             });
 
             render(<Home />);
 
-            // Wait for the component to render
+            // Wait for the component to render - it should show "Audio Active"
             await waitFor(() => {
-                expect(screen.getByText('Listening')).toBeInTheDocument();
+                expect(screen.getByText(/audio active/i)).toBeInTheDocument();
             });
         });
     });
 
     describe('Microphone Toggle', () => {
-        it('should handle microphone toggle to start recording', async () => {
-            const startRecordingMock = jest.fn().mockResolvedValue(undefined);
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+        it('should handle call button to start call', async () => {
+            const startCallMock = jest.fn().mockResolvedValue(undefined);
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: startRecordingMock,
-                stopRecording: jest.fn(),
+                startCall: startCallMock,
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
 
-            const micButton = await screen.findByLabelText(/start recording/i);
-            await userEvent.click(micButton);
+            const callButton = await screen.findByRole('button', { name: /start call/i });
+            await userEvent.click(callButton);
 
             await waitFor(() => {
-                expect(startRecordingMock).toHaveBeenCalled();
+                expect(startCallMock).toHaveBeenCalled();
             });
         });
 
-        it('should handle microphone access error', async () => {
+        it('should handle microphone access error when starting call', async () => {
             const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
-            const startRecordingMock = jest.fn().mockRejectedValue(new Error('Permission denied'));
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder');
+            const startCallMock = jest.fn().mockRejectedValue(new Error('Microphone access denied'));
+            const { useContinuousCall } = require('@/hooks/useContinuousCall');
 
-            useVoiceRecorder.mockReturnValue({
-                isListening: false,
-                isProcessing: false,
+            useContinuousCall.mockReturnValue({
+                callState: 'idle',
                 audioLevel: 0,
-                startRecording: startRecordingMock,
-                stopRecording: jest.fn(),
+                startCall: startCallMock,
+                endCall: jest.fn(),
+                isCallActive: false,
             });
 
             render(<Home />);
 
-            const micButton = await screen.findByLabelText(/start recording/i);
-            await userEvent.click(micButton);
+            const callButton = await screen.findByRole('button', { name: /start call/i });
+            await userEvent.click(callButton);
 
             await waitFor(() => {
                 expect(alertSpy).toHaveBeenCalledWith(
