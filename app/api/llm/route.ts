@@ -60,27 +60,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No user text provided' }, { status: 400 });
         }
 
-        // Connect to MongoDB for saving chat history
-        await dbConnect();
-        console.log('[LLM] Connected to MongoDB');
+        // Connect to MongoDB for saving chat history (skip in tests or when not configured)
+        const isTestEnv = process.env.NODE_ENV === 'test';
+        const hasMongo = !!process.env.MONGODB_URI;
+        if (hasMongo && !isTestEnv) {
+            await dbConnect();
+            console.log('[LLM] Connected to MongoDB');
+        } else {
+            console.log('[LLM] Skipping MongoDB connection (hasMongo:', hasMongo, 'isTestEnv:', isTestEnv, ')');
+        }
 
         // Generate a session ID if not provided
         const chatSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         // Save user message to database
-        try {
-            await Chat.create({
-                userId: 'mukul', // Hardcoded user for now
-                sessionId: chatSessionId,
-                role: 'user',
-                content: userText.trim(),
-                systemPrompt: prompt?.trim(),
-                timestamp: new Date(),
-            });
-            console.log('[LLM] User message saved to database');
-        } catch (dbError) {
-            console.error('[LLM] Failed to save user message:', dbError);
-            // Continue with LLM request even if DB save fails
+        if (hasMongo && !isTestEnv) {
+            try {
+                await Chat.create({
+                    userId: 'mukul', // Hardcoded user for now
+                    sessionId: chatSessionId,
+                    role: 'user',
+                    content: userText.trim(),
+                    systemPrompt: prompt?.trim(),
+                    timestamp: new Date(),
+                });
+                console.log('[LLM] User message saved to database');
+            } catch (dbError) {
+                console.error('[LLM] Failed to save user message:', dbError);
+                // Continue with LLM request even if DB save fails
+            }
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -199,19 +207,21 @@ export async function POST(request: NextRequest) {
 
             console.log('[LLM] Successfully generated response, length:', llmText.length);
 
-            // Save assistant response to database
-            try {
-                await Chat.create({
-                    userId: 'mukul', // Hardcoded user for now
-                    sessionId: chatSessionId,
-                    role: 'assistant',
-                    content: llmText.trim(),
-                    timestamp: new Date(),
-                });
-                console.log('[LLM] Assistant response saved to database');
-            } catch (dbError) {
-                console.error('[LLM] Failed to save assistant response:', dbError);
-                // Continue even if DB save fails
+            // Save assistant response to database (skip in tests or when not configured)
+            if (hasMongo && !isTestEnv) {
+                try {
+                    await Chat.create({
+                        userId: 'mukul', // Hardcoded user for now
+                        sessionId: chatSessionId,
+                        role: 'assistant',
+                        content: llmText.trim(),
+                        timestamp: new Date(),
+                    });
+                    console.log('[LLM] Assistant response saved to database');
+                } catch (dbError) {
+                    console.error('[LLM] Failed to save assistant response:', dbError);
+                    // Continue even if DB save fails
+                }
             }
 
             return NextResponse.json({

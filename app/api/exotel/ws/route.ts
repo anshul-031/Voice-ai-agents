@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   // We echo a 'connected' for clarity (not strictly required by Exotel).
   try {
     (server as WebSocket).send(textFrame({ event: 'connected' }));
-  } catch (e) {
+  } catch {
     // ignore if send fails
   }
 
@@ -54,11 +54,14 @@ export async function GET(req: NextRequest) {
       if (pcm.length < 320) return; // too small
 
       // Build WAV for STT
-      const wav = wavFromPCM16(pcm, sampleRate);
+  const wav = wavFromPCM16(pcm, sampleRate);
 
       // Send to our upload-audio endpoint via form-data
-      const form = new FormData();
-      form.append('audio', new Blob([wav], { type: 'audio/wav' }), 'chunk.wav');
+  const form = new FormData();
+  // Ensure BlobPart is a concrete ArrayBuffer (not SharedArrayBuffer)
+  const ab = new ArrayBuffer(wav.byteLength);
+  new Uint8Array(ab).set(wav);
+  form.append('audio', new Blob([ab], { type: 'audio/wav' }), 'chunk.wav');
 
       const baseHttp = `${originUrl.protocol}//${originUrl.host}`;
       const sttRes = await fetch(`${baseHttp}/api/upload-audio`, { method: 'POST', body: form });
@@ -106,7 +109,6 @@ export async function GET(req: NextRequest) {
       const { pcm: ttsPcm /*, sampleRate: ttsRate */ } = pcm16FromWav(wavBytes);
       const chunks = splitForExotel(ttsPcm, 3200); // ~100ms-ish
 
-      let chunkIdx = 0;
       for (const c of chunks) {
         const payload = uint8ToBase64(c);
         (server as WebSocket).send(textFrame({
@@ -117,7 +119,6 @@ export async function GET(req: NextRequest) {
         }));
         // small pacing to avoid buffer overrun
         await sleep(20);
-        chunkIdx++;
       }
       // notify playback marker
       (server as WebSocket).send(textFrame({ event: 'mark', sequence_number: ++seq, stream_sid: streamSid, mark: { name: 'bot-tts' } }));
@@ -167,7 +168,7 @@ export async function GET(req: NextRequest) {
         try { (server as WebSocket).close(1000, 'bye'); } catch {}
         return;
       }
-    } catch (e) {
+    } catch {
       try { (server as WebSocket).send(textFrame({ event: 'clear', stream_sid: streamSid })); } catch {}
     }
   });
