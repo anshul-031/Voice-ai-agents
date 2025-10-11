@@ -1,7 +1,7 @@
+import Home from '@/app/demo/page'
+import '@testing-library/jest-dom'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
-import '@testing-library/jest-dom'
 
 // Mock ConfirmDialog to auto-confirm on open to deterministically cover the confirm path
 jest.mock('@/components/ConfirmDialog', () => ({
