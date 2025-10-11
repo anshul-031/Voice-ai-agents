@@ -1,6 +1,6 @@
+import Home from '@/app/demo/page'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
 
 describe('Home page - text chat TTS success and ended cleanup', () => {
   beforeEach(() => {

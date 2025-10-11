@@ -1,6 +1,6 @@
-import { render, screen, waitFor, act } from '@testing-library/react'
+import Home from '@/app/demo/page'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
 
 describe('Home page - text input focus on toggle', () => {
   beforeEach(() => {

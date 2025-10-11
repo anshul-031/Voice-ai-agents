@@ -1,4 +1,4 @@
-import Home from '@/app/page';
+import Home from '@/app/demo/page';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
