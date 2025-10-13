@@ -10,7 +10,7 @@ describe('API: /api/tts extra branches', () => {
   const originalEnv = process.env
   beforeEach(() => {
     jest.resetModules()
-    process.env = { ...originalEnv, DEEPGRAM_API_KEY: 'key' }
+    process.env = { ...originalEnv, SARVAM_API_KEY: 'key' }
     ;(global.fetch as jest.Mock).mockClear()
   })
   afterEach(() => { process.env = originalEnv })
@@ -20,7 +20,7 @@ describe('API: /api/tts extra branches', () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
-      arrayBuffer: async () => buf,
+      json: async () => ({ audios: ['base64AudioDataHere'] }),
       headers: new Headers(),
     })
 

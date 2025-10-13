@@ -8,12 +8,13 @@ A Next.js 15 application that enables real-time voice conversations with AI usin
 - **Voice Activity Detection**: Automatically detects when you stop speaking (800ms silence threshold)
 - **Real-time Transcription**: Uses AssemblyAI for speech-to-text conversion
 - **AI Conversations**: Powered by Google Gemini for intelligent responses
-- **Text-to-Speech**: Uses Deepgram to speak AI responses back to you
+- **Text-to-Speech**: Uses Sarvam Voice (Manisha) to speak AI responses back to you
 - **Clean UI**: Built with Tailwind CSS and responsive design
 
 ## Architecture
 
 ### Components
+
 - `TopModelBoxes`: Displays current AI model configurations
 - `InitialPromptEditor`: Allows customization of the AI system prompt
 - `MicButton`: Toggles voice recording and chat interface
@@ -21,9 +22,10 @@ A Next.js 15 application that enables real-time voice conversations with AI usin
 - `useVoiceRecorder`: Custom hook managing audio recording and VAD
 
 ### API Routes
+
 - `/api/upload-audio`: Handles audio upload and AssemblyAI transcription
 - `/api/llm`: Processes text through Google Gemini API
-- `/api/tts`: Generates speech using Deepgram API
+- `/api/tts`: Generates speech using Sarvam Voice API
 
 ## Setup Instructions
 
@@ -52,14 +54,14 @@ Edit `.env.local` and add your API keys:
 ```env
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
-DEEPGRAM_API_KEY=your_deepgram_api_key_here
+SARVAM_API_KEY=your_sarvam_api_key_here
 ```
 
 #### Getting API Keys
 
 - **AssemblyAI**: Sign up at [https://app.assemblyai.com/](https://app.assemblyai.com/)
 - **Google Gemini**: Get your key at [https://ai.google.dev/](https://ai.google.dev/)
-- **Deepgram**: Register at [https://console.deepgram.com/](https://console.deepgram.com/)
+- **Sarvam AI**: Register at [https://www.sarvam.ai/](https://www.sarvam.ai/)
 
 ### 4. Run the Development Server
 
@@ -86,17 +88,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Technical Notes
 
 ### Voice Activity Detection
+
 - Uses Web Audio API with AudioContext and AnalyserNode
 - Monitors RMS (Root Mean Square) amplitude levels
 - Configurable silence threshold (default: 0.01 RMS)
 - Configurable silence timeout (default: 800ms)
 
 ### Audio Processing
+
 - Supports multiple audio formats: webm, mp4, wav (browser dependent)
 - Automatic audio format selection based on browser support
 - Segments are processed individually for better real-time experience
 
 ### Performance Considerations
+
 - Audio segments are automatically chunked to prevent long uploads
 - Server-side API calls prevent exposing keys to client
 - Error handling with user-friendly messages
@@ -105,16 +110,19 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Troubleshooting
 
 ### Microphone Issues
+
 - Ensure microphone permissions are granted
 - Check if other applications are using the microphone
 - Try refreshing the page and granting permissions again
 
 ### API Errors
+
 - Verify all API keys are correctly set in `.env.local`
 - Check API key quotas and rate limits
 - Ensure internet connection for external API calls
 
 ### Audio Playback Issues
+
 - Check browser audio settings and volume
 - Ensure browser supports Web Audio API
 - Try using headphones to prevent feedback loops
@@ -122,6 +130,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Development
 
 ### File Structure
+
 ```
 ├── app/
 │   ├── api/
@@ -141,6 +150,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 
 ### Customization
+
 - Adjust VAD thresholds in `useVoiceRecorder.ts`
 - Modify AI models in component configurations
 - Update UI styling with Tailwind classes

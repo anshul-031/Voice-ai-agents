@@ -66,7 +66,7 @@ describe('AgentModal', () => {
             prompt: 'You are a professional EMI collection assistant...',
             llmModel: 'Gemini 1.5 Flash',
             sttModel: 'AssemblyAI Universal',
-            ttsModel: 'Deepgram Aura Luna',
+            ttsModel: 'Sarvam Voice Manisha',
             userId: 'mukul',
             lastUpdated: '2025-10-08T10:00:00Z',
             createdAt: '2025-10-01T10:00:00Z',
@@ -202,7 +202,7 @@ describe('AgentModal', () => {
                             prompt: 'Test prompt',
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
-                            ttsModel: 'Deepgram Aura Luna',
+                            ttsModel: 'Sarvam Voice Manisha',
                         }),
                     })
                 )
@@ -289,7 +289,7 @@ describe('AgentModal', () => {
             prompt: 'Original prompt',
             llmModel: 'Gemini 1.5 Flash',
             sttModel: 'AssemblyAI Universal',
-            ttsModel: 'Deepgram Aura Luna',
+            ttsModel: 'Sarvam Voice Manisha',
             userId: 'mukul',
             lastUpdated: '2025-10-08T10:00:00Z',
             createdAt: '2025-10-01T10:00:00Z',
@@ -329,7 +329,7 @@ describe('AgentModal', () => {
                             prompt: 'Updated prompt',
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
-                            ttsModel: 'Deepgram Aura Luna',
+                            ttsModel: 'Sarvam Voice Manisha',
                         }),
                     })
                 )
@@ -469,7 +469,7 @@ describe('AgentModal', () => {
                             prompt: '  Test prompt  ',
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
-                            ttsModel: 'Deepgram Aura Luna',
+                            ttsModel: 'Sarvam Voice Manisha',
                         }),
                     })
                 )

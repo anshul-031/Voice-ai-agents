@@ -72,7 +72,7 @@ export default function AgentPage() {
     const [modelConfig, setModelConfig] = useState<ModelConfig>({
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Voice Manisha',
     });
 
     // Fetch agent data on mount
@@ -297,7 +297,7 @@ export default function AgentPage() {
                 } else if (error.message.includes('LLM service not configured')) {
                     errorText = 'Please configure your Gemini API key in .env.local to use AI responses.';
                 } else if (error.message.includes('TTS service not configured')) {
-                    errorText = 'Please configure your Deepgram API key in .env.local to use text-to-speech.';
+                    errorText = 'Please configure your Sarvam API key in .env.local to use text-to-speech.';
                 } else if (error.message.includes('service not configured')) {
                     errorText = 'Please configure your API keys in .env.local to use all features.';
                 }

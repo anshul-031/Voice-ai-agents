@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
             prompt: prompt.trim(),
             llmModel: llmModel || 'Gemini 1.5 Flash',
             sttModel: sttModel || 'AssemblyAI Universal',
-            ttsModel: ttsModel || 'Deepgram Aura Luna',
+            ttsModel: ttsModel || 'Sarvam Voice Manisha',
             lastUpdated: new Date(),
             createdAt: new Date(),
         });

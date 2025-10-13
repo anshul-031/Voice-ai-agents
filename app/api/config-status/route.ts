@@ -10,23 +10,23 @@ export async function GET() {
     const geminiConfigured = !!process.env.GEMINI_API_KEY &&
         process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here';
 
-    const deepgramConfigured = !!process.env.DEEPGRAM_API_KEY &&
-        process.env.DEEPGRAM_API_KEY !== 'your_deepgram_api_key_here';
+    const sarvamConfigured = !!process.env.SARVAM_API_KEY &&
+        process.env.SARVAM_API_KEY !== 'your_sarvam_api_key_here';
 
     console.log('[config-status] Configuration status:', {
         stt: assemblyAIConfigured,
         llm: geminiConfigured,
-        tts: deepgramConfigured
+        tts: sarvamConfigured
     });
 
-    const allConfigured = assemblyAIConfigured && geminiConfigured && deepgramConfigured;
+    const allConfigured = assemblyAIConfigured && geminiConfigured && sarvamConfigured;
     console.log('[config-status] All configured:', allConfigured);
 
     return NextResponse.json({
         services: {
             stt: assemblyAIConfigured,
             llm: geminiConfigured,
-            tts: deepgramConfigured
+            tts: sarvamConfigured
         },
         allConfigured: allConfigured,
         message: allConfigured

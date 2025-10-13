@@ -40,7 +40,7 @@ const VoiceAgentSchema = new Schema<IVoiceAgent>({
     ttsModel: {
         type: String,
         required: true,
-        default: 'Deepgram Aura Luna',
+        default: 'Sarvam Voice Manisha',
     },
     lastUpdated: {
         type: Date,

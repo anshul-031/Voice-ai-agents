@@ -111,7 +111,7 @@ $130,000 should be "one hundred and thirty thousand dollars"
     const [modelConfig] = useState<ModelConfig>({
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Voice Manisha',
     });
 
     // Check configuration status on mount
@@ -336,8 +336,21 @@ $130,000 should be "one hundred and thirty thousand dollars"
                         currentAudioRef.current = null;
                     };
                     
-                    await audio.play();
-                    console.log('[Home] Playing greeting audio');
+                    try {
+                        await audio.play();
+                        console.log('[Home] Playing greeting audio');
+                    } catch (playError) {
+                        console.error('[Home] Failed to play greeting audio:', playError);
+                        // Try to play after a short delay to work around autoplay restrictions
+                        setTimeout(async () => {
+                            try {
+                                await audio.play();
+                                console.log('[Home] Greeting audio played after retry');
+                            } catch (retryError) {
+                                console.error('[Home] Greeting audio retry failed:', retryError);
+                            }
+                        }, 100);
+                    }
                 }
             } else {
                 console.warn('[Home] Greeting TTS failed');
@@ -414,8 +427,13 @@ $130,000 should be "one hundred and thirty thousand dollars"
                 
                 console.log('[Home] Call started successfully');
                 
-                // Send automatic greeting message
-                sendGreetingMessage();
+                // Wait a brief moment for audio context to be fully ready
+                // This helps avoid browser autoplay restrictions
+                setTimeout(() => {
+                    if (isCallActiveRef.current) {
+                        sendGreetingMessage();
+                    }
+                }, 300);
             } catch (error) {
                 console.error('[Home] Failed to start call:', error);
                 isCallActiveRef.current = false;
