@@ -5,7 +5,7 @@
 Add this to your `.env.local` file:
 
 ```bash
-SARVAM_API_KEY=sk_x56l2sqd_MlYB0HhUx9TLSNN13JHiK3Up
+SARVAM_API_KEY=your-sarvam-api-key-here
 ```
 
 ## API Usage
