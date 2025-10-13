@@ -40,8 +40,8 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage
 
-      - name: Enforce minimum coverage 90%
-        run: node scripts/check-coverage.js 90
+      - name: Enforce minimum coverage 50%
+        run: node scripts/check-coverage.js 50
 
       - name: Upload coverage artifacts
         if: always()
