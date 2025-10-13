@@ -25,7 +25,7 @@ describe('API: /api/voice-agents/[id]', () => {
         prompt: 'You are a test agent',
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Manisha',
         lastUpdated: new Date('2025-10-10'),
         createdAt: new Date('2025-10-01')
       }
@@ -96,3 +96,4 @@ describe('API: /api/voice-agents/[id]', () => {
     })
   })
 })
+

@@ -9,7 +9,7 @@ describe('API: /api/tts catch error branch', () => {
 
   beforeEach(() => {
     jest.resetModules()
-    process.env = { ...originalEnv, DEEPGRAM_API_KEY: 'any' }
+    process.env = { ...originalEnv, SARVAM_API_KEY: 'any' }
     ;(global.fetch as jest.Mock) = jest.fn()
   })
 

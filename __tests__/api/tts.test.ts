@@ -22,7 +22,7 @@ describe('API: /api/tts', () => {
 
   describe('POST Request', () => {
     it('should return error when no text is provided', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',
@@ -37,7 +37,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should return error when API key is not configured', async () => {
-      delete process.env.DEEPGRAM_API_KEY
+      delete process.env.SARVAM_API_KEY
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',
@@ -52,15 +52,17 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle successful TTS generation', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
-      const mockAudioBuffer = new ArrayBuffer(1024)
+      const mockSarvamResponse = {
+        audios: ['SGVsbG8gd29ybGQ='] // Base64 encoded audio
+      }
       const mockResponse = {
         ok: true,
         status: 200,
-        arrayBuffer: async () => mockAudioBuffer,
+        json: async () => mockSarvamResponse,
         headers: new Headers(),
-        text: async () => '',
+        text: async () => JSON.stringify(mockSarvamResponse),
       }
 
       ;(global.fetch as jest.Mock).mockResolvedValueOnce(mockResponse)
@@ -78,8 +80,8 @@ describe('API: /api/tts', () => {
       expect(data.mimeType).toBe('audio/wav')
     })
 
-    it('should handle Deepgram API failure', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+    it('should handle Sarvam API failure', async () => {
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const mockResponse = {
         ok: false,
@@ -103,7 +105,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle whitespace-only text', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',
@@ -118,13 +120,15 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle long text', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
-      const mockAudioBuffer = new ArrayBuffer(2048)
+      const mockSarvamResponse = {
+        audios: ['SGVsbG8gd29ybGQ=']
+      }
       const mockResponse = {
         ok: true,
         status: 200,
-        arrayBuffer: async () => mockAudioBuffer,
+        json: async () => mockSarvamResponse,
         headers: new Headers(),
       }
 
@@ -144,13 +148,15 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle special characters in text', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
-      const mockAudioBuffer = new ArrayBuffer(1024)
+      const mockSarvamResponse = {
+        audios: ['SGVsbG8gd29ybGQ=']
+      }
       const mockResponse = {
         ok: true,
         status: 200,
-        arrayBuffer: async () => mockAudioBuffer,
+        json: async () => mockSarvamResponse,
         headers: new Headers(),
       }
 
@@ -158,7 +164,7 @@ describe('API: /api/tts', () => {
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',
-        body: JSON.stringify({ text: 'Hello! @#$%^&*() こんにちは 你好' }),
+        body: JSON.stringify({ text: 'Hello! @#$%^&*() नमस्ते' }),
       })
 
       const response = await POST(request)
@@ -169,13 +175,15 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle multiline text', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
-      const mockAudioBuffer = new ArrayBuffer(1024)
+      const mockSarvamResponse = {
+        audios: ['SGVsbG8gd29ybGQ=']
+      }
       const mockResponse = {
         ok: true,
         status: 200,
-        arrayBuffer: async () => mockAudioBuffer,
+        json: async () => mockSarvamResponse,
         headers: new Headers(),
       }
 
@@ -193,14 +201,16 @@ describe('API: /api/tts', () => {
       expect(data.audioData).toBeDefined()
     })
 
-    it('should call Deepgram API with correct parameters', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_deepgram_key'
+    it('should call Sarvam API with correct parameters', async () => {
+      process.env.SARVAM_API_KEY = 'test_sarvam_key'
 
-      const mockAudioBuffer = new ArrayBuffer(1024)
+      const mockSarvamResponse = {
+        audios: ['SGVsbG8gd29ybGQ=']
+      }
       const mockResponse = {
         ok: true,
         status: 200,
-        arrayBuffer: async () => mockAudioBuffer,
+        json: async () => mockSarvamResponse,
         headers: new Headers(),
       }
 
@@ -214,11 +224,11 @@ describe('API: /api/tts', () => {
       await POST(request)
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.deepgram.com/v1/speak?model=aura-luna-en',
+        'https://api.sarvam.ai/text-to-speech',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'Token test_deepgram_key',
+            'api-subscription-key': 'test_sarvam_key',
             'Content-Type': 'application/json',
           }),
         })
@@ -226,7 +236,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle network errors', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
@@ -243,7 +253,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle 401 unauthorized errors', async () => {
-      process.env.DEEPGRAM_API_KEY = 'invalid_key'
+      process.env.SARVAM_API_KEY = 'invalid_key'
 
       const mockResponse = {
         ok: false,
@@ -267,7 +277,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle 429 rate limit errors', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const mockResponse = {
         ok: false,
@@ -293,7 +303,7 @@ describe('API: /api/tts', () => {
 
   describe('Error Scenarios', () => {
     it('should handle malformed JSON', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',
@@ -305,7 +315,7 @@ describe('API: /api/tts', () => {
     })
 
     it('should handle missing request body', async () => {
-      process.env.DEEPGRAM_API_KEY = 'test_key'
+      process.env.SARVAM_API_KEY = 'test_key'
 
       const request = new NextRequest('http://localhost:3000/api/tts', {
         method: 'POST',

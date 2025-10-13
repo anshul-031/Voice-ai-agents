@@ -74,11 +74,11 @@ describe('AgentPage text chat flow', () => {
     await screen.findByText('Test Agent')
 
     // Toggle text input
-    const toggle = screen.getByTitle('Toggle text chat')
+    const toggle = screen.getByTitle('Text chat mode')
     await userEvent.click(toggle)
 
     // Type and send
-  const input = await screen.findByPlaceholderText('Type your message here...')
+  const input = await screen.findByPlaceholderText('Type your message...')
   await userEvent.type(input, 'Hello')
     const send = screen.getByTitle('Send message')
     await userEvent.click(send)

@@ -25,7 +25,7 @@ export const createMockMessage = (overrides = {}) => ({
 export const createMockModelConfig = (overrides = {}) => ({
   llmModel: 'Gemini 1.5 Flash',
   sttModel: 'AssemblyAI Universal',
-  ttsModel: 'Deepgram Aura Luna',
+  ttsModel: 'Sarvam Manisha',
   ...overrides,
 })
 
@@ -62,3 +62,4 @@ export const createMockFormData = (data: Record<string, any> = {}) => {
   })
   return formData
 }
+

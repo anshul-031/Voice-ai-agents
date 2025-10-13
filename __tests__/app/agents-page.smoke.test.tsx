@@ -63,7 +63,7 @@ describe('AgentPage smoke', () => {
               prompt: 'You are helpful',
               llmModel: 'Gemini 1.5 Flash',
               sttModel: 'AssemblyAI Universal',
-              ttsModel: 'Deepgram Aura Luna',
+              ttsModel: 'Sarvam Manisha',
               userId: 'mukul',
               lastUpdated: new Date().toISOString(),
               createdAt: new Date().toISOString(),
@@ -104,3 +104,4 @@ describe('AgentPage smoke', () => {
     expect(screen.getByTestId('ChatBox')).toBeInTheDocument()
   })
 })
+
