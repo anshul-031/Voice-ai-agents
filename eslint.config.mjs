@@ -39,7 +39,14 @@ export default [
     rules: {
       'no-console': 'off', // Allow console statements for debugging
       eqeqeq: 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn', 
+        { 
+          argsIgnorePattern: '^_', 
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
     },
   },
 ];
