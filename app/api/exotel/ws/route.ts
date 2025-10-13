@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 export const runtime = 'edge';
 
 // Next.js Edge route that upgrades to WebSocket for Exotel bidirectional stream

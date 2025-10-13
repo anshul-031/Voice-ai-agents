@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';

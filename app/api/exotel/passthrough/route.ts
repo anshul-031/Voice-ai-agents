@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
 // Exotel will POST to this endpoint (Passthru Applet) and expects a JSON with a WSS URL

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { setSession } from '@/lib/exotel-session';
 import { NextRequest, NextResponse } from 'next/server';
 
