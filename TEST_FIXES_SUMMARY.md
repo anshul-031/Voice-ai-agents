@@ -160,7 +160,7 @@ Make sure your `.env.local` contains:
 ```bash
 ASSEMBLYAI_API_KEY=your_assemblyai_key
 GEMINI_API_KEY=your_gemini_key
-SARVAM_API_KEY=sk_x56l2sqd_MlYB0HhUx9TLSNN13JHiK3Up
+SARVAM_API_KEY=your_sarvam_api_key_here
 ```
 
 ---
