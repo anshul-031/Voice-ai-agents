@@ -106,7 +106,7 @@ Navigate to: http://localhost:3000
 Your `.env.local` file now contains:
 
 ```bash
-SARVAM_API_KEY=sk_x56l2sqd_MlYB0HhUx9TLSNN13JHiK3Up
+SARVAM_API_KEY=your-sarvam-api-key-here
 ```
 
 **Important**: Keep this API key secure and never commit it to version control!
