@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  // sample-rate default 16000 recommended by docs; Exotel defaults to 8000 otherwise
-  const sampleRate = Number(searchParams.get('sample-rate') || '16000');
+  // Exotel defaults to 8000 Hz sample rate unless configured otherwise
+  const sampleRate = Number(searchParams.get('sample-rate') || '8000');
   const callSid = searchParams.get('CallSid') || searchParams.get('callSid') || undefined;
   const from = searchParams.get('From') || searchParams.get('from') || undefined;
   const to = searchParams.get('To') || searchParams.get('to') || undefined;
