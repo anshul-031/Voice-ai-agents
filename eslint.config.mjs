@@ -37,7 +37,7 @@ export default [
       '@typescript-eslint': tseslint,
     },
     rules: {
-      'no-console': 'warn',
+      'no-console': 'off', // Allow console statements for debugging
       eqeqeq: 'error',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
