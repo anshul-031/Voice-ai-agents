@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/tts/route'
+import { NextRequest } from 'next/server'
 
 describe('API: /api/tts catch error branch', () => {
   const originalEnv = process.env

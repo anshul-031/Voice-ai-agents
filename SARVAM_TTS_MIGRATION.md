@@ -1,11 +1,13 @@
 # Sarvam TTS Migration Summary
 
 ## Overview
+
 Successfully migrated the voicebot builder platform from **Deepgram Aura Luna** to **Sarvam TTS with Manisha voice**.
 
 ## What Changed
 
 ### 1. TTS API Route (`app/api/tts/route.ts`)
+
 - **Before**: Used Deepgram API with Aura Luna voice
 - **After**: Uses Sarvam AI API with Manisha voice
 - **API Endpoint**: `https://api.sarvam.ai/text-to-speech`
@@ -17,11 +19,14 @@ Successfully migrated the voicebot builder platform from **Deepgram Aura Luna** 
   - Preprocessing: Enabled
 
 ### 2. Environment Configuration (`.env.local`)
+
 - Added: `SARVAM_API_KEY=sk_x56l2sqd_MlYB0HhUx9TLSNN13JHiK3Up`
 - Note: Old Deepgram key still present but no longer used
 
 ### 3. Default Model Configuration
+
 Updated in all components to use `Sarvam Manisha`:
+
 - ✅ `app/demo/page.tsx`
 - ✅ `app/agents/[id]/page.tsx`
 - ✅ `components/VoiceAIAgent.tsx`
@@ -30,18 +35,22 @@ Updated in all components to use `Sarvam Manisha`:
 - ✅ `models/VoiceAgent.ts`
 
 ### 4. TTS Model Options (`components/AgentModal.tsx`)
+
 Updated dropdown to show Sarvam voices:
+
 - **Sarvam Manisha** (default - female)
 - **Sarvam Meera** (female)
 - **Sarvam Arvind** (male)
 
 ### 5. Config Status Check (`app/api/config-status/route.ts`)
+
 - Changed from checking `DEEPGRAM_API_KEY` to `SARVAM_API_KEY`
 - Validates Sarvam configuration for TTS service
 
 ## Sarvam API Configuration
 
 ### Request Format
+
 ```json
 {
   "inputs": ["Text to convert to speech"],
@@ -57,6 +66,7 @@ Updated dropdown to show Sarvam voices:
 ```
 
 ### Response Format
+
 ```json
 {
   "audios": ["base64_encoded_audio_data"]
@@ -64,6 +74,7 @@ Updated dropdown to show Sarvam voices:
 ```
 
 ### Headers
+
 - `api-subscription-key`: Your Sarvam API key
 - `Content-Type`: application/json
 
@@ -78,6 +89,7 @@ Updated dropdown to show Sarvam voices:
 ## Audio Quality Settings
 
 The migration uses these Sarvam-specific parameters:
+
 - **Pitch**: 0 (neutral, natural voice)
 - **Pace**: 1.0 (normal speed)
 - **Loudness**: 1.5 (slightly amplified for clarity)
@@ -95,14 +107,17 @@ The migration uses these Sarvam-specific parameters:
 ## Testing Recommendations
 
 1. **Test Initial Greeting**:
+
    - Start a call and verify the Hindi greeting plays with audio
    - Message: "नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से..."
 
 2. **Test Voice Responses**:
+
    - Speak in Hindi/Hinglish during a call
    - Verify TTS audio plays for bot responses
 
 3. **Test Text Chat**:
+
    - Use text chat mode
    - Verify audio plays for text responses
 
@@ -122,6 +137,7 @@ If you need to revert to Deepgram:
 ## API Key Security
 
 ⚠️ **Important**: The Sarvam API key is currently in `.env.local`. Make sure:
+
 - ✅ `.env.local` is in `.gitignore`
 - ✅ Never commit API keys to version control
 - ✅ Use environment variables in production deployment
@@ -136,6 +152,7 @@ If you need to revert to Deepgram:
 ## Support
 
 If you encounter issues:
+
 1. Check browser console for `[TTS]` prefixed logs
 2. Verify Sarvam API key is valid and has credits
 3. Check Sarvam API documentation: https://docs.sarvam.ai/

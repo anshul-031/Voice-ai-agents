@@ -9,6 +9,7 @@ Successfully updated all tests and code to reflect the migration from Deepgram T
 ## ✅ Completed Tasks
 
 ### 1. **UI Display Name Update**
+
 - **Changed**: "Deepgram Luna" → "Sarvam(Manisha)" or "Sarvam Manisha"
 - **Files Updated**:
   - `components/AgentModal.tsx` - Reset value after agent creation
@@ -16,6 +17,7 @@ Successfully updated all tests and code to reflect the migration from Deepgram T
 ### 2. **API Test Files Updated** (6 files)
 
 #### `__tests__/api/config-status.test.ts`
+
 - ✅ Updated all environment variable checks from `DEEPGRAM_API_KEY` to `SARVAM_API_KEY`
 - ✅ Updated 6 test cases:
   - All services configured test
@@ -28,12 +30,13 @@ Successfully updated all tests and code to reflect the migration from Deepgram T
   - Partially configured test
 
 #### `__tests__/api/tts.test.ts`
+
 - ✅ Changed API key from `DEEPGRAM_API_KEY` to `SARVAM_API_KEY`
 - ✅ Updated mock responses from `arrayBuffer()` to `json()` format
 - ✅ Changed mock response structure to Sarvam format:
   ```typescript
   {
-    audios: ['base64_encoded_audio_string']
+    audios: ["base64_encoded_audio_string"];
   }
   ```
 - ✅ Updated API endpoint verification from:
@@ -47,37 +50,45 @@ Successfully updated all tests and code to reflect the migration from Deepgram T
   - Various edge cases
 
 #### `__tests__/api/tts.status-mapping.test.ts`
+
 - ✅ Updated environment variable to `SARVAM_API_KEY`
 - ✅ Updated all 5 error status mapping tests
 - ✅ Tests now correctly check Sarvam API error handling
 
 #### `__tests__/api/tts.extra.test.ts`
+
 - ✅ Updated environment variable to `SARVAM_API_KEY`
 - ✅ Changed mock response from `arrayBuffer()` to Sarvam `json()` format
 - ✅ Test now validates Sarvam response structure
 
 #### `__tests__/api/voice-agents.test.ts`
+
 - ✅ Updated all occurrences of `'Deepgram Aura Luna'` to `'Sarvam Manisha'`
 - ✅ Updated 4 locations in mock data and assertions
 
 #### `__tests__/api/voice-agents-id.test.ts`
+
 - ✅ Updated default TTS model from `'Deepgram Aura Luna'` to `'Sarvam Manisha'`
 
 ### 3. **Component Test Files Updated** (4 files)
 
 #### `__tests__/test-utils.tsx`
+
 - ✅ Updated `createMockModelConfig()` helper
 - ✅ Changed default TTS model to `'Sarvam Manisha'`
 
 #### `__tests__/components/AgentModal.test.tsx`
+
 - ✅ Updated all TTS model references
 - ✅ Changed 5 occurrences from `'Deepgram Aura Luna'` to `'Sarvam Manisha'`
 
 #### `__tests__/components/TopModelBoxes.test.tsx`
+
 - ✅ Updated TTS model display expectations
 - ✅ Changed from `'Deepgram Aura Luna'` to `'Sarvam Manisha'`
 
 #### `__tests__/app/agents-page.smoke.test.tsx`
+
 - ✅ Updated mock agent data
 - ✅ Changed TTS model to `'Sarvam Manisha'`
 
@@ -86,16 +97,19 @@ Successfully updated all tests and code to reflect the migration from Deepgram T
 ## 📊 Test Results Summary
 
 ### Before Fixes
+
 - ❌ **34 failing tests** across 10 test suites
 - All failures related to Deepgram → Sarvam migration
 
 ### After Fixes
+
 - ✅ **0 TTS-related test failures**
 - ✅ **All API tests passing** (config-status, tts, tts.status-mapping, tts.extra)
 - ✅ **All component tests passing** (AgentModal, TopModelBoxes, agents-page.smoke)
 - ⚠️ **34 remaining failures** - Unrelated to TTS migration (Riya template content expectations)
 
 ### Current Test Status
+
 ```
 Test Suites: 66 passed, 10 failed (content-related, not TTS), 76 total
 Tests:       594 passed, 34 failed (template content), 17 skipped, 645 total
@@ -109,20 +123,22 @@ Coverage:    [Will be measured after all fixes]
 ### API Response Format Changes
 
 **Deepgram (Old)**:
+
 ```typescript
 // Request
-fetch('https://api.deepgram.com/v1/speak?model=aura-luna-en', {
+fetch("https://api.deepgram.com/v1/speak?model=aura-luna-en", {
   headers: {
-    'Authorization': 'Token <api_key>',
-    'Content-Type': 'application/json'
-  }
-})
+    Authorization: "Token <api_key>",
+    "Content-Type": "application/json",
+  },
+});
 
 // Response
-arrayBuffer() // Raw audio bytes
+arrayBuffer(); // Raw audio bytes
 ```
 
 **Sarvam (New)**:
+
 ```typescript
 // Request
 fetch('https://api.sarvam.ai/text-to-speech', {
@@ -141,12 +157,12 @@ fetch('https://api.sarvam.ai/text-to-speech', {
 
 ### Model Name Updates
 
-| Component | Old Value | New Value |
-|-----------|-----------|-----------|
-| Default TTS Model | `Deepgram Aura Luna` | `Sarvam Manisha` |
-| Environment Variable | `DEEPGRAM_API_KEY` | `SARVAM_API_KEY` |
-| API Endpoint | `api.deepgram.com` | `api.sarvam.ai` |
-| Audio Format | MP3 (arraybuffer) | WAV (base64 in JSON) |
+| Component             | Old Value              | New Value              |
+| --------------------- | ---------------------- | ---------------------- |
+| Default TTS Model     | `Deepgram Aura Luna`   | `Sarvam Manisha`       |
+| Environment Variable  | `DEEPGRAM_API_KEY`     | `SARVAM_API_KEY`       |
+| API Endpoint          | `api.deepgram.com`     | `api.sarvam.ai`        |
+| Audio Format          | MP3 (arraybuffer)      | WAV (base64 in JSON)   |
 | Authentication Header | `Authorization: Token` | `api-subscription-key` |
 
 ---
@@ -154,6 +170,7 @@ fetch('https://api.sarvam.ai/text-to-speech', {
 ## 📁 Files Modified (Summary)
 
 ### Code Files (Previously Fixed)
+
 1. `app/api/tts/route.ts` - Complete TTS API rewrite
 2. `app/api/config-status/route.ts` - Environment variable check
 3. `components/AgentModal.tsx` - UI and reset value
@@ -163,6 +180,7 @@ fetch('https://api.sarvam.ai/text-to-speech', {
 7. `app/api/voice-agents/route.ts` - Agent creation default
 
 ### Test Files (Just Fixed)
+
 8. `__tests__/api/config-status.test.ts`
 9. `__tests__/api/tts.test.ts`
 10. `__tests__/api/tts.status-mapping.test.ts`
@@ -181,16 +199,19 @@ fetch('https://api.sarvam.ai/text-to-speech', {
 ## 🚀 Verification Steps
 
 ### 1. Run All Tests
+
 ```bash
 npm run test
 ```
 
 ### 2. Run Tests with Coverage
+
 ```bash
 npm run test:coverage
 ```
 
 ### 3. Check Specific Test Suites
+
 ```bash
 # API tests only
 npm test -- __tests__/api
@@ -204,7 +225,9 @@ npm test -- __tests__/components
 ## 🎨 Remaining Test Failures (Not TTS-Related)
 
 The 34 remaining failures are in:
+
 - `__tests__/app/page.riya-default.test.tsx` (33 failures)
+
   - These test the content of the Riya template prompt
   - Related to template structure, not TTS functionality
   - Example: Missing "## Profile", "NEVER type out a number", "OTP, PIN, Aadhaar" sections
@@ -215,7 +238,9 @@ The 34 remaining failures are in:
   - Actual: "[VoiceAIAgent] Failed to check config:"
 
 ### Why These Are Separate
+
 These failures are:
+
 - ❌ **NOT** related to the TTS migration
 - ❌ **NOT** related to API changes
 - ✅ Related to application content/template changes
@@ -226,12 +251,14 @@ These failures are:
 ## ✨ Success Metrics
 
 ### TTS Migration Tests
+
 - ✅ **100% of TTS API tests passing**
 - ✅ **100% of config-status tests passing**
 - ✅ **100% of TTS-related component tests passing**
 - ✅ **All Sarvam API mocks working correctly**
 
 ### Coverage Impact
+
 - All TTS code paths now tested with Sarvam API
 - Mock responses match actual Sarvam API structure
 - Error handling tested for Sarvam-specific scenarios
@@ -260,6 +287,7 @@ These failures are:
 ### If You Want 100% Test Pass Rate:
 
 1. **Fix Riya Template Tests**
+
    - Update the default Riya prompt to include all expected sections
    - Or update tests to match current prompt structure
 
@@ -268,6 +296,7 @@ These failures are:
    - Or update test expectation to accept either tag
 
 ### Current Priority
+
 The **TTS migration is 100% complete** and all TTS-related functionality is fully tested. The remaining failures are unrelated to your TTS migration request.
 
 ---
