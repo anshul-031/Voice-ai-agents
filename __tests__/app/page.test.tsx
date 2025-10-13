@@ -114,7 +114,7 @@ describe('Home Page', () => {
 
             await waitFor(() => {
                 expect(consoleErrorSpy).toHaveBeenCalledWith(
-                    expect.stringContaining('[Home] Failed to check config:'),
+                    expect.stringContaining('[VoiceAIAgent] Failed to check config:'),
                     expect.any(Error)
                 );
             });

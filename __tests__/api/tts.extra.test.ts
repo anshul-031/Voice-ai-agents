@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/tts/route'
+import { NextRequest } from 'next/server'
 
 global.fetch = jest.fn()
 
@@ -10,17 +10,19 @@ describe('API: /api/tts extra branches', () => {
   const originalEnv = process.env
   beforeEach(() => {
     jest.resetModules()
-    process.env = { ...originalEnv, DEEPGRAM_API_KEY: 'key' }
+    process.env = { ...originalEnv, SARVAM_API_KEY: 'key' }
     ;(global.fetch as jest.Mock).mockClear()
   })
   afterEach(() => { process.env = originalEnv })
 
-  it('propagates arrayBuffer to base64 correctly', async () => {
-    const buf = new TextEncoder().encode('abc').buffer
+  it('propagates Sarvam response to base64 correctly', async () => {
+    const mockSarvamResponse = {
+      audios: ['YWJj'] // base64 for 'abc'
+    }
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
-      arrayBuffer: async () => buf,
+      json: async () => mockSarvamResponse,
       headers: new Headers(),
     })
 

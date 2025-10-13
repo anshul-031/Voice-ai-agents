@@ -27,7 +27,7 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
     const [prompt, setPrompt] = useState('')
     const [llmModel, setLlmModel] = useState('Gemini 1.5 Flash')
     const [sttModel, setSttModel] = useState('AssemblyAI Universal')
-    const [ttsModel, setTtsModel] = useState('Deepgram Aura Luna')
+    const [ttsModel, setTtsModel] = useState('Sarvam Manisha')
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -36,13 +36,13 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
             setPrompt(agent.prompt)
             setLlmModel(agent.llmModel || 'Gemini 1.5 Flash')
             setSttModel(agent.sttModel || 'AssemblyAI Universal')
-            setTtsModel(agent.ttsModel || 'Deepgram Aura Luna')
+            setTtsModel(agent.ttsModel || 'Sarvam Manisha')
         } else {
             setTitle('')
             setPrompt('')
             setLlmModel('Gemini 1.5 Flash')
             setSttModel('AssemblyAI Universal')
-            setTtsModel('Deepgram Aura Luna')
+            setTtsModel('Sarvam Manisha')
         }
     }, [agent, isOpen])
 
@@ -69,7 +69,7 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 setPrompt('')
                 setLlmModel('Gemini 1.5 Flash')
                 setSttModel('AssemblyAI Universal')
-                setTtsModel('Deepgram Aura Luna')
+                setTtsModel('Sarvam Manisha')
             }
         } catch (error) {
             console.error('Error saving agent:', error)
@@ -159,10 +159,9 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                                 onChange={(e) => setTtsModel(e.target.value)}
                                 className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                             >
-                                <option value="Deepgram Aura Luna">Deepgram Aura Luna</option>
-                                <option value="Deepgram Aura Asteria">Deepgram Aura Asteria</option>
-                                <option value="ElevenLabs">ElevenLabs</option>
-                                <option value="Google Text-to-Speech">Google Text-to-Speech</option>
+                                <option value="Sarvam Manisha">Sarvam Manisha</option>
+                                <option value="Sarvam Meera">Sarvam Meera</option>
+                                <option value="Sarvam Arvind">Sarvam Arvind</option>
                             </select>
                         </div>
                     </div>

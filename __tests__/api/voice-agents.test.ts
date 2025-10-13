@@ -26,7 +26,7 @@ describe('API: /api/voice-agents', () => {
           prompt: 'You are a helpful customer support agent',
           llmModel: 'Gemini 1.5 Flash',
           sttModel: 'AssemblyAI Universal',
-          ttsModel: 'Deepgram Aura Luna',
+          ttsModel: 'Sarvam Manisha',
           lastUpdated: new Date('2025-10-10'),
           createdAt: new Date('2025-10-01')
         },
@@ -218,7 +218,7 @@ describe('API: /api/voice-agents', () => {
         prompt: 'Basic prompt',
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Manisha',
         lastUpdated: new Date(),
         createdAt: new Date()
       }
@@ -245,7 +245,7 @@ describe('API: /api/voice-agents', () => {
       expect(data.agent.userId).toBe('mukul')
       expect(data.agent.llmModel).toBe('Gemini 1.5 Flash')
       expect(data.agent.sttModel).toBe('AssemblyAI Universal')
-      expect(data.agent.ttsModel).toBe('Deepgram Aura Luna')
+      expect(data.agent.ttsModel).toBe('Sarvam Manisha')
     })
 
     it('should trim whitespace from title and prompt', async () => {
@@ -397,7 +397,7 @@ describe('API: /api/voice-agents', () => {
         prompt: 'Original prompt',
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Manisha',
         lastUpdated: new Date(),
         createdAt: new Date()
       }
@@ -440,7 +440,7 @@ describe('API: /api/voice-agents', () => {
         prompt: 'Spaced Prompt',
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
-        ttsModel: 'Deepgram Aura Luna',
+        ttsModel: 'Sarvam Manisha',
         lastUpdated: new Date(),
         createdAt: new Date()
       })
@@ -599,3 +599,4 @@ describe('API: /api/voice-agents', () => {
     })
   })
 })
+

@@ -1,15 +1,15 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/tts/route'
+import { NextRequest } from 'next/server'
 
 describe('API: /api/tts catch error branch', () => {
   const originalEnv = process.env
 
   beforeEach(() => {
     jest.resetModules()
-    process.env = { ...originalEnv, DEEPGRAM_API_KEY: 'any' }
+    process.env = { ...originalEnv, SARVAM_API_KEY: 'any' }
     ;(global.fetch as jest.Mock) = jest.fn()
   })
 

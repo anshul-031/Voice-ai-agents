@@ -25,7 +25,7 @@ describe('TopModelBoxes', () => {
 
       expect(screen.getByText('Gemini 1.5 Flash')).toBeInTheDocument()
       expect(screen.getByText('AssemblyAI Universal')).toBeInTheDocument()
-      expect(screen.getByText('Deepgram Aura Luna')).toBeInTheDocument()
+      expect(screen.getByText('Sarvam Manisha')).toBeInTheDocument()
     })
   })
 
@@ -177,3 +177,4 @@ describe('TopModelBoxes', () => {
     })
   })
 })
+
