@@ -4,23 +4,23 @@ import '@testing-library/jest-dom'
 // Only mock browser APIs if window is available (jsdom environment)
 if (typeof window !== 'undefined') {
   // Avoid jsdom unimplemented scrollTo warnings from animation libs
-  if (!window.scrollTo) {
+  // Always mock to a no-op to reduce noise
   // @ts-ignore
   window.scrollTo = jest.fn()
-  }
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      // Prefer reduced motion to reduce animation work in tests
+      matches: query.includes('prefers-reduced-motion') ? true : false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
   })
 
   // Mock IntersectionObserver
@@ -141,6 +141,12 @@ if (typeof window !== 'undefined') {
     fftSize: 2048,
     frequencyBinCount: 1024,
     getByteFrequencyData: jest.fn(),
+    getByteTimeDomainData: jest.fn((arr) => {
+      // Fill with midline values to simulate silence
+      if (arr && arr.length) {
+        for (let i = 0; i < arr.length; i++) arr[i] = 128
+      }
+    }),
     connect: jest.fn(),
   })),
   close: jest.fn(),
@@ -200,6 +206,14 @@ if (typeof window !== 'undefined') {
   // Mock URL.createObjectURL and revokeObjectURL
   global.URL.createObjectURL = jest.fn(() => 'mock-object-url')
   global.URL.revokeObjectURL = jest.fn()
+
+  // Polyfill requestAnimationFrame/cancelAnimationFrame to avoid open handles
+  if (!window.requestAnimationFrame) {
+    window.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 16)
+  }
+  if (!window.cancelAnimationFrame) {
+    window.cancelAnimationFrame = (id) => clearTimeout(id)
+  }
 }
 
 // Mock fetch globally (available in both node and jsdom)
@@ -214,7 +228,8 @@ beforeAll(() => {
       (args[0].includes('Warning: ReactDOM.render') ||
         args[0].includes('Not implemented: HTMLFormElement.prototype.submit') ||
         args[0].includes('Warning: An update to') ||
-        args[0].includes('not wrapped in act('))
+        args[0].includes('not wrapped in act(') ||
+        args[0].includes('In HTML, <html> cannot be a child of <div>.'))
     ) {
       return
     }
