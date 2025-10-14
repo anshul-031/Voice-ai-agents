@@ -22,6 +22,8 @@ interface VoiceAIAgentProps {
     showHeader?: boolean;
     headerTitle?: string;
     onBack?: () => void;
+    onDelete?: () => void;
+    isDeleting?: boolean;
 }
 
 interface ConfigStatus {
@@ -46,6 +48,8 @@ export default function VoiceAIAgent({
     showHeader = true,
     headerTitle = 'AI Voice Assistant',
     onBack,
+    onDelete,
+    isDeleting = false,
 }: VoiceAIAgentProps) {
     // Console logs are allowed in this component for debugging UX
 
@@ -628,6 +632,26 @@ export default function VoiceAIAgent({
                                 </h1>
                             </div>
                             <div className="flex items-center gap-3">
+                                {onDelete && agentId && (
+                                    <button
+                                        onClick={onDelete}
+                                        disabled={isDeleting}
+                                        className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        title="Delete this agent"
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <span className="animate-spin">⏳</span>
+                                                <span>Deleting...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>🗑️</span>
+                                                <span>Delete Agent</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                                 <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60">
                                     v2.0
                                 </div>

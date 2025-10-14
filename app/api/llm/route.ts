@@ -67,20 +67,30 @@ export async function POST(request: NextRequest) {
         // Generate a session ID if not provided
         const chatSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Save user message to database
-        try {
-            await Chat.create({
-                userId: 'mukul', // Hardcoded user for now
-                sessionId: chatSessionId,
-                role: 'user',
-                content: userText.trim(),
-                systemPrompt: prompt?.trim(),
-                timestamp: new Date(),
-            });
-            console.log('[LLM] User message saved to database');
-        } catch (dbError) {
-            console.error('[LLM] Failed to save user message:', dbError);
-            // Continue with LLM request even if DB save fails
+        // Calculate total messages (history + current user message)
+        const totalMessages = (conversationHistory?.length || 0) + 1;
+        const shouldSaveToHistory = totalMessages > 2;
+
+        console.log('[LLM] Total messages in conversation:', totalMessages, 'Save to history:', shouldSaveToHistory);
+
+        // Save user message to database only if conversation has more than 2 messages
+        if (shouldSaveToHistory) {
+            try {
+                await Chat.create({
+                    userId: 'mukul', // Hardcoded user for now
+                    sessionId: chatSessionId,
+                    role: 'user',
+                    content: userText.trim(),
+                    systemPrompt: prompt?.trim(),
+                    timestamp: new Date(),
+                });
+                console.log('[LLM] User message saved to database (conversation has >2 messages)');
+            } catch (dbError) {
+                console.error('[LLM] Failed to save user message:', dbError);
+                // Continue with LLM request even if DB save fails
+            }
+        } else {
+            console.log('[LLM] Skipping user message save (conversation has <=2 messages)');
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -199,19 +209,23 @@ export async function POST(request: NextRequest) {
 
             console.log('[LLM] Successfully generated response, length:', llmText.length);
 
-            // Save assistant response to database
-            try {
-                await Chat.create({
-                    userId: 'mukul', // Hardcoded user for now
-                    sessionId: chatSessionId,
-                    role: 'assistant',
-                    content: llmText.trim(),
-                    timestamp: new Date(),
-                });
-                console.log('[LLM] Assistant response saved to database');
-            } catch (dbError) {
-                console.error('[LLM] Failed to save assistant response:', dbError);
-                // Continue even if DB save fails
+            // Save assistant response to database only if conversation has more than 2 messages
+            if (shouldSaveToHistory) {
+                try {
+                    await Chat.create({
+                        userId: 'mukul', // Hardcoded user for now
+                        sessionId: chatSessionId,
+                        role: 'assistant',
+                        content: llmText.trim(),
+                        timestamp: new Date(),
+                    });
+                    console.log('[LLM] Assistant response saved to database (conversation has >2 messages)');
+                } catch (dbError) {
+                    console.error('[LLM] Failed to save assistant response:', dbError);
+                    // Continue even if DB save fails
+                }
+            } else {
+                console.log('[LLM] Skipping assistant response save (conversation has <=2 messages)');
             }
 
             return NextResponse.json({
