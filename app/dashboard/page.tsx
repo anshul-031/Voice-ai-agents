@@ -7,6 +7,8 @@ import CampaignModal from '@/components/CampaignModal'
 import CampaignsTable from '@/components/CampaignsTable'
 import ChatHistory from '@/components/ChatHistory'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import PhoneNumberModal from '@/components/PhoneNumberModal'
+import PhoneNumbersTable from '@/components/PhoneNumbersTable'
 import VoiceAgentsTable from '@/components/VoiceAgentsTable'
 import { useEffect, useState } from 'react'
 
@@ -38,6 +40,11 @@ export default function DashboardPage() {
     const [campaignsRefreshKey, setCampaignsRefreshKey] = useState(0)
     const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null)
     const [contactsModalOpen, setContactsModalOpen] = useState(false)
+
+    // Phone Numbers state
+    const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false)
+    const [editingPhoneNumber, setEditingPhoneNumber] = useState<any | null>(null)
+    const [phoneNumbersRefreshKey, setPhoneNumbersRefreshKey] = useState(0)
 
     useEffect(() => {
         if (activeView === 'campaigns') {
@@ -104,6 +111,26 @@ export default function DashboardPage() {
         setViewingCampaignId(null)
     }
 
+    // Phone Number handlers
+    const handleAddPhoneNumber = () => {
+        setEditingPhoneNumber(null)
+        setPhoneNumberModalOpen(true)
+    }
+
+    const handleEditPhoneNumber = (phone: any) => {
+        setEditingPhoneNumber(phone)
+        setPhoneNumberModalOpen(true)
+    }
+
+    const handlePhoneNumberModalClose = () => {
+        setPhoneNumberModalOpen(false)
+        setEditingPhoneNumber(null)
+    }
+
+    const handlePhoneNumberModalSuccess = () => {
+        setPhoneNumbersRefreshKey(prev => prev + 1)
+    }
+
     const renderContent = () => {
         switch (activeView) {
             case 'voice-agents':
@@ -135,6 +162,14 @@ export default function DashboardPage() {
                 )
 
             case 'phone-number':
+                return (
+                    <PhoneNumbersTable
+                        key={phoneNumbersRefreshKey}
+                        onAddPhone={handleAddPhoneNumber}
+                        onEditPhone={handleEditPhoneNumber}
+                    />
+                )
+
             case 'agent-knowledge':
             case 'api-keys':
             case 'credentials':
@@ -191,6 +226,13 @@ export default function DashboardPage() {
                 isOpen={contactsModalOpen}
                 onClose={handleContactsModalClose}
                 campaignId={viewingCampaignId}
+            />
+
+            <PhoneNumberModal
+                isOpen={phoneNumberModalOpen}
+                onClose={handlePhoneNumberModalClose}
+                phoneNumber={editingPhoneNumber}
+                onSuccess={handlePhoneNumberModalSuccess}
             />
 
             <ChatHistory
