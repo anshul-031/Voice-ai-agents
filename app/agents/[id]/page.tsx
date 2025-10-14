@@ -24,6 +24,7 @@ export default function AgentPage() {
     
     const [agent, setAgent] = useState<VoiceAgent | null>(null);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
     const [modelConfig, setModelConfig] = useState<ModelConfig>({
         llmModel: 'Gemini 1.5 Flash',
         sttModel: 'AssemblyAI Universal',
@@ -63,6 +64,33 @@ export default function AgentPage() {
         fetchAgent();
     }, [agentId, router]);
 
+    const handleDelete = async () => {
+        if (!agent) return;
+        
+        if (!confirm(`Are you sure you want to delete "${agent.title}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/voice-agents?id=${agent.id}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                router.push('/dashboard');
+            } else {
+                const data = await res.json();
+                alert(`Failed to delete agent: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting agent:', error);
+            alert('Failed to delete agent. Please try again.');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className='min-h-screen bg-slate-900 text-white flex items-center justify-center'>
@@ -99,6 +127,8 @@ export default function AgentPage() {
             showHeader={true}
             headerTitle={agent.title}
             onBack={() => router.push('/dashboard')}
+            onDelete={handleDelete}
+            isDeleting={deleting}
         />
     );
 }
