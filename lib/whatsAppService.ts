@@ -139,13 +139,19 @@ export async function sendMessage(metaMessageRequest: MetaMessageRequest): Promi
             },
             body: JSON.stringify(metaMessageRequest),
         });
+            console.info("Meta API CALL FINISHEDL");
+            console.warn("Meta API CALL FINISHEDL");
         if (!response.ok) {
             const errorText = await response.text();
+            console.info('Error in sendMessage:', response.status, errorText);
             console.error('Error in sendMessage:', response.status, errorText);
+            console.warn('Error in sendMessage:', response.status, errorText);
             return null;
         }
         const metaResponse = await response.json();
         if (metaResponse.response) {
+            console.info('MetaMessageResponse with response field:', metaResponse.response);
+            console.warn('MetaMessageResponse with response field:', metaResponse.response);
             return metaResponse.response as MetaMessageResponse;
         }
         return metaResponse as MetaMessageResponse;
@@ -189,7 +195,7 @@ export async function sendTextMessage(mobileNo: string, message: string): Promis
  * Processes WhatsApp webhook callback and extracts user phone number and message.
  * @param callbackResponse The parsed webhook JSON object
  */
-export function processWhatsAppCallback(callbackResponse: any): void {
+export async function processWhatsAppCallback(callbackResponse: any): Promise<void> {
     try {
         const entry = callbackResponse?.entry?.[0];
         const change = entry?.changes?.[0];
@@ -201,8 +207,10 @@ export function processWhatsAppCallback(callbackResponse: any): void {
         // Example: Log extracted values
         console.info('User Mobile (from):', userMobile);
         console.info('User Message:', userMessage);
-        // Add further processing logic here if needed
-    } catch (e) {
-        console.error('Error processing WhatsApp callback:', e);
+        if(userMessage && userMobile){
+            await sendTextMessage(userMobile, userMessage);
+        }
+    } catch (e: any) {
+        console.error('Error in processWhatsAppCallback:', e?.message);
     }
 }
