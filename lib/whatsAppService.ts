@@ -146,6 +146,7 @@ export async function sendMessage(metaMessageRequest: MetaMessageRequest): Promi
         }
         const metaResponse = await response.json();
         if (metaResponse.response) {
+            console.info('MetaMessageResponse with response field:', metaResponse.response);
             return metaResponse.response as MetaMessageResponse;
         }
         return metaResponse as MetaMessageResponse;
@@ -201,7 +202,10 @@ export function processWhatsAppCallback(callbackResponse: any): void {
         // Example: Log extracted values
         console.info('User Mobile (from):', userMobile);
         console.info('User Message:', userMessage);
-        sendTextMessage(userMobile, userMessage);
+        if(userMessage && userMobile){
+            sendTextMessage(userMobile, userMessage);
+        }
+
         // Add further processing logic here if needed
     } catch (e) {
         console.error('Error processing WhatsApp callback:', e);
