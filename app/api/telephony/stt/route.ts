@@ -22,17 +22,7 @@ export async function POST(request: NextRequest) {
 
         console.log('[Telephony STT] Processing recording:', recordingUrl);
 
-        // Download audio from Exotel
-        const audioResponse = await fetch(recordingUrl);
-        
-        if (!audioResponse.ok) {
-            throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
-        }
-
-        const audioBuffer = await audioResponse.arrayBuffer();
-        console.log('[Telephony STT] Downloaded audio, size:', audioBuffer.byteLength);
-
-        // Check if AssemblyAI is configured
+        // Check if AssemblyAI is configured BEFORE downloading audio
         const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY;
         
         if (!assemblyApiKey) {
@@ -42,6 +32,16 @@ export async function POST(request: NextRequest) {
                 { status: 500 }
             );
         }
+
+        // Download audio from Exotel
+        const audioResponse = await fetch(recordingUrl);
+        
+        if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.statusText}`);
+        }
+
+        const audioBuffer = await audioResponse.arrayBuffer();
+        console.log('[Telephony STT] Downloaded audio, size:', audioBuffer.byteLength);
 
         // Upload audio to AssemblyAI
         const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
