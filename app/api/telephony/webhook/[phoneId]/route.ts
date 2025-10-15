@@ -1,4 +1,6 @@
 import dbConnect from '@/lib/mongodb';
+import Chat from '@/models/Chat';
+
 import PhoneNumber from '@/models/PhoneNumber';
 import VoiceAgent from '@/models/VoiceAgent';
 import { NextRequest, NextResponse } from 'next/server';
@@ -6,16 +8,15 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Exotel Webhook Handler
  * 
- * This endpoint receives incoming call webhooks from Exotel using the Passthru App approach.
- * Instead of WebSockets, we use HTTP callbacks for each interaction.
+ * This endpoint receives incoming call webhooks from Exotel.
+ * It identifies the phone number, finds the linked agent, and handles the call flow.
  * 
- * Flow:
- * 1. Exotel calls this webhook when a call comes in
- * 2. We return XML with <Gather> to collect speech input
- * 3. User speaks, Exotel transcribes (or we receive audio)
- * 4. Exotel posts back to our action URL with the input
- * 5. We process with LLM and return response
- * 6. Repeat until call ends
+ * Exotel sends call events to this webhook with parameters like:
+ * - CallSid: Unique identifier for the call
+ * - From: Caller's phone number
+ * - To: Your Exotel number
+ * - Status: Call status (ringing, in-progress, completed, etc.)
+ * - RecordingUrl: URL of the call recording (if enabled)
  */
 
 interface RouteContext {
@@ -34,7 +35,7 @@ export async function POST(
     try {
         await dbConnect();
 
-        // Parse Exotel webhook data
+
         const contentType = request.headers.get('content-type');
         let exotelData: any = {};
 
@@ -49,6 +50,7 @@ export async function POST(
             // If no body, check query params
             const url = new URL(request.url);
             exotelData = Object.fromEntries(url.searchParams.entries());
+          
         }
 
         console.log('[Exotel Webhook] Received data:', {
@@ -72,6 +74,12 @@ export async function POST(
                     status: 200, // Return 200 with error message to avoid Exotel retries
                     headers: { 'Content-Type': 'application/xml' },
                 }
+            Status: exotelData.Status,
+        });
+
+        // Extract phone ID from the route parameter
+        // Find the phone number configuration
+      
             );
         }
 
