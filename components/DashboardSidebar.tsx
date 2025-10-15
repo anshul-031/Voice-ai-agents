@@ -1,21 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
-    Bot,
-    Phone,
-    Megaphone,
-    BookOpen,
-    PhoneCall,
-    Settings,
-    FileText,
-    Sparkles,
-    ChevronDown,
-    Key,
-    CreditCard,
     Banknote,
-    Receipt
+    BookOpen,
+    Bot,
+    ChevronDown,
+    CreditCard,
+    FileText,
+    Key,
+    Megaphone,
+    Phone,
+    PhoneCall,
+    Receipt,
+    Settings,
+    Sparkles
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface DashboardSidebarProps {
     activeView: string

@@ -1,15 +1,15 @@
-import { render, screen, waitFor, fireEvent } from '../test-utils'
-import Home from '@/app/page'
+import Home from '@/app/demo/page'
 import '@testing-library/jest-dom'
+import { fireEvent, render, screen, waitFor } from '../test-utils'
 
-// Mock the useVoiceRecorder hook
-jest.mock('@/hooks/useVoiceRecorder', () => ({
-    useVoiceRecorder: jest.fn(() => ({
-        isListening: false,
-        isProcessing: false,
+// Mock the useContinuousCall hook
+jest.mock('@/hooks/useContinuousCall', () => ({
+    useContinuousCall: jest.fn(() => ({
+        callState: 'idle',
         audioLevel: 0,
-        startRecording: jest.fn(),
-        stopRecording: jest.fn(),
+        startCall: jest.fn(),
+        endCall: jest.fn(),
+        isCallActive: false,
     })),
 }))
 
@@ -147,15 +147,15 @@ describe('Home Page - Riya Template Default', () => {
             render(<Home />)
 
             // Open text chat
-            const textChatButton = screen.getByTitle('Toggle text chat')
+            const textChatButton = screen.getByTitle('Text chat mode')
             fireEvent.click(textChatButton)
 
             await waitFor(() => {
-                expect(screen.getByPlaceholderText('Type your message here...')).toBeInTheDocument()
+                expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument()
             })
 
             // Type and send message
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             fireEvent.change(input, { target: { value: 'Hello' } })
 
             const sendButton = screen.getByTitle('Send message')
@@ -277,18 +277,7 @@ describe('Home Page - Riya Template Default', () => {
     })
 
     describe('Riya Template in Different Scenarios', () => {
-        it('should use Riya template for voice recording flow', async () => {
-            const mockStartRecording = jest.fn()
-            const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder')
-
-            useVoiceRecorder.mockImplementation(() => ({
-                isListening: false,
-                isProcessing: false,
-                audioLevel: 0,
-                startRecording: mockStartRecording,
-                stopRecording: jest.fn(),
-            }))
-
+        it('should use Riya template for voice call flow', async () => {
             render(<Home />)
 
             await waitFor(() => {
@@ -297,8 +286,8 @@ describe('Home Page - Riya Template Default', () => {
             })
 
             // The template should be ready for voice interactions
-            const micButton = screen.getByLabelText(/start recording/i)
-            expect(micButton).toBeInTheDocument()
+            const callButton = screen.getByRole('button', { name: /start call/i })
+            expect(callButton).toBeInTheDocument()
         })
 
         it('should show Riya template before any user interaction', async () => {

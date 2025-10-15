@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '../test-utils'
 import MicButton from '@/components/MicButton'
+import { fireEvent, render, screen } from '../test-utils'
 
 describe('MicButton', () => {
   const mockOnToggle = jest.fn()
@@ -54,7 +54,7 @@ describe('MicButton', () => {
   })
 
   describe('Button States', () => {
-    it('should show blue background when not open', () => {
+    it('should have glass-button styling', () => {
       const { container } = render(
         <MicButton
           isListening={false}
@@ -63,11 +63,24 @@ describe('MicButton', () => {
         />
       )
 
-      const button = container.querySelector('.bg-blue-600')
+      const button = container.querySelector('.glass-button')
       expect(button).toBeInTheDocument()
     })
 
-    it('should show red background when listening', () => {
+    it('should show blue gradient when not open', () => {
+      const { container } = render(
+        <MicButton
+          isListening={false}
+          isOpen={false}
+          onToggle={mockOnToggle}
+        />
+      )
+
+      const button = container.querySelector('.from-blue-500\\/40')
+      expect(button).toBeInTheDocument()
+    })
+
+    it('should show red gradient when listening', () => {
       const { container } = render(
         <MicButton
           isListening={true}
@@ -76,11 +89,11 @@ describe('MicButton', () => {
         />
       )
 
-      const button = container.querySelector('.bg-red-600')
+      const button = container.querySelector('.from-red-500\\/40')
       expect(button).toBeInTheDocument()
     })
 
-    it('should show slate background when open but not listening', () => {
+    it('should show slate gradient when open but not listening', () => {
       const { container } = render(
         <MicButton
           isListening={false}
@@ -89,7 +102,33 @@ describe('MicButton', () => {
         />
       )
 
-      const button = container.querySelector('.bg-slate-600')
+      const button = container.querySelector('.from-slate-600\\/40')
+      expect(button).toBeInTheDocument()
+    })
+
+    it('should have glow effect when not open', () => {
+      const { container } = render(
+        <MicButton
+          isListening={false}
+          isOpen={false}
+          onToggle={mockOnToggle}
+        />
+      )
+
+      const button = container.querySelector('.glow-blue')
+      expect(button).toBeInTheDocument()
+    })
+
+    it('should have glow effect when listening', () => {
+      const { container } = render(
+        <MicButton
+          isListening={true}
+          isOpen={true}
+          onToggle={mockOnToggle}
+        />
+      )
+
+      const button = container.querySelector('.glow-red')
       expect(button).toBeInTheDocument()
     })
   })
@@ -130,7 +169,7 @@ describe('MicButton', () => {
         />
       )
 
-      const indicator = container.querySelector('.bg-yellow-500')
+      const indicator = container.querySelector('.bg-yellow-400')
       expect(indicator).toBeInTheDocument()
     })
   })

@@ -1,6 +1,6 @@
+import Home from '@/app/demo/page'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
 
 describe('Home page - text chat TTS success and ended cleanup', () => {
   beforeEach(() => {
@@ -28,10 +28,10 @@ describe('Home page - text chat TTS success and ended cleanup', () => {
   it('revokes object URL after audio ended', async () => {
     render(<Home />)
 
-    const toggle = await screen.findByTitle('Toggle text chat')
+    const toggle = await screen.findByTitle('Text chat mode')
     await userEvent.click(toggle)
 
-    const input = screen.getByPlaceholderText('Type your message here...')
+    const input = screen.getByPlaceholderText('Type your message...')
     await userEvent.type(input, 'Hi there')
     await userEvent.click(screen.getByTitle('Send message'))
 

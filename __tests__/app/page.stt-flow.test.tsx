@@ -31,18 +31,18 @@ jest.mock('@/hooks/useSpeechRecognition', () => ({
   }),
 }))
 
-// keep voice recorder fallback minimal (unused in this path)
-jest.mock('@/hooks/useVoiceRecorder', () => ({
-  useVoiceRecorder: jest.fn(() => ({
-    isListening: false,
-    isProcessing: false,
+// continuous call hook
+jest.mock('@/hooks/useContinuousCall', () => ({
+  useContinuousCall: jest.fn(() => ({
+    callState: 'idle',
     audioLevel: 0,
-    startRecording: jest.fn(),
-    stopRecording: jest.fn(),
+    startCall: jest.fn(),
+    endCall: jest.fn(),
+    isCallActive: false,
   })),
 }))
 
-const Home = require('@/app/page').default as typeof import('@/app/page').default
+const Home = require('@/app/demo/page').default as typeof import('@/app/demo/page').default
 
 describe('Home page - real-time STT onFinal flow', () => {
   beforeEach(() => {
@@ -69,8 +69,8 @@ describe('Home page - real-time STT onFinal flow', () => {
     render(<Home />)
 
     // open chat to ensure ChatBox renders
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
     // ensure hook captured onFinal
     const { useSpeechRecognition } = require('@/hooks/useSpeechRecognition')
@@ -106,8 +106,8 @@ describe('Home page - real-time STT onFinal flow', () => {
     })
 
     render(<Home />)
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
     await waitFor(() => { expect(typeof capturedOnFinal).toBe('function') })
     capturedOnFinal && capturedOnFinal('question')
@@ -134,8 +134,8 @@ describe('Home page - real-time STT onFinal flow', () => {
     })
 
     render(<Home />)
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
     await waitFor(() => expect(typeof capturedOnFinal).toBe('function'))
     capturedOnFinal && capturedOnFinal('test input')
@@ -164,8 +164,8 @@ describe('Home page - real-time STT onFinal flow', () => {
     })
 
     render(<Home />)
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
     await waitFor(() => expect(typeof capturedOnFinal).toBe('function'))
     capturedOnFinal && capturedOnFinal('test input 2')
@@ -195,8 +195,8 @@ describe('Home page - real-time STT onFinal flow', () => {
 
     ;(global.URL.revokeObjectURL as jest.Mock).mockClear()
     render(<Home />)
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
     await waitFor(() => expect(typeof capturedOnFinal).toBe('function'))
     capturedOnFinal && capturedOnFinal('hi')

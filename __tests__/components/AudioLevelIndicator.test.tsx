@@ -1,77 +1,110 @@
-import { render, screen } from '../test-utils'
 import AudioLevelIndicator from '@/components/AudioLevelIndicator'
+import { render, screen } from '../test-utils'
 
 describe('AudioLevelIndicator', () => {
   describe('Rendering', () => {
     it('should render the component with audio level', () => {
-      render(<AudioLevelIndicator level={0.5} isListening={true} />)
+      render(<AudioLevelIndicator level={0.05} isListening={true} />)
       
-      expect(screen.getByText('Audio Level:')).toBeInTheDocument()
-      expect(screen.getByText('0.5000')).toBeInTheDocument()
+      expect(screen.getByText('Listening')).toBeInTheDocument()
+      expect(screen.getByText('50', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('%', { exact: false })).toBeInTheDocument()
     })
 
-    it('should display formatted level with 4 decimal places', () => {
+    it('should display percentage correctly', () => {
       render(<AudioLevelIndicator level={0.123456} isListening={false} />)
       
-      expect(screen.getByText('0.1235')).toBeInTheDocument()
+      expect(screen.getByText('100', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('%', { exact: false })).toBeInTheDocument()
     })
 
     it('should render with zero level', () => {
       render(<AudioLevelIndicator level={0} isListening={false} />)
       
-      expect(screen.getByText('0.0000')).toBeInTheDocument()
+      expect(screen.getByText('0', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('%', { exact: false })).toBeInTheDocument()
+    })
+
+    it('should show Idle when not listening', () => {
+      render(<AudioLevelIndicator level={0.5} isListening={false} />)
+      
+      expect(screen.getByText('Idle')).toBeInTheDocument()
+    })
+
+    it('should show Listening when listening', () => {
+      render(<AudioLevelIndicator level={0.5} isListening={true} />)
+      
+      expect(screen.getByText('Listening')).toBeInTheDocument()
     })
   })
 
-  describe('Audio Level Bar', () => {
-    it('should show green color when listening and level > 0.5%', () => {
-      const { container } = render(<AudioLevelIndicator level={0.001} isListening={true} />)
+  describe('Canvas Visualizer', () => {
+    it('should render canvas element', () => {
+      const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      const bar = container.querySelector('.bg-green-500')
-      expect(bar).toBeInTheDocument()
+      const canvas = container.querySelector('canvas')
+      expect(canvas).toBeInTheDocument()
     })
 
-    it('should show yellow color when listening and level <= 0.5%', () => {
-      const { container } = render(<AudioLevelIndicator level={0.0001} isListening={true} />)
+    it('should show green indicator when listening', () => {
+      const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
       
-      const bar = container.querySelector('.bg-yellow-500')
-      expect(bar).toBeInTheDocument()
+      // Look for the green pulsing dot indicator
+      const greenIndicator = container.querySelector('.bg-gradient-to-br.from-green-400')
+      expect(greenIndicator).toBeInTheDocument()
     })
 
-    it('should show gray color when not listening', () => {
-      const { container } = render(<AudioLevelIndicator level={0.5} isListening={false} />)
+    it('should not show green indicator when not listening', () => {
+      const { container} = render(<AudioLevelIndicator level={0.5} isListening={false} />)
       
-      const bar = container.querySelector('.bg-gray-500')
-      expect(bar).toBeInTheDocument()
+      const greenIndicator = container.querySelector('.bg-gradient-to-br.from-green-400')
+      expect(greenIndicator).not.toBeInTheDocument()
     })
+  })
 
-    it('should calculate width percentage correctly', () => {
-      const { container } = render(<AudioLevelIndicator level={0.05} isListening={true} />)
+  describe('Glass Effects', () => {
+    it('should have glass-card styling', () => {
+      const { container } = render(<AudioLevelIndicator level={0.5} isListening={true} />)
+      
+      // Component uses backdrop-blur and glass effects (rounded-2xl, border, bg-gradient)
+      const visualizerContainer = container.querySelector('.rounded-2xl')
+      expect(visualizerContainer).toBeInTheDocument()
+      expect(visualizerContainer).toHaveClass('bg-gradient-to-br')
+    })
+  })
+
+  describe('Percentage Display', () => {
+    it('should calculate percentage correctly (level * 1000)', () => {
+      render(<AudioLevelIndicator level={0.05} isListening={true} />)
       
       // level * 1000 = 0.05 * 1000 = 50%
-      const bar = container.querySelector('[style*="width"]')
-      expect(bar).toHaveStyle({ width: '50%' })
+      expect(screen.getByText('50', { exact: false })).toBeInTheDocument()
     })
 
-    it('should cap width at 100%', () => {
-      const { container } = render(<AudioLevelIndicator level={1.0} isListening={true} />)
+    it('should cap percentage at 100%', () => {
+      render(<AudioLevelIndicator level={1.0} isListening={true} />)
       
-      const bar = container.querySelector('[style*="width"]')
-      expect(bar).toHaveStyle({ width: '100%' })
+      expect(screen.getByText('100', { exact: false })).toBeInTheDocument()
     })
   })
 
-  describe('Edge Cases', () => {
-    it('should handle negative levels', () => {
-      const { container } = render(<AudioLevelIndicator level={-0.5} isListening={true} />)
+  describe('High Level Warning', () => {
+    it('should show warning when percentage > 85 and listening', () => {
+      render(<AudioLevelIndicator level={0.09} isListening={true} />)
       
-      expect(screen.getByText('-0.5000')).toBeInTheDocument()
+      expect(screen.getByText('High audio level detected')).toBeInTheDocument()
     })
 
-    it('should handle very large levels', () => {
-      render(<AudioLevelIndicator level={999.999} isListening={true} />)
+    it('should not show warning when percentage <= 85', () => {
+      render(<AudioLevelIndicator level={0.08} isListening={true} />)
       
-      expect(screen.getByText('999.9990')).toBeInTheDocument()
+      expect(screen.queryByText('High audio level detected')).not.toBeInTheDocument()
+    })
+
+    it('should not show warning when not listening', () => {
+      render(<AudioLevelIndicator level={0.09} isListening={false} />)
+      
+      expect(screen.queryByText('High audio level detected')).not.toBeInTheDocument()
     })
   })
 })

@@ -1,6 +1,5 @@
-import { render, screen } from '../test-utils'
-import { createMockModelConfig } from '../test-utils'
 import TopModelBoxes from '@/components/TopModelBoxes'
+import { createMockModelConfig, render, screen } from '../test-utils'
 
 describe('TopModelBoxes', () => {
   describe('Rendering', () => {
@@ -26,7 +25,7 @@ describe('TopModelBoxes', () => {
 
       expect(screen.getByText('Gemini 1.5 Flash')).toBeInTheDocument()
       expect(screen.getByText('AssemblyAI Universal')).toBeInTheDocument()
-      expect(screen.getByText('Deepgram Aura Luna')).toBeInTheDocument()
+      expect(screen.getByText('Sarvam Manisha')).toBeInTheDocument()
     })
   })
 
@@ -77,8 +76,8 @@ describe('TopModelBoxes', () => {
       const config = createMockModelConfig()
       const { container } = render(<TopModelBoxes config={config} />)
 
-      // Updated to match new class structure with opacity
-      const boxes = container.querySelectorAll('[class*="bg-slate-700"]')
+      // Updated to match glass-card structure
+      const boxes = container.querySelectorAll('.glass-card.rounded-xl')
       const firstBox = boxes[0]
       expect(firstBox.textContent).toContain('LLM')
     })
@@ -87,8 +86,8 @@ describe('TopModelBoxes', () => {
       const config = createMockModelConfig()
       const { container } = render(<TopModelBoxes config={config} />)
 
-      // Updated to match new class structure with opacity
-      const boxes = container.querySelectorAll('[class*="bg-slate-700"]')
+      // Updated to match glass-card structure
+      const boxes = container.querySelectorAll('.glass-card.rounded-xl')
       const secondBox = boxes[1]
       expect(secondBox.textContent).toContain('STT')
     })
@@ -97,8 +96,8 @@ describe('TopModelBoxes', () => {
       const config = createMockModelConfig()
       const { container } = render(<TopModelBoxes config={config} />)
 
-      // Updated to match new class structure with opacity
-      const boxes = container.querySelectorAll('[class*="bg-slate-700"]')
+      // Updated to match glass-card structure
+      const boxes = container.querySelectorAll('.glass-card.rounded-xl')
       const thirdBox = boxes[2]
       expect(thirdBox.textContent).toContain('TTS')
     })
@@ -107,8 +106,8 @@ describe('TopModelBoxes', () => {
       const config = createMockModelConfig()
       const { container } = render(<TopModelBoxes config={config} />)
 
-      // Updated to match new class structure with opacity
-      const boxes = container.querySelectorAll('[class*="bg-slate-700"]')
+      // Updated to match glass-card structure
+      const boxes = container.querySelectorAll('.glass-card.rounded-xl')
       expect(boxes.length).toBe(3)
     })
   })
@@ -165,16 +164,17 @@ describe('TopModelBoxes', () => {
   })
 
   describe('Styling', () => {
-    it('should apply correct background colors', () => {
+    it('should apply glass panel styling', () => {
       const config = createMockModelConfig()
       const { container } = render(<TopModelBoxes config={config} />)
 
-      const outerBox = container.querySelector('.bg-slate-800')
+      const outerBox = container.querySelector('.glass-panel')
       expect(outerBox).toBeInTheDocument()
 
-      // Updated to match new component structure with bg-slate-700/50 class
-      const innerBoxes = container.querySelectorAll('[class*="bg-slate-700"]')
-      expect(innerBoxes.length).toBeGreaterThanOrEqual(3)
+      // Check for blue gradient classes on model cards
+      const gradientBoxes = container.querySelectorAll('[class*="from-blue"]')
+      expect(gradientBoxes.length).toBeGreaterThanOrEqual(3)
     })
   })
 })
+

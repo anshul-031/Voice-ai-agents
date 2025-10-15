@@ -1,4 +1,4 @@
-import Home from '@/app/page'
+import Home from '@/app/demo/page'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -50,10 +50,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             await userEvent.type(input, 'Hello')
 
             const send = screen.getByTitle('Send message')
@@ -79,10 +79,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
 
             // First message
             await userEvent.type(input, 'What is my EMI?')
@@ -127,10 +127,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send 3 messages
@@ -170,10 +170,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat and send a message
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             await userEvent.type(input, 'First message')
 
             const send = screen.getByTitle('Send message')
@@ -251,10 +251,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // First message (succeeds)
@@ -295,10 +295,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send first message
@@ -344,10 +344,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send first message
@@ -394,10 +394,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send 10 messages
@@ -436,10 +436,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send 3 messages
@@ -487,10 +487,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send message with special characters
@@ -529,10 +529,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Send Hinglish message
@@ -568,10 +568,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // Try to send empty message (should not send)
@@ -593,10 +593,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             await userEvent.type(input, 'Test')
@@ -654,10 +654,10 @@ describe('Home page - Conversation History', () => {
             render(<Home />)
 
             // Open text chat
-            const toggle = await screen.findByTitle('Toggle text chat')
+            const toggle = await screen.findByTitle('Text chat mode')
             await userEvent.click(toggle)
 
-            const input = screen.getByPlaceholderText('Type your message here...')
+            const input = screen.getByPlaceholderText('Type your message...')
             const send = screen.getByTitle('Send message')
 
             // First message

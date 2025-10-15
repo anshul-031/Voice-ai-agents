@@ -1,6 +1,6 @@
+import Home from '@/app/demo/page'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
 
 describe('Home page audio/text flow branches', () => {
   beforeEach(() => {
@@ -32,10 +32,10 @@ describe('Home page audio/text flow branches', () => {
     render(<Home />)
 
     // Open text input
-    const toggle = await screen.findByTitle('Toggle text chat')
+    const toggle = await screen.findByTitle('Text chat mode')
     await userEvent.click(toggle)
 
-    const input = screen.getByPlaceholderText('Type your message here...')
+    const input = screen.getByPlaceholderText('Type your message...')
     await userEvent.type(input, 'Test')
 
     const send = screen.getByTitle('Send message')
@@ -65,10 +65,10 @@ describe('Home page audio/text flow branches', () => {
 
     render(<Home />)
 
-    const toggle = await screen.findByTitle('Toggle text chat')
+    const toggle = await screen.findByTitle('Text chat mode')
     await userEvent.click(toggle)
 
-    const input = screen.getByPlaceholderText('Type your message here...')
+    const input = screen.getByPlaceholderText('Type your message...')
     await userEvent.type(input, 'Test')
 
     const send = screen.getByTitle('Send message')

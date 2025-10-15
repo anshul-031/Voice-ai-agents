@@ -1,7 +1,7 @@
+import Home from '@/app/demo/page'
+import '@testing-library/jest-dom'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Home from '@/app/page'
-import '@testing-library/jest-dom'
 
 // Mock ConfirmDialog to auto-confirm on open to deterministically cover the confirm path
 jest.mock('@/components/ConfirmDialog', () => ({
@@ -45,8 +45,8 @@ describe('Home Page - Restart Confirm happy path (mocked dialog)', () => {
     render(<Home />)
 
     // Open text chat and send a message to create at least one message
-    await userEvent.click(screen.getByTitle('Toggle text chat'))
-    const input = await screen.findByPlaceholderText('Type your message here...')
+    await userEvent.click(screen.getByTitle('Text chat mode'))
+    const input = await screen.findByPlaceholderText('Type your message...')
 
     // Mock LLM and TTS to succeed
     ;(global.fetch as jest.Mock)
@@ -61,11 +61,11 @@ describe('Home Page - Restart Confirm happy path (mocked dialog)', () => {
     await userEvent.click(screen.getByTitle('Send message'))
 
     await waitFor(() => {
-      expect(screen.getByText('Restart')).toBeInTheDocument()
+      expect(screen.getByTitle('Clear chat messages')).toBeInTheDocument()
     })
 
     // Click restart; mocked dialog will call onConfirm immediately
-    await userEvent.click(screen.getByText('Restart'))
+    await userEvent.click(screen.getByTitle('Clear chat messages'))
 
     // Messages should be cleared, so the Restart button disappears
     await waitFor(() => {

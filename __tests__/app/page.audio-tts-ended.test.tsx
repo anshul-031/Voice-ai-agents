@@ -1,28 +1,40 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-let capturedOnSegmentReady: ((b: Blob) => void) | null = null
+let capturedOnFinal: ((t: string) => void) | null = null
 
-jest.mock('@/hooks/useVoiceRecorder', () => ({
-  useVoiceRecorder: jest.fn((opts: { onSegmentReady: (b: Blob) => void }) => {
-    capturedOnSegmentReady = opts.onSegmentReady
+jest.mock('@/hooks/useContinuousCall', () => ({
+  useContinuousCall: jest.fn(() => ({
+    callState: 'idle',
+    audioLevel: 0,
+    startCall: jest.fn(),
+    endCall: jest.fn(),
+    isCallActive: false,
+  })),
+}))
+
+jest.mock('@/hooks/useSpeechRecognition', () => ({
+  useSpeechRecognition: jest.fn((opts: { onFinal?: (t: string) => void }) => {
+    capturedOnFinal = opts.onFinal || null
     return {
+      supported: true,
       isListening: false,
-      isProcessing: false,
-      audioLevel: 0,
-      startRecording: jest.fn(),
-      stopRecording: jest.fn(),
+      interimTranscript: '',
+      startListening: jest.fn(),
+      stopListening: jest.fn(),
+      pause: jest.fn(),
+      resume: jest.fn(),
     }
   }),
 }))
 
 // Import Home after the mock so it picks up the mocked hook
-const Home = require('@/app/page').default as typeof import('@/app/page').default
+const Home = require('@/app/demo/page').default as typeof import('@/app/demo/page').default
 
 describe('Home page - audio path TTS success and ended cleanup', () => {
 
   beforeEach(() => {
-    capturedOnSegmentReady = null
+    capturedOnFinal = null
     ;(global.URL.revokeObjectURL as jest.Mock).mockClear()
     ;(global.fetch as jest.Mock) = jest.fn((url: RequestInfo | URL) => {
       const s = String(url)
@@ -43,22 +55,21 @@ describe('Home page - audio path TTS success and ended cleanup', () => {
     })
   })
 
-  it('revokes object URL after audio ended (audio segment path)', async () => {
+  it('revokes object URL after audio ended (STT flow path)', async () => {
     render(<Home />)
 
-    // Open chat by starting recording (ensures ChatBox renders messages)
-    const micBtn = await screen.findByRole('button', { name: 'Start recording' })
-    await userEvent.click(micBtn)
+    // Open chat by starting call (ensures ChatBox renders messages)
+    const startBtn = await screen.findByRole('button', { name: /start call/i })
+    await userEvent.click(startBtn)
 
-    // Simulate an audio segment ready from the recorder
+    // Simulate speech recognition final result
     // Ensure the hook has been called and callback captured
-    const { useVoiceRecorder } = require('@/hooks/useVoiceRecorder')
+    const { useSpeechRecognition } = require('@/hooks/useSpeechRecognition')
     await waitFor(() => {
-      expect(useVoiceRecorder).toHaveBeenCalled()
-      expect(capturedOnSegmentReady).toBeTruthy()
+      expect(useSpeechRecognition).toHaveBeenCalled()
+      expect(capturedOnFinal).toBeTruthy()
     })
-    const blob = new Blob([Uint8Array.from([1,2,3])], { type: 'audio/webm' })
-    capturedOnSegmentReady && capturedOnSegmentReady(blob)
+    capturedOnFinal && capturedOnFinal('Hi from audio')
 
     // Wait for assistant message to confirm flow progressed through LLM and messages are visible
     await waitFor(() => {
