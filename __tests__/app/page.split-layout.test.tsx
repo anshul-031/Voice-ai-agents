@@ -1,4 +1,4 @@
-import Home from '@/app/demo/page';
+import Home from '@/app/page';
 import { render, screen, waitFor } from '../test-utils';
 
 // Mock hooks

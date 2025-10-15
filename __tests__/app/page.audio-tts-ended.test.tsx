@@ -29,7 +29,7 @@ jest.mock('@/hooks/useSpeechRecognition', () => ({
 }))
 
 // Import Home after the mock so it picks up the mocked hook
-const Home = require('@/app/demo/page').default as typeof import('@/app/demo/page').default
+const Home = require('@/app/page').default as typeof import('@/app/page').default
 
 describe('Home page - audio path TTS success and ended cleanup', () => {
 
