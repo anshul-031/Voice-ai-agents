@@ -195,7 +195,7 @@ export async function sendTextMessage(mobileNo: string, message: string): Promis
  * Processes WhatsApp webhook callback and extracts user phone number and message.
  * @param callbackResponse The parsed webhook JSON object
  */
-export function processWhatsAppCallback(callbackResponse: any): void {
+export async function processWhatsAppCallback(callbackResponse: any): Promise<void> {
     try {
         const entry = callbackResponse?.entry?.[0];
         const change = entry?.changes?.[0];
@@ -208,11 +208,9 @@ export function processWhatsAppCallback(callbackResponse: any): void {
         console.info('User Mobile (from):', userMobile);
         console.info('User Message:', userMessage);
         if(userMessage && userMobile){
-            sendTextMessage(userMobile, userMessage);
+            await sendTextMessage(userMobile, userMessage);
         }
-
-        // Add further processing logic here if needed
-    } catch (e) {
-        console.error('Error processing WhatsApp callback:', e);
+    } catch (e: any) {
+        console.error('Error in processWhatsAppCallback:', e?.message);
     }
 }

@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 import { processWhatsAppCallback } from '@/lib/whatsAppService';
@@ -10,7 +9,7 @@ export async function POST(req: NextRequest) {
     const callbackResponse = await req.text(); // Get raw body as string
     console.info(callbackResponse);
     const parsedResponse = JSON.parse(callbackResponse); // Parse body as JSON
-    processWhatsAppCallback(parsedResponse);
+    await processWhatsAppCallback(parsedResponse);
 
     return NextResponse.json({ message: 'SUCCESS' }, { status: 200 });
   } catch (e: any) {
