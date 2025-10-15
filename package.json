@@ -1,13 +1,22 @@
 {
   "name": "pelocal_voice_ai_agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
-  "lint": "eslint app components hooks types",
-  "lint:fix": "eslint app components hooks types --fix",
+    "start:8009": "next start -p 8009 -H 0.0.0.0",
+    "ws": "node ws-server.js",
+    "ws:passthrough": "node ws-passthrough.js",
+  "ws:pipeline": "node ws-server.js",
+    "start:ws": "node ws-server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all || true",
+    "pm2:delete": "pm2 delete all || true",
+    "ws:test": "node test-exotel-protocol.js",
+    "lint": "eslint app components hooks types --max-warnings 100",
+    "lint:fix": "eslint app components hooks types --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -21,7 +30,8 @@
     "test:unit": "jest --testPathPattern=__tests__",
     "test:unit:components": "jest --testPathPattern=__tests__/components",
     "test:unit:hooks": "jest --testPathPattern=__tests__/hooks",
-    "test:unit:api": "jest --testPathPattern=__tests__/api"
+    "test:unit:api": "jest --testPathPattern=__tests__/api",
+    "check:endpoints": "node scripts/check-endpoints.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -29,9 +39,11 @@
     "lucide-react": "^0.544.0",
     "mongoose": "^8.19.1",
     "next": "15.5.4",
+    "node-fetch": "^2.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

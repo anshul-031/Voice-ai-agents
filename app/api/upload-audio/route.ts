@@ -8,13 +8,38 @@ export async function POST(request: NextRequest) {
     console.log('[upload-audio] POST request received');
 
     try {
-        console.log('[upload-audio] Parsing form data...');
-        const formData = await request.formData();
-        const audioFile = formData.get('audio') as File;
+        const contentType = request.headers.get('content-type') || '';
+        let audioBuffer: Buffer | Uint8Array | null = null;
+        let source: 'json-base64' | 'form-file' | null = null;
 
-        if (!audioFile) {
-            console.error('[upload-audio] No audio file provided in request');
-            return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
+        if (contentType.includes('application/json')) {
+            console.log('[upload-audio] Parsing JSON body...');
+            const body = await request.json();
+            const base64 = body?.audio || body?.audioData || body?.wavBase64;
+            if (!base64 || typeof base64 !== 'string') {
+                console.error('[upload-audio] Missing base64 audio in JSON (expected audio | audioData | wavBase64)');
+                return NextResponse.json({ error: 'Missing base64 audio' }, { status: 400 });
+            }
+            audioBuffer = Buffer.from(base64, 'base64');
+            source = 'json-base64';
+        } else {
+            console.log('[upload-audio] Parsing form data...');
+            const formData = await request.formData();
+            const audioFile = formData.get('audio') as File;
+
+            if (!audioFile) {
+                console.error('[upload-audio] No audio file provided in request');
+                return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
+            }
+            const arr = await audioFile.arrayBuffer();
+            audioBuffer = Buffer.from(arr);
+            source = 'form-file';
+            // Debug: Log audio file info
+            console.log('[upload-audio] Received audio file:', {
+                name: audioFile.name,
+                size: audioFile.size,
+                type: (audioFile as any).type
+            });
         }
 
         const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -23,24 +48,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Speech-to-text service not configured' }, { status: 500 });
         }
 
-        // Debug: Log audio file info
-        console.log('[upload-audio] Received audio file:', {
-            name: audioFile.name,
-            size: audioFile.size,
-            type: audioFile.type
-        });
-
-        // Validate audio file
-        if (audioFile.size === 0) {
-            console.error('[upload-audio] Empty audio file received');
-            return NextResponse.json({ error: 'Empty audio file received' }, { status: 400 });
+        // Validate audio
+        if (!audioBuffer || (audioBuffer as any).length === 0) {
+            console.error('[upload-audio] Empty audio payload received');
+            return NextResponse.json({ error: 'Empty audio payload received' }, { status: 400 });
         }
 
         // Step 1: Upload audio file to AssemblyAI
         console.log('[upload-audio] Step 1: Uploading to AssemblyAI...');
-        // Convert file to buffer for proper upload
-        const audioBuffer = await audioFile.arrayBuffer();
-        console.log('[upload-audio] Audio buffer size:', audioBuffer.byteLength, 'bytes');
+    console.log('[upload-audio] Audio source:', source);
+    console.log('[upload-audio] Audio buffer size:', (audioBuffer as any).length, 'bytes');
 
         const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
             method: 'POST',
@@ -48,7 +65,7 @@ export async function POST(request: NextRequest) {
                 'Authorization': assemblyApiKey,
                 'Content-Type': 'application/octet-stream',
             },
-            body: audioBuffer,
+            body: audioBuffer as any,
         });
 
         console.log('[upload-audio] Upload response status:', uploadResponse.status);

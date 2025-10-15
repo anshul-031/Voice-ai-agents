@@ -19,13 +19,14 @@ export async function POST(request: NextRequest) {
       try { body = await request.json(); } catch {}
     }
 
-    // Accept optional parameters from Exotel or upstream flow
-    const sampleRate = (body['sample-rate'] || body.sampleRate || body.sample_rate || '16000').toString();
-    const custom: Record<string, string> = {};
-    // Prioritize common metadata into first three params
-    if (body.userId) custom.param1 = String(body.userId);
-    if (body.from) custom.param2 = String(body.from);
-    if (body.to) custom.param3 = String(body.to);
+  // Accept optional parameters from Exotel or upstream flow
+  // Note: We intentionally DO NOT propagate sample-rate in URL (Exotel defaults to 8000)
+  const custom: Record<string, string> = {};
+  // Prioritize common metadata into first three params and propagate Exotel fields
+  if (body.userId) custom.param1 = String(body.userId);
+  if (body.from || body.From) custom.param2 = String(body.from || body.From);
+  if (body.to || body.To) custom.param3 = String(body.to || body.To);
+  if (body.CallSid) custom.callSid = String(body.CallSid);
 
     // If caller already provided param1/2/3, do not override
     for (const k of ['param1','param2','param3'] as const) {
@@ -43,12 +44,14 @@ export async function POST(request: NextRequest) {
         ? (incomingOrigin.startsWith('http:') ? incomingOrigin.replace('http:', 'ws:') : incomingOrigin.replace('https:', 'wss:'))
         : `ws://localhost:3000`;
 
-    const params = new URLSearchParams({ 'sample-rate': sampleRate });
-    for (const [k, v] of Object.entries(custom)) params.set(k, v);
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(custom)) params.set(k, v);
 
     const wsUrl = `${base}/api/exotel/ws?${params.toString()}`;
 
-    return NextResponse.json({ url: wsUrl });
+  console.log('[Exotel Passthrough] returning wsUrl:', wsUrl);
+  // If you're configuring WS statically in Exotel, you can ignore this endpoint
+  return NextResponse.json({ url: wsUrl, note: 'Optional: You can configure WS statically in Exotel and ignore this URL' });
   } catch (e) {
     console.error('[Exotel Passthrough] Error building WS URL', e);
     return NextResponse.json({ error: 'failed to build ws url' }, { status: 500 });
