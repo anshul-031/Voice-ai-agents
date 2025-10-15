@@ -139,14 +139,19 @@ export async function sendMessage(metaMessageRequest: MetaMessageRequest): Promi
             },
             body: JSON.stringify(metaMessageRequest),
         });
+            console.info("Meta API CALL FINISHEDL");
+            console.warn("Meta API CALL FINISHEDL");
         if (!response.ok) {
             const errorText = await response.text();
+            console.info('Error in sendMessage:', response.status, errorText);
             console.error('Error in sendMessage:', response.status, errorText);
+            console.warn('Error in sendMessage:', response.status, errorText);
             return null;
         }
         const metaResponse = await response.json();
         if (metaResponse.response) {
             console.info('MetaMessageResponse with response field:', metaResponse.response);
+            console.warn('MetaMessageResponse with response field:', metaResponse.response);
             return metaResponse.response as MetaMessageResponse;
         }
         return metaResponse as MetaMessageResponse;
