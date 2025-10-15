@@ -11,7 +11,7 @@ export interface MetaMessageRequest {
 }
 
 export interface MetaTextMessageRequest {
-    previewUrl?: boolean;
+    preview_url?: boolean;
     body: string;
 }
 export interface MetaImageMessageRequest {
@@ -168,7 +168,7 @@ function getMetaMessageRequest(mobileNo: string, message: string): MetaMessageRe
         to: mobileNo,
         type: "text",
         text: {
-            previewUrl: false,
+            preview_url: false,
             body: message
         }
     };
