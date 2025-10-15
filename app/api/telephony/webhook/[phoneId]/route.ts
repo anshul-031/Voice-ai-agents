@@ -1,5 +1,4 @@
 import dbConnect from '@/lib/mongodb';
-import Chat from '@/models/Chat';
 import PhoneNumber from '@/models/PhoneNumber';
 import VoiceAgent from '@/models/VoiceAgent';
 import { NextRequest, NextResponse } from 'next/server';
@@ -95,16 +94,6 @@ export async function POST(
 
         // Generate a unique session ID for this call
         const sessionId = `exotel_${exotelData.CallSid || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        // Log the call in chat history
-        await Chat.create({
-            userId: phoneNumber.userId,
-            sessionId,
-            role: 'system',
-            content: `Call initiated from ${exotelData.From} to ${exotelData.To}`,
-            systemPrompt: agent.prompt,
-            timestamp: new Date(),
-        });
 
         // Generate TwiML/Exotel response
         // This tells Exotel what to do with the call

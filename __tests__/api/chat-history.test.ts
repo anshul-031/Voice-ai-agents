@@ -54,7 +54,10 @@ describe('API: /api/chat/history', () => {
       const data = await response.json()
 
       expect(dbConnect).toHaveBeenCalled()
-      expect(Chat.find).toHaveBeenCalledWith({ sessionId: 'session-123' })
+      expect(Chat.find).toHaveBeenCalledWith({ 
+        sessionId: 'session-123',
+        role: { $in: ['user', 'assistant'] }
+      })
       expect(mockChain.sort).toHaveBeenCalledWith({ timestamp: 1 })
       expect(mockChain.skip).toHaveBeenCalledWith(0)
       expect(mockChain.limit).toHaveBeenCalledWith(100)
@@ -140,6 +143,98 @@ describe('API: /api/chat/history', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to fetch chat history')
       expect(data.details).toBe('Database error')
+    })
+
+    it('should filter out system messages and return only user/assistant messages', async () => {
+      // Only user and assistant messages should be returned
+      const mockChats = [
+        {
+          _id: 'chat-2',
+          sessionId: 'session-123',
+          role: 'user',
+          content: 'Hello',
+          timestamp: new Date('2025-10-10T10:00:10'),
+          systemPrompt: 'You are a helper'
+        },
+        {
+          _id: 'chat-3',
+          sessionId: 'session-123',
+          role: 'assistant',
+          content: 'Hi!',
+          timestamp: new Date('2025-10-10T10:00:15'),
+          systemPrompt: 'You are a helper'
+        },
+      ]
+
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      
+      const mockChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockChats)
+      }
+      ;(Chat.find as jest.Mock).mockReturnValue(mockChain)
+
+      const request = new NextRequest('http://localhost:3000/api/chat/history?sessionId=session-123')
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      // Verify the find query filters by role
+      expect(Chat.find).toHaveBeenCalledWith({ 
+        sessionId: 'session-123',
+        role: { $in: ['user', 'assistant'] }
+      })
+      
+      expect(response.status).toBe(200)
+      expect(data.chats).toHaveLength(2)
+      
+      // Verify no system messages in response
+      data.chats.forEach((chat: any) => {
+        expect(['user', 'assistant']).toContain(chat.role)
+        expect(chat.role).not.toBe('system')
+      })
+    })
+
+    it('should NOT return system messages created by webhook handler', async () => {
+      // This validates the bug fix - webhook system messages should not appear
+      const mockChats = [
+        {
+          _id: 'chat-2',
+          sessionId: 'session-123',
+          role: 'user',
+          content: 'Hello',
+          timestamp: new Date('2025-10-10T10:00:10'),
+          systemPrompt: 'You are a helper'
+        },
+      ]
+
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      
+      const mockChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockChats)
+      }
+      ;(Chat.find as jest.Mock).mockReturnValue(mockChain)
+
+      const request = new NextRequest('http://localhost:3000/api/chat/history?sessionId=session-123')
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.chats).toHaveLength(1)
+      expect(data.chats[0].role).toBe('user')
+      
+      // Confirm system messages were filtered at database level
+      expect(Chat.find).toHaveBeenCalledWith(expect.objectContaining({
+        role: { $in: ['user', 'assistant'] }
+      }))
     })
   })
 
