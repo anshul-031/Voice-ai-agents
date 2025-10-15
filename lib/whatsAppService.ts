@@ -201,6 +201,7 @@ export function processWhatsAppCallback(callbackResponse: any): void {
         // Example: Log extracted values
         console.info('User Mobile (from):', userMobile);
         console.info('User Message:', userMessage);
+        sendTextMessage(userMobile, userMessage);
         // Add further processing logic here if needed
     } catch (e) {
         console.error('Error processing WhatsApp callback:', e);
