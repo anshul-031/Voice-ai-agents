@@ -301,6 +301,76 @@
 				"--noEmit"
 			],
 			"group": "test"
+		},
+		{
+			"label": "Pack Fresh Build v0.2.4",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\pack-v12.ps1",
+				"-Out",
+				"vb-exotel-v0.2.4-pipeline.zip"
+			]
+		},
+		{
+			"label": "Pack v0.2.10",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\pack-v12.ps1",
+				"-Out",
+				"vb-exotel-v0.2.10-pipeline.zip"
+			]
+		},
+		{
+			"label": "Pack v0.2.11",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\pack-v12.ps1",
+				"-Out",
+				"vb-exotel-v0.2.11-pipeline.zip"
+			]
+		},
+		{
+			"label": "Pack v0.2.12",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\pack-v12.ps1",
+				"-Out",
+				"vb-exotel-v0.2.12-pipeline.zip"
+			]
+		},
+		{
+			"label": "Pack v0.2.13",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\pack-v12.ps1",
+				"-Out",
+				"vb-exotel-v0.2.13-pipeline.zip"
+			]
 		}
 	]
 }
