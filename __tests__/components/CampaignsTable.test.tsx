@@ -35,7 +35,8 @@ describe('CampaignsTable Component', () => {
   const mockHandlers = {
     onEditCampaign: jest.fn(),
     onAddCampaign: jest.fn(),
-    onViewCampaign: jest.fn()
+    onViewCampaign: jest.fn(),
+    onStartCampaign: jest.fn()
   }
 
   beforeEach(() => {
@@ -50,6 +51,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -63,6 +65,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -372,6 +375,146 @@ describe('CampaignsTable Component', () => {
 
       const titleElement = screen.getByText(longTitleCampaign[0].title)
       expect(titleElement).toHaveClass('truncate')
+    })
+  })
+
+  describe('Start Campaign Button', () => {
+    it('should render Start button for each campaign', () => {
+      render(
+        <CampaignsTable
+          campaigns={mockCampaigns}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      const startButtons = screen.getAllByText('Start')
+      expect(startButtons).toHaveLength(3)
+    })
+
+    it('should call onStartCampaign with correct campaign when Start button is clicked', () => {
+      render(
+        <CampaignsTable
+          campaigns={mockCampaigns}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      const startButtons = screen.getAllByText('Start')
+      fireEvent.click(startButtons[0])
+
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledTimes(1)
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledWith(mockCampaigns[0])
+    })
+
+    it('should disable Start button for running campaigns', () => {
+      const runningCampaign: Campaign[] = [{
+        _id: '1',
+        title: 'Running Campaign',
+        status: 'running',
+        start_date: '2025-10-01',
+        updated_at: '2025-10-10',
+        agent_id: 'emi reminder',
+        user_id: 'user1',
+        started_at: '2025-10-10T10:00:00Z'
+      }]
+
+      render(
+        <CampaignsTable
+          campaigns={runningCampaign}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      const startButton = screen.getByText('Start')
+      expect(startButton).toBeDisabled()
+    })
+
+    it('should enable Start button for stopped campaigns', () => {
+      const stoppedCampaign: Campaign[] = [{
+        _id: '1',
+        title: 'Stopped Campaign',
+        status: 'stopped',
+        start_date: '2025-10-01',
+        updated_at: '2025-10-10',
+        agent_id: 'emi reminder',
+        user_id: 'user1'
+      }]
+
+      render(
+        <CampaignsTable
+          campaigns={stoppedCampaign}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      const startButton = screen.getByText('Start')
+      expect(startButton).not.toBeDisabled()
+    })
+
+    it('should display campaign progress when available', () => {
+      const campaignWithProgress: Campaign[] = [{
+        _id: '1',
+        title: 'Campaign with Progress',
+        status: 'running',
+        start_date: '2025-10-01',
+        updated_at: '2025-10-10',
+        agent_id: 'emi reminder',
+        user_id: 'user1',
+        total_contacts: 100,
+        calls_completed: 45,
+        calls_failed: 5
+      }]
+
+      render(
+        <CampaignsTable
+          campaigns={campaignWithProgress}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      expect(screen.getByText('45/100')).toBeInTheDocument()
+      expect(screen.getByText('(5 failed)')).toBeInTheDocument()
+    })
+
+    it('should show dash when no progress data available', () => {
+      const campaignNoProgress: Campaign[] = [{
+        _id: '1',
+        title: 'Campaign without Progress',
+        status: 'stopped',
+        start_date: '2025-10-01',
+        updated_at: '2025-10-10',
+        agent_id: 'emi reminder',
+        user_id: 'user1'
+      }]
+
+      render(
+        <CampaignsTable
+          campaigns={campaignNoProgress}
+          onEditCampaign={mockHandlers.onEditCampaign}
+          onAddCampaign={mockHandlers.onAddCampaign}
+          onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
+        />
+      )
+
+      // Check for dash in Progress column
+      const progressCells = screen.getAllByText('-')
+      expect(progressCells.length).toBeGreaterThan(0)
     })
   })
 })

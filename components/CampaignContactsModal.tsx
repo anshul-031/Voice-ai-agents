@@ -7,6 +7,9 @@ interface Contact {
   name: string
   description: string
   call_done: string
+  call_status?: 'pending' | 'initiated' | 'completed' | 'failed'
+  call_sid?: string
+  call_error?: string
 }
 
 interface CampaignContactsModalProps {
@@ -71,6 +74,7 @@ export default function CampaignContactsModal({ isOpen, onClose, campaignId }: C
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Number</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Name</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Description</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Call Status</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Call Done</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Actions</th>
                     </tr>
@@ -82,6 +86,24 @@ export default function CampaignContactsModal({ isOpen, onClose, campaignId }: C
                         <td className="px-6 py-4 text-sm text-white">{contact.name}</td>
                         <td className="px-6 py-4 text-sm text-gray-300 max-w-md truncate" title={contact.description}>
                           {contact.description}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            contact.call_status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                            contact.call_status === 'initiated' ? 'bg-blue-500/10 text-blue-400' :
+                            contact.call_status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                            'bg-gray-500/10 text-gray-400'
+                          }`}>
+                            {contact.call_status === 'completed' ? '✓ Completed' :
+                             contact.call_status === 'initiated' ? '⟳ In Progress' :
+                             contact.call_status === 'failed' ? '✕ Failed' :
+                             '○ Pending'}
+                          </span>
+                          {contact.call_error && (
+                            <div className="text-xs text-red-400 mt-1" title={contact.call_error}>
+                              {contact.call_error.substring(0, 30)}...
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

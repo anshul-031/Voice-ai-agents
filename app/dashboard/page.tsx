@@ -111,6 +111,34 @@ export default function DashboardPage() {
         setViewingCampaignId(null)
     }
 
+    const handleStartCampaign = async (campaign: any) => {
+        if (!confirm(`Are you sure you want to start campaign "${campaign.title}"? This will trigger calls to all contacts in the campaign.`)) {
+            return
+        }
+
+        try {
+            const response = await fetch('/api/campaigns/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ campaign_id: campaign._id }),
+            })
+
+            const data = await response.json()
+
+            if (response.ok && data.success) {
+                alert(`Campaign started successfully! Calling ${data.data.total_contacts} contacts.`)
+                setCampaignsRefreshKey(prev => prev + 1) // Refresh campaigns list
+            } else {
+                alert(`Failed to start campaign: ${data.error || 'Unknown error'}`)
+            }
+        } catch (error: any) {
+            console.error('Error starting campaign:', error)
+            alert('An error occurred while starting the campaign.')
+        }
+    }
+
     // Phone Number handlers
     const handleAddPhoneNumber = () => {
         setEditingPhoneNumber(null)
@@ -158,6 +186,7 @@ export default function DashboardPage() {
                         onAddCampaign={handleAddCampaign}
                         onEditCampaign={handleEditCampaign}
                         onViewCampaign={handleViewCampaign}
+                        onStartCampaign={handleStartCampaign}
                     />
                 )
 
