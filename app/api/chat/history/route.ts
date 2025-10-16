@@ -1,6 +1,6 @@
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
-import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     console.log('[Chat History] GET request received');
@@ -24,11 +24,7 @@ export async function GET(request: NextRequest) {
 
         console.log('[Chat History] Fetching chats for session:', sessionId);
 
-        // Only fetch user and assistant messages, exclude system messages
-        const chats = await Chat.find({ 
-            sessionId,
-            role: { $in: ['user', 'assistant'] }
-        })
+        const chats = await Chat.find({ sessionId })
             .sort({ timestamp: 1 }) // Oldest first
             .skip(skip)
             .limit(limit)

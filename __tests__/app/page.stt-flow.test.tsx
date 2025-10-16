@@ -42,7 +42,7 @@ jest.mock('@/hooks/useContinuousCall', () => ({
   })),
 }))
 
-const Home = require('@/app/page').default as typeof import('@/app/page').default
+const Home = require('@/app/demo/page').default as typeof import('@/app/demo/page').default
 
 describe('Home page - real-time STT onFinal flow', () => {
   beforeEach(() => {
