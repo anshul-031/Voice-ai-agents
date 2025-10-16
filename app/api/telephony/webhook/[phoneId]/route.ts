@@ -1,5 +1,8 @@
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
+
+
+
 import PhoneNumber from '@/models/PhoneNumber';
 import VoiceAgent from '@/models/VoiceAgent';
 import { NextRequest, NextResponse } from 'next/server';
@@ -49,6 +52,7 @@ export async function POST(
             CallSid: exotelData.CallSid,
             From: exotelData.From,
             To: exotelData.To,
+
             Status: exotelData.Status,
         });
 

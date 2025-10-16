@@ -180,11 +180,41 @@ export default function VoiceAIAgent({
                 }
                 const llmData: LLMResponse = await llmResponse.json();
 
+                // Check if PDF generation was requested
+                let pdfAttachment = undefined;
+                if (llmData.pdfCommand) {
+                    console.log('[VoiceAIAgent] PDF generation requested:', llmData.pdfCommand.title);
+                    setProcessingStep('Generating PDF document...');
+
+                    try {
+                        const pdfResponse = await fetch('/api/generate-pdf', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(llmData.pdfCommand),
+                        });
+
+                        if (pdfResponse.ok) {
+                            const pdfData = await pdfResponse.json();
+                            pdfAttachment = {
+                                fileName: pdfData.fileName,
+                                pdfData: pdfData.pdfData,
+                                title: llmData.pdfCommand.title,
+                            };
+                            console.log('[VoiceAIAgent] PDF generated successfully:', pdfData.fileName);
+                        } else {
+                            console.error('[VoiceAIAgent] PDF generation failed');
+                        }
+                    } catch (pdfError) {
+                        console.error('[VoiceAIAgent] PDF generation error:', pdfError);
+                    }
+                }
+
                 const assistantMessage: Message = {
                     id: uid(),
                     text: llmData.llmText,
                     source: 'assistant',
                     timestamp: new Date(),
+                    pdfAttachment,
                 };
                 setMessages(prev => [...prev, assistantMessage]);
 
@@ -512,12 +542,42 @@ export default function VoiceAIAgent({
             const llmData: LLMResponse = await llmResponse.json();
             console.log('[VoiceAIAgent] LLM response:', llmData.llmText);
 
+            // Check if PDF generation was requested
+            let pdfAttachment = undefined;
+            if (llmData.pdfCommand) {
+                console.log('[VoiceAIAgent] PDF generation requested:', llmData.pdfCommand.title);
+                setProcessingStep('Generating PDF document...');
+
+                try {
+                    const pdfResponse = await fetch('/api/generate-pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(llmData.pdfCommand),
+                    });
+
+                    if (pdfResponse.ok) {
+                        const pdfData = await pdfResponse.json();
+                        pdfAttachment = {
+                            fileName: pdfData.fileName,
+                            pdfData: pdfData.pdfData,
+                            title: llmData.pdfCommand.title,
+                        };
+                        console.log('[VoiceAIAgent] PDF generated successfully:', pdfData.fileName);
+                    } else {
+                        console.error('[VoiceAIAgent] PDF generation failed');
+                    }
+                } catch (pdfError) {
+                    console.error('[VoiceAIAgent] PDF generation error:', pdfError);
+                }
+            }
+
             // Add assistant message
             const assistantMessage: Message = {
                 id: uid(),
                 text: llmData.llmText,
                 source: 'assistant',
                 timestamp: new Date(),
+                pdfAttachment,
             };
             
             // Update chat messages state
