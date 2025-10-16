@@ -7,9 +7,10 @@ import ChatHistory from '@/components/ChatHistory';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import InitialPromptEditor from '@/components/InitialPromptEditor';
 import TopModelBoxes from '@/components/TopModelBoxes';
+import WhatsAppConfigEditor from '@/components/WhatsAppConfigEditor';
 import { useContinuousCall } from '@/hooks/useContinuousCall';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { LLMResponse, Message, ModelConfig, TTSResponse } from '@/types';
+import { LLMResponse, Message, ModelConfig, TTSResponse, WhatsAppConfig } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Clock, MessageSquare, Phone, PhoneOff, RotateCcw, Send } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -82,6 +83,9 @@ export default function VoiceAIAgent({
     // Model configuration
     const [modelConfig] = useState<ModelConfig>(defaultModelConfig);
 
+    // WhatsApp configuration
+    const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | undefined>(undefined);
+
     // Check configuration status on mount
     useEffect(() => {
         console.log('[VoiceAIAgent] Checking API configuration status...');
@@ -103,7 +107,21 @@ export default function VoiceAIAgent({
             .catch(err => {
                 console.error('[VoiceAIAgent] Failed to check config:', err);
             });
-    }, []);
+
+        // Load WhatsApp configuration if agentId exists
+        if (agentId) {
+            fetch(`/api/voice-agents/${agentId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.agent?.whatsappConfig) {
+                        setWhatsappConfig(data.agent.whatsappConfig);
+                    }
+                })
+                .catch(err => {
+                    console.error('[VoiceAIAgent] Failed to load WhatsApp config:', err);
+                });
+        }
+    }, [agentId]);
 
     // Update prompt when defaultPrompt changes
     useEffect(() => {
@@ -729,6 +747,15 @@ export default function VoiceAIAgent({
 
                     {/* System Prompt */}
                     <InitialPromptEditor value={initialPrompt} onChange={setInitialPrompt} />
+
+                    {/* WhatsApp Configuration (only show if agent has ID) */}
+                    {agentId && (
+                        <WhatsAppConfigEditor
+                            agentId={agentId}
+                            initialConfig={whatsappConfig}
+                            onSave={setWhatsappConfig}
+                        />
+                    )}
 
                     {/* Chat Interface - Modern Design */}
                     <div className="glass-panel rounded-2xl overflow-hidden h-[600px] flex flex-col animate-scale-in">

@@ -4,6 +4,15 @@ export interface PDFAttachment {
     title: string;
 }
 
+export interface WhatsAppConfig {
+    appId?: string;
+    appSecret?: string;
+    businessId?: string;
+    accessToken?: string;
+    phoneNumber?: string;
+    enabled?: boolean;
+}
+
 export interface Message {
     id: string;
     text: string;

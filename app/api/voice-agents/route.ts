@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                whatsappConfig: (agent as any).whatsappConfig,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             })),
@@ -123,12 +124,12 @@ export async function PUT(request: NextRequest) {
     try {
         await dbConnect();
 
-        const { id, title, prompt, llmModel, sttModel, ttsModel } = await request.json();
-        console.log('[Voice Agents API] Update request:', { id, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel });
+        const { id, title, prompt, llmModel, sttModel, ttsModel, whatsappConfig } = await request.json();
+        console.log('[Voice Agents API] Update request:', { id, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel, hasWhatsappConfig: !!whatsappConfig });
 
-        if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel)) {
+        if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel && !whatsappConfig)) {
             return NextResponse.json(
-                { error: 'Missing required fields: id and at least one of (title, prompt, llmModel, sttModel, ttsModel)' },
+                { error: 'Missing required fields: id and at least one of (title, prompt, llmModel, sttModel, ttsModel, whatsappConfig)' },
                 { status: 400 }
             );
         }
@@ -139,6 +140,7 @@ export async function PUT(request: NextRequest) {
         if (llmModel) updateData.llmModel = llmModel;
         if (sttModel) updateData.sttModel = sttModel;
         if (ttsModel) updateData.ttsModel = ttsModel;
+        if (whatsappConfig !== undefined) updateData.whatsappConfig = whatsappConfig;
 
         const agent = await VoiceAgent.findByIdAndUpdate(
             id,
@@ -165,6 +167,7 @@ export async function PUT(request: NextRequest) {
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                whatsappConfig: agent.whatsappConfig,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             },

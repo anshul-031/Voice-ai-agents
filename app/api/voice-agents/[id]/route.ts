@@ -36,6 +36,7 @@ export async function GET(
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                whatsappConfig: agent.whatsappConfig,
                 userId: agent.userId,
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
