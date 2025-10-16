@@ -133,7 +133,7 @@
 // }
 
 import { motion } from 'framer-motion';
-import { Bot, Mic, User } from 'lucide-react';
+import { Bot, Download, FileText, Mic, User } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Message } from '../types';
 
@@ -162,6 +162,17 @@ export default function ChatBox({
             });
         }
     }, [messages]);
+
+    // Handle PDF download
+    const handleDownloadPDF = (pdfData: string, fileName: string) => {
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = pdfData;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div className="h-full flex flex-col relative">
@@ -261,6 +272,40 @@ export default function ChatBox({
                                         <div className="text-sm leading-relaxed">
                                             <p className="whitespace-pre-wrap">{message.text}</p>
                                         </div>
+
+                                        {/* PDF Attachment */}
+                                        {message.pdfAttachment && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.2 }}
+                                                className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:border-emerald-500/30 transition-all"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+                                                        <FileText className="w-5 h-5 text-emerald-400" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-semibold text-white/90 truncate">
+                                                            {message.pdfAttachment.title}
+                                                        </p>
+                                                        <p className="text-xs text-white/50 truncate">
+                                                            {message.pdfAttachment.fileName}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleDownloadPDF(
+                                                            message.pdfAttachment!.pdfData,
+                                                            message.pdfAttachment!.fileName
+                                                        )}
+                                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
+                                                    >
+                                                        <Download size={14} />
+                                                        Download
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )}
 
                                         {/* Glass shine effect */}
                                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />

@@ -227,11 +227,53 @@ export async function POST(request: NextRequest) {
             } else {
                 console.log('[LLM] Skipping assistant response save (conversation has <=2 messages)');
             }
+            // Check if response contains PDF generation command
+            let pdfCommand = null;
+            let cleanedText = llmText.trim();
 
-            return NextResponse.json({
-                llmText: llmText.trim(),
+            // Look for PDF command in format: [PDF:...] or <<<PDF>>>...<<</PDF>>>
+            const pdfRegex = /<<<PDF>>>([\s\S]*?)<<<\/PDF>>>/;
+            const pdfMatch = llmText.match(pdfRegex);
+
+            if (pdfMatch) {
+                try {
+                    console.log('[LLM] PDF command detected in response');
+                    const pdfJson = pdfMatch[1].trim();
+                    pdfCommand = JSON.parse(pdfJson);
+                    // Remove PDF command from text
+                    cleanedText = llmText.replace(pdfRegex, '').trim();
+                    console.log('[LLM] PDF command extracted:', pdfCommand.title);
+                } catch (parseError) {
+                    console.error('[LLM] Failed to parse PDF command:', parseError);
+                    // Keep original text if parsing fails
+                }
+            }
+
+            // Save assistant response to database (always save for call logs)
+            try {
+                await Chat.create({
+                    userId: 'mukul', // Hardcoded user for now
+                    sessionId: chatSessionId,
+                    role: 'assistant',
+                    content: cleanedText,
+                    timestamp: new Date(),
+                });
+                console.log('[LLM] Assistant response saved to database');
+            } catch (dbError) {
+                console.error('[LLM] Failed to save assistant response:', dbError);
+                // Continue even if DB save fails
+            }
+
+            const response: any = {
+                llmText: cleanedText,
                 sessionId: chatSessionId
-            });
+            };
+
+            if (pdfCommand) {
+                response.pdfCommand = pdfCommand;
+            }
+
+            return NextResponse.json(response);
 
         } catch (errGenerate: any) {
             console.error('[LLM] Error while calling model.generate/generateContent:', errGenerate);
