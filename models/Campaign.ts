@@ -7,6 +7,10 @@ export interface ICampaign extends Document {
     status: 'running' | 'stopped' | 'completed';
     agent_id: string;
     user_id: string;
+    total_contacts: number;
+    calls_completed: number;
+    calls_failed: number;
+    started_at?: Date;
 }
 
 const CampaignSchema = new Schema<ICampaign>({
@@ -36,6 +40,22 @@ const CampaignSchema = new Schema<ICampaign>({
     user_id: {
         type: String,
         required: true,
+    },
+    total_contacts: {
+        type: Number,
+        default: 0,
+    },
+    calls_completed: {
+        type: Number,
+        default: 0,
+    },
+    calls_failed: {
+        type: Number,
+        default: 0,
+    },
+    started_at: {
+        type: Date,
+        required: false,
     },
 });
 

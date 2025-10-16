@@ -219,6 +219,71 @@ if (typeof window !== 'undefined') {
 // Mock fetch globally (available in both node and jsdom)
 global.fetch = jest.fn()
 
+// Provide minimal Request/Response polyfills for Next.js route handlers in tests
+if (typeof global.Request === 'undefined') {
+  class MockRequest {
+    constructor(input = '', init = {}) {
+      this.url = typeof input === 'string' ? input : input?.url ?? ''
+      this.method = init.method ?? 'GET'
+      this.headers = init.headers ?? {}
+      this.body = init.body
+    }
+
+    async json() {
+      if (!this.body) return {}
+      if (typeof this.body === 'string') {
+        try {
+          return JSON.parse(this.body)
+        } catch (error) {
+          return this.body
+        }
+      }
+      return this.body
+    }
+
+    clone() {
+      return new MockRequest(this.url, {
+        method: this.method,
+        headers: this.headers,
+        body: this.body,
+      })
+    }
+  }
+
+  global.Request = MockRequest
+}
+
+if (typeof global.Response === 'undefined') {
+  class MockResponse {
+    constructor(body = null, init = {}) {
+      this._body = body
+      this.status = init.status ?? 200
+      this.headers = init.headers ?? {}
+    }
+
+    async json() {
+      if (typeof this._body === 'string') {
+        try {
+          return JSON.parse(this._body)
+        } catch (error) {
+          return this._body
+        }
+      }
+      return this._body
+    }
+
+    text() {
+      return Promise.resolve(
+        typeof this._body === 'string' ? this._body : JSON.stringify(this._body ?? {})
+      )
+    }
+  }
+
+  MockResponse.json = (body, init = {}) => new MockResponse(body, init)
+
+  global.Response = MockResponse
+}
+
 // Suppress console errors in tests unless needed
 const originalError = console.error
 beforeAll(() => {

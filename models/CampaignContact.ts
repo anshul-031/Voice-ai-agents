@@ -6,6 +6,11 @@ export interface ICampaignContact extends Document {
     description: string;
     campaign_id: string;
     call_done: 'yes' | 'no';
+    call_status: 'pending' | 'initiated' | 'completed' | 'failed';
+    call_sid?: string;
+    call_started_at?: Date;
+    call_ended_at?: Date;
+    call_error?: string;
 }
 
 const CampaignContactSchema = new Schema<ICampaignContact>({
@@ -32,6 +37,28 @@ const CampaignContactSchema = new Schema<ICampaignContact>({
         required: true,
         enum: ['yes', 'no'],
         default: 'no',
+    },
+    call_status: {
+        type: String,
+        required: true,
+        enum: ['pending', 'initiated', 'completed', 'failed'],
+        default: 'pending',
+    },
+    call_sid: {
+        type: String,
+        required: false,
+    },
+    call_started_at: {
+        type: Date,
+        required: false,
+    },
+    call_ended_at: {
+        type: Date,
+        required: false,
+    },
+    call_error: {
+        type: String,
+        required: false,
     },
 });
 
