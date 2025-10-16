@@ -244,14 +244,35 @@ describe('Exotel Integration', () => {
 
   describe('validateExotelConfig', () => {
     it('should validate configuration successfully', () => {
-      const result = validateExotelConfig();
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      // Save original env vars
+      const originalEnv = {
+        EXOTEL_AUTH_KEY: process.env.EXOTEL_AUTH_KEY,
+        EXOTEL_AUTH_TOKEN: process.env.EXOTEL_AUTH_TOKEN,
+        EXOTEL_ACCOUNT_SID: process.env.EXOTEL_ACCOUNT_SID,
+        EXOTEL_CALLER_ID: process.env.EXOTEL_CALLER_ID,
+        EXOTEL_URL: process.env.EXOTEL_URL,
+      };
+      // Set test env vars
+      process.env.EXOTEL_AUTH_KEY = 'test_auth_key';
+      process.env.EXOTEL_AUTH_TOKEN = 'test_auth_token';
+      process.env.EXOTEL_ACCOUNT_SID = 'test_account_sid';
+      process.env.EXOTEL_CALLER_ID = '919876543210';
+      process.env.EXOTEL_URL = 'https://api.exotel.com/v1/Accounts/test_account_sid/Calls/connect';
+      try {
+        const result = validateExotelConfig();
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+      } finally {
+        // Restore original env vars
+        process.env.EXOTEL_AUTH_KEY = originalEnv.EXOTEL_AUTH_KEY;
+        process.env.EXOTEL_AUTH_TOKEN = originalEnv.EXOTEL_AUTH_TOKEN;
+        process.env.EXOTEL_ACCOUNT_SID = originalEnv.EXOTEL_ACCOUNT_SID;
+        process.env.EXOTEL_CALLER_ID = originalEnv.EXOTEL_CALLER_ID;
+        process.env.EXOTEL_URL = originalEnv.EXOTEL_URL;
+      }
     });
 
-    // Note: This test would require mocking environment variables
-    // For now, we're assuming default config values are present
+    // Note: This test now sets environment variables explicitly
   });
 
   describe('Phone number formatting', () => {
