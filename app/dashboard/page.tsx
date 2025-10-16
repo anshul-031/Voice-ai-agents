@@ -9,6 +9,8 @@ import ChatHistory from '@/components/ChatHistory'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import PhoneNumberModal from '@/components/PhoneNumberModal'
 import PhoneNumbersTable from '@/components/PhoneNumbersTable'
+import WhatsAppNumberModal from '@/components/WhatsAppNumberModal'
+import WhatsAppNumbersTable from '@/components/WhatsAppNumbersTable'
 import VoiceAgentsTable from '@/components/VoiceAgentsTable'
 import { useEffect, useState } from 'react'
 
@@ -45,6 +47,11 @@ export default function DashboardPage() {
     const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false)
     const [editingPhoneNumber, setEditingPhoneNumber] = useState<any | null>(null)
     const [phoneNumbersRefreshKey, setPhoneNumbersRefreshKey] = useState(0)
+
+    // WhatsApp Numbers state
+    const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false)
+    const [editingWhatsAppNumber, setEditingWhatsAppNumber] = useState<any | null>(null)
+    const [whatsAppRefreshKey, setWhatsAppRefreshKey] = useState(0)
 
     useEffect(() => {
         if (activeView === 'campaigns') {
@@ -131,6 +138,26 @@ export default function DashboardPage() {
         setPhoneNumbersRefreshKey(prev => prev + 1)
     }
 
+    // WhatsApp handlers
+    const handleAddWhatsAppNumber = () => {
+        setEditingWhatsAppNumber(null)
+        setWhatsAppModalOpen(true)
+    }
+
+    const handleEditWhatsAppNumber = (item: any) => {
+        setEditingWhatsAppNumber(item)
+        setWhatsAppModalOpen(true)
+    }
+
+    const handleWhatsAppModalClose = () => {
+        setWhatsAppModalOpen(false)
+        setEditingWhatsAppNumber(null)
+    }
+
+    const handleWhatsAppModalSuccess = () => {
+        setWhatsAppRefreshKey(prev => prev + 1)
+    }
+
     const renderContent = () => {
         switch (activeView) {
             case 'voice-agents':
@@ -167,6 +194,15 @@ export default function DashboardPage() {
                         key={phoneNumbersRefreshKey}
                         onAddPhone={handleAddPhoneNumber}
                         onEditPhone={handleEditPhoneNumber}
+                    />
+                )
+
+            case 'whatsapp-number':
+                return (
+                    <WhatsAppNumbersTable
+                        key={whatsAppRefreshKey}
+                        onAdd={handleAddWhatsAppNumber}
+                        onEdit={handleEditWhatsAppNumber}
                     />
                 )
 
@@ -233,6 +269,13 @@ export default function DashboardPage() {
                 onClose={handlePhoneNumberModalClose}
                 phoneNumber={editingPhoneNumber}
                 onSuccess={handlePhoneNumberModalSuccess}
+            />
+
+            <WhatsAppNumberModal
+                isOpen={whatsAppModalOpen}
+                onClose={handleWhatsAppModalClose}
+                whatsAppNumber={editingWhatsAppNumber}
+                onSuccess={handleWhatsAppModalSuccess}
             />
 
             <ChatHistory
