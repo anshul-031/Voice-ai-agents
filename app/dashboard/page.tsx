@@ -9,9 +9,9 @@ import ChatHistory from '@/components/ChatHistory'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import PhoneNumberModal from '@/components/PhoneNumberModal'
 import PhoneNumbersTable from '@/components/PhoneNumbersTable'
+import VoiceAgentsTable from '@/components/VoiceAgentsTable'
 import WhatsAppNumberModal from '@/components/WhatsAppNumberModal'
 import WhatsAppNumbersTable from '@/components/WhatsAppNumbersTable'
-import VoiceAgentsTable from '@/components/VoiceAgentsTable'
 import { useEffect, useState } from 'react'
 
 interface VoiceAgent {
