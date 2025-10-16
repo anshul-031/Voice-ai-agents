@@ -5,12 +5,12 @@
 
 // Exotel configuration from environment variables
 const EXOTEL_CONFIG = {
-  authKey: process.env.EXOTEL_AUTH_KEY || '0057eb80c8954c57fd04a706cced7204a55e78f1171edb43',
-  authToken: process.env.EXOTEL_AUTH_TOKEN || '0462a5eeaeaaa40839a50e5cd9b5c1332315639ece950f8c',
-  subdomain: process.env.EXOTEL_SUBDOMAIN || 'api.exotel.com',
-  accountSid: process.env.EXOTEL_ACCOUNT_SID || 'pelocal2',
-  callerId: process.env.EXOTEL_CALLER_ID || '918047495133',
-  url: process.env.EXOTEL_URL || 'http://my.exotel.com/pelocal2/exoml/start_voice/1044171'
+  authKey: process.env.EXOTEL_AUTH_KEY || '',
+  authToken: process.env.EXOTEL_AUTH_TOKEN || '',
+  subdomain: process.env.EXOTEL_SUBDOMAIN || '',
+  accountSid: process.env.EXOTEL_ACCOUNT_SID || '',
+  callerId: process.env.EXOTEL_CALLER_ID || '',
+  url: process.env.EXOTEL_URL || ''
 };
 
 export interface ExotelCallParams {
