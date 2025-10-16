@@ -12,6 +12,9 @@ const customJestConfig = {
   moduleNameMapper: {
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/$1',
+    '^mongoose$': '<rootDir>/__tests__/mocks/mongoose.js',
+    '^mongodb$': '<rootDir>/__tests__/mocks/mongodb.js',
+    '^bson$': '<rootDir>/__tests__/mocks/bson.js',
   },
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
@@ -41,6 +44,7 @@ const customJestConfig = {
     '/test-components-static.js',
     '/__tests__/test-utils.tsx',
     '/__tests__/mocks.tsx',
+    '/__tests__/mocks/',
   ],
   coverageThreshold: {
     global: {

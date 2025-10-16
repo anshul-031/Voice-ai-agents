@@ -1,8 +1,20 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/llm/route'
+import { NextRequest } from 'next/server'
+
+jest.mock('@/models/Chat', () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn().mockResolvedValue({}),
+  },
+}))
+
+jest.mock('@/lib/mongodb', () => ({
+  __esModule: true,
+  default: jest.fn().mockResolvedValue(undefined),
+}))
 
 jest.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: jest.fn().mockImplementation(() => ({

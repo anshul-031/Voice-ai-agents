@@ -2,11 +2,25 @@
  * Unit tests for Campaign Start API endpoint
  */
 
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: jest.fn((body: any, init: any = {}) => ({
+      status: init?.status ?? 200,
+      body,
+      json: async () => body,
+    })),
+  },
+  NextRequest: class MockNextRequest {},
+}));
+
 import { POST } from '@/app/api/campaigns/start/route';
 import dbConnect from '@/lib/dbConnect';
 import Campaign from '@/models/Campaign';
 import CampaignContact from '@/models/CampaignContact';
-import { NextRequest } from 'next/server';
+
+const createRequest = (body: unknown) => ({
+  json: jest.fn().mockResolvedValue(body),
+}) as any;
 
 // Mock dependencies
 jest.mock('@/lib/dbConnect');
@@ -55,10 +69,7 @@ describe('POST /api/campaigns/start', () => {
     (Campaign.findById as jest.Mock).mockResolvedValue(mockCampaign);
     (CampaignContact.find as jest.Mock).mockResolvedValue(mockContacts);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+  const request = createRequest({ campaign_id: 'campaign-123' });
 
     const response = await POST(request);
     const data = await response.json();
@@ -71,10 +82,7 @@ describe('POST /api/campaigns/start', () => {
   });
 
   it('should return error if campaign_id is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({})
-    });
+    const request = createRequest({});
 
     const response = await POST(request);
     const data = await response.json();
@@ -88,10 +96,7 @@ describe('POST /api/campaigns/start', () => {
     (dbConnect as jest.Mock).mockResolvedValue(true);
     (Campaign.findById as jest.Mock).mockResolvedValue(null);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'non-existent' })
-    });
+    const request = createRequest({ campaign_id: 'non-existent' });
 
     const response = await POST(request);
     const data = await response.json();
@@ -111,10 +116,7 @@ describe('POST /api/campaigns/start', () => {
     (dbConnect as jest.Mock).mockResolvedValue(true);
     (Campaign.findById as jest.Mock).mockResolvedValue(mockCampaign);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+  const request = createRequest({ campaign_id: 'campaign-123' });
 
     const response = await POST(request);
     const data = await response.json();
@@ -135,10 +137,7 @@ describe('POST /api/campaigns/start', () => {
     (Campaign.findById as jest.Mock).mockResolvedValue(mockCampaign);
     (CampaignContact.find as jest.Mock).mockResolvedValue([]);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+  const request = createRequest({ campaign_id: 'campaign-123' });
 
     const response = await POST(request);
     const data = await response.json();
@@ -175,10 +174,7 @@ describe('POST /api/campaigns/start', () => {
     (Campaign.findById as jest.Mock).mockResolvedValue(mockCampaign);
     (CampaignContact.find as jest.Mock).mockResolvedValue(mockContacts);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+    const request = createRequest({ campaign_id: 'campaign-123' });
 
     await POST(request);
 
@@ -204,10 +200,7 @@ describe('POST /api/campaigns/start', () => {
     (Campaign.findById as jest.Mock).mockResolvedValue(mockCampaign);
     (CampaignContact.find as jest.Mock).mockResolvedValue([]);
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+    const request = createRequest({ campaign_id: 'campaign-123' });
 
     await POST(request);
 
@@ -220,10 +213,7 @@ describe('POST /api/campaigns/start', () => {
   it('should handle database errors gracefully', async () => {
     (dbConnect as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
 
-    const request = new NextRequest('http://localhost:3000/api/campaigns/start', {
-      method: 'POST',
-      body: JSON.stringify({ campaign_id: 'campaign-123' })
-    });
+    const request = createRequest({ campaign_id: 'campaign-123' });
 
     const response = await POST(request);
     const data = await response.json();

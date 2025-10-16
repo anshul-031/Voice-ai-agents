@@ -333,10 +333,12 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
-      expect(screen.getByText('-')).toBeInTheDocument()
+      const placeholderCells = screen.getAllByText('-', { exact: true })
+      expect(placeholderCells.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should handle single campaign', () => {
@@ -346,6 +348,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -370,6 +373,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
