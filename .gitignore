@@ -1,0 +1,83 @@
+# Dependencies# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+node_modules/
+
+# dependencies
+
+# Next.js build output/node_modules
+
+.next//.pnp
+
+out/.pnp.*
+
+.yarn/*
+
+# TypeScript build info!.yarn/patches
+
+*.tsbuildinfo!.yarn/plugins
+
+!.yarn/releases
+
+# Logs!.yarn/versions
+
+npm-debug.log*
+
+yarn-debug.log*# testing
+
+yarn-error.log*/coverage
+
+pnpm-debug.log*
+
+# next.js
+
+# Env files/.next/
+
+.env/out/
+
+.env.*
+
+!.env.example# production
+
+/build
+
+# OS junk
+
+.DS_Store# misc
+
+Thumbs.db.DS_Store
+
+*.pem
+
+# Archives and binaries
+
+*.zip# debug
+
+*.tarnpm-debug.log*
+
+*.tar.gzyarn-debug.log*
+
+*.tgzyarn-error.log*
+
+*.7z
+
+*.rar# env files (can opt-in for commiting if needed)
+
+*.exe.env*
+
+
+
+# Temporary/backup# vercel
+
+restore_*/.vercel
+
+vb_exotel_v12_temp/
+
+# typescript
+
+# IDE*.tsbuildinfo
+
+.vscode/next-env.d.ts
+
+ 
+# archives / bundles
+*.zip
