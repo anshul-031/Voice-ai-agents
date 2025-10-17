@@ -36,6 +36,48 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
     const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'failed' | 'ongoing'>('all')
     const [showFilters, setShowFilters] = useState(false)
 
+    // ...existing code...
+
+    // Export handler: downloads filteredSessions as CSV
+    const handleExport = (format: 'csv' | 'json' = 'csv') => {
+        if (filteredSessions.length === 0) return
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(filteredSessions, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'call-logs.json'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        } else {
+            // CSV export
+            const headers = ['Session ID', 'User ID', 'Message Count', 'First Message', 'Last Message', 'First Timestamp', 'Last Timestamp']
+            const rows = filteredSessions.map(s => [
+                s.sessionId,
+                s.userId,
+                s.messageCount,
+                s.firstMessage ?? '',
+                s.lastMessage ?? '',
+                s.firstTimestamp,
+                s.lastTimestamp
+            ])
+            const csv = [headers, ...rows]
+                .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+                .join('\n')
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'call-logs.csv'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        }
+    }
+
     useEffect(() => {
         fetchSessions()
     }, [])
@@ -114,10 +156,26 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                 <RefreshCw className="w-4 h-4" />
                                 <span className="text-sm font-medium">Refresh</span>
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white transition-all duration-200 hover:scale-105 shadow-lg shadow-emerald-500/20">
-                                <Download className="w-4 h-4" />
-                                <span className="text-sm font-medium">Export</span>
-                            </button>
+                            <div className="relative group">
+                                <button
+                                    onClick={() => handleExport('csv')}
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#141b24] border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-gray-600 transition-all duration-200 hover:scale-105"
+                                    aria-label="Export as CSV"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Export</span>
+                                </button>
+                                <div className="absolute right-0 mt-1 hidden group-hover:block z-20">
+                                    <button
+                                        onClick={() => handleExport('json')}
+                                        className="block w-full px-4 py-2 bg-[#141b24] border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-gray-600 text-sm text-left"
+                                        style={{ minWidth: 120 }}
+                                        aria-label="Export as JSON"
+                                    >
+                                        Export as JSON
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

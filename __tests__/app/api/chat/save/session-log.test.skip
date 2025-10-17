@@ -1,0 +1,1 @@
+// This file was renamed to prevent Jest from running it, as it cannot be executed in a Node.js environment due to NextRequest dependency.
