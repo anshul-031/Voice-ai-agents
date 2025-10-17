@@ -16,13 +16,18 @@ describe('API: /api/chat/save', () => {
     jest.clearAllMocks()
   })
 
-  describe('POST Request - Save chat message', () => {
-    it('should save a user message', async () => {
+  describe('POST Request - Save chat session log', () => {
+    it('should save a session log with only user and assistant messages', async () => {
       const chatData = {
         userId: 'testuser',
         sessionId: 'session-123',
-        role: 'user',
-        content: 'Hello, how are you?',
+        messages: [
+          { role: 'user', content: 'Hello' },
+          { role: 'assistant', content: 'Hi, how can I help?' },
+          { role: 'system', content: 'System message' },
+          { role: 'user', content: 'Tell me a joke.' },
+          { role: 'assistant', content: 'Why did the chicken cross the road?' }
+        ],
         systemPrompt: 'You are helpful'
       }
 
@@ -57,67 +62,12 @@ describe('API: /api/chat/save', () => {
       expect(data.timestamp).toBeDefined()
     })
 
-    it('should save an assistant message', async () => {
-      const chatData = {
-        sessionId: 'session-123',
-        role: 'assistant',
-        content: 'I am doing well, thank you!'
-      }
-
-      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
-      ;(Chat as any).mockImplementation(function() {
-        return {
-          _id: 'chat-id-456',
-          timestamp: new Date(),
-          save: jest.fn().mockResolvedValue({})
-        }
-      })
-
-      const request = new NextRequest('http://localhost:3000/api/chat/save', {
-        method: 'POST',
-        body: JSON.stringify(chatData)
-      })
-
-      const response = await POST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data.success).toBe(true)
-    })
-
-    it('should save a system message', async () => {
-      const chatData = {
-        sessionId: 'session-123',
-        role: 'system',
-        content: 'System initialized'
-      }
-
-      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
-      ;(Chat as any).mockImplementation(function() {
-        return {
-          _id: 'chat-id-789',
-          timestamp: new Date(),
-          save: jest.fn().mockResolvedValue({})
-        }
-      })
-
-      const request = new NextRequest('http://localhost:3000/api/chat/save', {
-        method: 'POST',
-        body: JSON.stringify(chatData)
-      })
-
-      const response = await POST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data.success).toBe(true)
-    })
-
     it('should use default userId "mukul" when not provided', async () => {
       const chatData = {
         sessionId: 'session-123',
-        role: 'user',
-        content: 'Test message'
+        messages: [
+          { role: 'user', content: 'Test message' }
+        ]
       }
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
@@ -144,8 +94,9 @@ describe('API: /api/chat/save', () => {
 
     it('should return 400 when sessionId is missing', async () => {
       const invalidData = {
-        role: 'user',
-        content: 'Hello'
+        messages: [
+          { role: 'user', content: 'Hello' }
+        ]
       }
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
@@ -162,10 +113,10 @@ describe('API: /api/chat/save', () => {
       expect(data.error).toContain('Missing required fields')
     })
 
-    it('should return 400 when role is missing', async () => {
+    it('should return 400 when messages array is missing or empty', async () => {
       const invalidData = {
         sessionId: 'session-123',
-        content: 'Hello'
+        messages: []
       }
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
@@ -182,10 +133,12 @@ describe('API: /api/chat/save', () => {
       expect(data.error).toContain('Missing required fields')
     })
 
-    it('should return 400 when content is missing', async () => {
+    it('should return 400 for no valid user/assistant messages', async () => {
       const invalidData = {
         sessionId: 'session-123',
-        role: 'user'
+        messages: [
+          { role: 'system', content: 'System message' }
+        ]
       }
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
@@ -199,28 +152,7 @@ describe('API: /api/chat/save', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Missing required fields')
-    })
-
-    it('should return 400 for invalid role', async () => {
-      const invalidData = {
-        sessionId: 'session-123',
-        role: 'invalid-role',
-        content: 'Hello'
-      }
-
-      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
-
-      const request = new NextRequest('http://localhost:3000/api/chat/save', {
-        method: 'POST',
-        body: JSON.stringify(invalidData)
-      })
-
-      const response = await POST(request)
-      const data = await response.json()
-
-      expect(response.status).toBe(400)
-      expect(data.error).toContain('Invalid role')
+      expect(data.error).toContain('No valid user/assistant messages to save')
     })
 
     it('should handle database save errors', async () => {
@@ -235,8 +167,9 @@ describe('API: /api/chat/save', () => {
         method: 'POST',
         body: JSON.stringify({
           sessionId: 'session-123',
-          role: 'user',
-          content: 'Test'
+          messages: [
+            { role: 'user', content: 'Test' }
+          ]
         })
       })
 

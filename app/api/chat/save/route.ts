@@ -9,36 +9,41 @@ export async function POST(request: NextRequest) {
         await dbConnect();
         console.log('[Chat Save] Connected to MongoDB');
 
-        const { userId, sessionId, role, content, systemPrompt } = await request.json();
-        console.log('[Chat Save] Request data:', { userId, sessionId, role, contentLength: content?.length });
+        const { userId, sessionId, messages, systemPrompt } = await request.json();
+        console.log('[Chat Save] Request data:', { userId, sessionId, messagesLength: messages?.length });
 
-        if (!sessionId || !role || !content) {
+        if (!sessionId || !messages || !Array.isArray(messages) || messages.length === 0) {
             console.error('[Chat Save] Missing required fields');
             return NextResponse.json(
-                { error: 'Missing required fields: sessionId, role, content' },
+                { error: 'Missing required fields: sessionId, messages' },
                 { status: 400 }
             );
         }
 
-        if (!['user', 'assistant', 'system'].includes(role)) {
-            console.error('[Chat Save] Invalid role:', role);
+        // Filter only user and assistant messages
+        const filteredMessages = messages.filter(
+            msg => ['user', 'assistant'].includes(msg.role)
+        );
+
+        if (filteredMessages.length === 0) {
+            console.error('[Chat Save] No valid user/assistant messages to save');
             return NextResponse.json(
-                { error: 'Invalid role. Must be user, assistant, or system' },
+                { error: 'No valid user/assistant messages to save' },
                 { status: 400 }
             );
         }
 
+        // Store one log per session with all filtered messages
         const chat = new Chat({
-            userId: userId || 'mukul', // Default to 'mukul' if not provided
+            userId: userId || 'mukul',
             sessionId,
-            role,
-            content,
+            content: JSON.stringify(filteredMessages), // Store as JSON string
             systemPrompt,
             timestamp: new Date(),
         });
 
         await chat.save();
-        console.log('[Chat Save] Chat saved successfully, ID:', chat._id);
+        console.log('[Chat Save] Session chat saved successfully, ID:', chat._id);
 
         return NextResponse.json({
             success: true,

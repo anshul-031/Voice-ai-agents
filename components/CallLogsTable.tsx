@@ -36,6 +36,8 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
     const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'failed' | 'ongoing'>('all')
     const [showFilters, setShowFilters] = useState(false)
 
+    // ...existing code...
+
     useEffect(() => {
         fetchSessions()
     }, [])
@@ -114,7 +116,10 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                 <RefreshCw className="w-4 h-4" />
                                 <span className="text-sm font-medium">Refresh</span>
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white transition-all duration-200 hover:scale-105 shadow-lg shadow-emerald-500/20">
+                            <button
+                                onClick={() => { /* TODO: implement export handler */ }}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#141b24] border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-gray-600 transition-all duration-200 hover:scale-105"
+                            >
                                 <Download className="w-4 h-4" />
                                 <span className="text-sm font-medium">Export</span>
                             </button>
