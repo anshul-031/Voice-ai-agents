@@ -23,7 +23,7 @@ jest.mock('@/models/PhoneNumber', () => {
   const MockPhoneNumber = jest.fn().mockImplementation((data) => ({
     ...data,
     ...mockPhoneNumberInstance,
-  }));
+  })) as any;
   MockPhoneNumber.find = jest.fn();
   MockPhoneNumber.findOne = jest.fn();
   MockPhoneNumber.findByIdAndUpdate = jest.fn();
