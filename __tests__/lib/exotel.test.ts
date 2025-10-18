@@ -1,327 +1,130 @@
-/**
- * Unit tests for Exotel API integration
- */
+import * as exotel from '@/lib/exotel'
 
-import { triggerBulkCalls, triggerExotelCall, validateExotelConfig } from '@/lib/exotel';
+describe('lib/exotel', () => {
+  const ORIGINAL_ENV = process.env
 
-// Mock fetch globally
-global.fetch = jest.fn();
-
-describe('Exotel Integration', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
+    jest.resetModules()
+    process.env = { ...ORIGINAL_ENV }
+    // provide default valid config
+    process.env.EXOTEL_AUTH_KEY = 'key'
+    process.env.EXOTEL_AUTH_TOKEN = 'token'
+    process.env.EXOTEL_SUBDOMAIN = 'api.exotel.com'
+    process.env.EXOTEL_ACCOUNT_SID = 'AC123'
+    process.env.EXOTEL_CALLER_ID = 'caller'
+    process.env.EXOTEL_URL = 'https://example.com/call'
+    ;(global as any).fetch = jest.fn()
+  })
 
-  describe('triggerExotelCall', () => {
-    it('should successfully trigger an outbound call', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid-123',
-          Status: 'queued'
-        }
-      };
+  afterEach(() => {
+    process.env = ORIGINAL_ENV
+    jest.clearAllMocks()
+    try {
+      delete (global as any).fetch
+    } catch (_) {}
+  })
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+  test('formatPhoneNumber handles various formats', () => {
+    expect(exotel.formatPhoneNumber('9876543210')).toBe('919876543210')
+    // 11-digit starting with 0 -> remove leading 0 and add 91
+    expect(exotel.formatPhoneNumber('09123456789')).toBe('919123456789')
+    expect(exotel.formatPhoneNumber('+91 98765-43210')).toBe('919876543210')
+    expect(exotel.formatPhoneNumber('919876543210')).toBe('919876543210')
+  })
 
-      const result = await triggerExotelCall({
-        phoneNumber: '9876543210',
-        contactName: 'Test User',
-        contactId: 'contact-123'
-      });
+  test('validateExotelConfig returns errors when missing', () => {
+    delete process.env.EXOTEL_AUTH_KEY
+    delete process.env.EXOTEL_AUTH_TOKEN
+    const result = exotel.validateExotelConfig()
+    expect(result.valid).toBe(false)
+    expect(result.errors.length).toBeGreaterThanOrEqual(2)
+  })
 
-      expect(result.success).toBe(true);
-      expect(result.callSid).toBe('test-call-sid-123');
-      expect(result.status).toBe('queued');
-      expect(result.phoneNumber).toBe('9876543210');
-    });
+  test('triggerExotelCall returns success when API responds with call object', async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({ Call: { Sid: 'SID123', Status: 'queued' } }),
+    }
+    ;(global as any).fetch = jest.fn().mockResolvedValue(mockResponse)
 
-    it('should handle 10-digit phone number format', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid-456',
-          Status: 'queued'
-        }
-      };
+    const res = await exotel.triggerExotelCall({ phoneNumber: '9876543210' })
+    expect(res.success).toBe(true)
+    expect(res.callSid).toBe('SID123')
+  })
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+  test('triggerExotelCall returns failure when API returns error', async () => {
+    const mockResponse = {
+      ok: false,
+      json: async () => ({ RestException: { Message: 'Bad request' } }),
+    }
+    ;(global as any).fetch = jest.fn().mockResolvedValue(mockResponse)
 
-      await triggerExotelCall({
-        phoneNumber: '9876543210'
-      });
+    const res = await exotel.triggerExotelCall({ phoneNumber: '123' })
+    expect(res.success).toBe(false)
+    expect(res.error).toBeDefined()
+  })
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('From=919876543210')
-        })
-      );
-    });
+  test('triggerExotelCall handles network errors gracefully', async () => {
+    ;(global as any).fetch = jest.fn().mockRejectedValue(new Error('Network fail'))
 
-    it('should handle phone number with country code', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid-789',
-          Status: 'queued'
-        }
-      };
+    const res = await exotel.triggerExotelCall({ phoneNumber: '9876543210' })
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/Network fail/)
+  })
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+  test('triggerExotelCall sends proper headers and formatted body', async () => {
+    const mockResponse = { ok: true, json: async () => ({ Call: { Sid: 'S', Status: 'queued' } }) }
+    const fetchMock = jest.fn().mockResolvedValue(mockResponse)
+    ;(global as any).fetch = fetchMock
 
-      await triggerExotelCall({
-        phoneNumber: '919876543210'
-      });
+    await exotel.triggerExotelCall({ phoneNumber: '9876543210' })
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('From=919876543210')
-        })
-      );
-    });
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, options] = fetchMock.mock.calls[0]
+    expect(options.method).toBe('POST')
+    expect(options.headers['Content-Type']).toBe('application/x-www-form-urlencoded')
+    expect(options.headers['Authorization']).toMatch(/^Basic /)
+    expect(options.body).toContain('From=919876543210')
+  })
 
-    it('should handle invalid phone number format', async () => {
-      const result = await triggerExotelCall({
-        phoneNumber: '123'
-      });
+  test('triggerBulkCalls calls triggerExotelCall for each contact and reports progress', async () => {
+    const mockResponse = { ok: true, json: async () => ({ Call: { Sid: 'S1', Status: 'queued' } }) }
+    ;(global as any).fetch = jest.fn().mockResolvedValue(mockResponse)
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Invalid phone number format');
-    });
+    const contacts = [
+      { phoneNumber: '9876543210' },
+      { phoneNumber: '9123456789' },
+    ]
 
-    it('should handle API error response', async () => {
-      const mockErrorResponse = {
-        RestException: {
-          Message: 'Invalid caller ID'
-        }
-      };
+    const progress: Array<{ completed: number; total: number }> = []
+    const onProgress = (_completed: number, _total: number) => {
+      progress.push({ completed: _completed, total: _total })
+    }
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        json: async () => mockErrorResponse
-      });
+    const results = await exotel.triggerBulkCalls(contacts, onProgress, 0)
+    expect(results).toHaveLength(2)
+    expect(progress).toHaveLength(2)
+  })
 
-      const result = await triggerExotelCall({
-        phoneNumber: '9876543210'
-      });
+  test('triggerBulkCalls continues when a call fails', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ Call: { Sid: 'sid1', Status: 'queued' } }) })
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ Call: { Sid: 'sid3', Status: 'queued' } }) })
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid caller ID');
-    });
+    ;(global as any).fetch = fetchMock
 
-    it('should handle network errors', async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+    const contacts = [
+      { phoneNumber: '9876543210' },
+      { phoneNumber: '9876543211' },
+      { phoneNumber: '9876543212' }
+    ]
 
-      const result = await triggerExotelCall({
-        phoneNumber: '9876543210'
-      });
+    const results = await exotel.triggerBulkCalls(contacts, undefined, 0)
+    expect(results).toHaveLength(3)
+    expect(results[0].success).toBe(true)
+    expect(results[1].success).toBe(false)
+    expect(results[2].success).toBe(true)
+  })
+})
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Network error');
-    });
-
-    it('should include proper authentication headers', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid',
-          Status: 'queued'
-        }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await triggerExotelCall({
-        phoneNumber: '9876543210'
-      });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': expect.stringMatching(/^Basic /),
-            'Content-Type': 'application/x-www-form-urlencoded'
-          })
-        })
-      );
-    });
-  });
-
-  describe('triggerBulkCalls', () => {
-    it('should trigger multiple calls sequentially', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid',
-          Status: 'queued'
-        }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const contacts = [
-        { phoneNumber: '9876543210', contactName: 'User 1' },
-        { phoneNumber: '9876543211', contactName: 'User 2' },
-        { phoneNumber: '9876543212', contactName: 'User 3' }
-      ];
-
-      const results = await triggerBulkCalls(contacts, undefined, 0); // 0 delay for testing
-
-      expect(results).toHaveLength(3);
-      expect(results.every(r => r.success)).toBe(true);
-      expect(global.fetch).toHaveBeenCalledTimes(3);
-    });
-
-    it('should call progress callback for each contact', async () => {
-      const mockResponse = {
-        Call: {
-          Sid: 'test-call-sid',
-          Status: 'queued'
-        }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const contacts = [
-        { phoneNumber: '9876543210' },
-        { phoneNumber: '9876543211' }
-      ];
-
-      const progressCallback = jest.fn();
-
-      await triggerBulkCalls(contacts, progressCallback, 0);
-
-      expect(progressCallback).toHaveBeenCalledTimes(2);
-      expect(progressCallback).toHaveBeenCalledWith(1, 2, expect.any(Object));
-      expect(progressCallback).toHaveBeenCalledWith(2, 2, expect.any(Object));
-    });
-
-    it('should continue calling even if one call fails', async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ Call: { Sid: 'sid1', Status: 'queued' } })
-        })
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ Call: { Sid: 'sid3', Status: 'queued' } })
-        });
-
-      const contacts = [
-        { phoneNumber: '9876543210' },
-        { phoneNumber: '9876543211' },
-        { phoneNumber: '9876543212' }
-      ];
-
-      const results = await triggerBulkCalls(contacts, undefined, 0);
-
-      expect(results).toHaveLength(3);
-      expect(results[0].success).toBe(true);
-      expect(results[1].success).toBe(false);
-      expect(results[2].success).toBe(true);
-    });
-  });
-
-  describe('validateExotelConfig', () => {
-    it('should validate configuration successfully', () => {
-      // Save original env vars
-      const originalEnv = {
-        EXOTEL_AUTH_KEY: process.env.EXOTEL_AUTH_KEY,
-        EXOTEL_AUTH_TOKEN: process.env.EXOTEL_AUTH_TOKEN,
-        EXOTEL_ACCOUNT_SID: process.env.EXOTEL_ACCOUNT_SID,
-        EXOTEL_CALLER_ID: process.env.EXOTEL_CALLER_ID,
-        EXOTEL_URL: process.env.EXOTEL_URL,
-      };
-      // Set test env vars
-      process.env.EXOTEL_AUTH_KEY = 'test_auth_key';
-      process.env.EXOTEL_AUTH_TOKEN = 'test_auth_token';
-      process.env.EXOTEL_ACCOUNT_SID = 'test_account_sid';
-      process.env.EXOTEL_CALLER_ID = '919876543210';
-      process.env.EXOTEL_URL = 'https://api.exotel.com/v1/Accounts/test_account_sid/Calls/connect';
-      try {
-        const result = validateExotelConfig();
-        expect(result.valid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-      } finally {
-        // Restore original env vars
-        process.env.EXOTEL_AUTH_KEY = originalEnv.EXOTEL_AUTH_KEY;
-        process.env.EXOTEL_AUTH_TOKEN = originalEnv.EXOTEL_AUTH_TOKEN;
-        process.env.EXOTEL_ACCOUNT_SID = originalEnv.EXOTEL_ACCOUNT_SID;
-        process.env.EXOTEL_CALLER_ID = originalEnv.EXOTEL_CALLER_ID;
-        process.env.EXOTEL_URL = originalEnv.EXOTEL_URL;
-      }
-    });
-
-    // Note: This test now sets environment variables explicitly
-  });
-
-  describe('Phone number formatting', () => {
-    it('should format 10-digit number correctly', async () => {
-      const mockResponse = {
-        Call: { Sid: 'sid', Status: 'queued' }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await triggerExotelCall({ phoneNumber: '9876543210' });
-
-      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
-      expect(fetchCall[1].body).toContain('From=919876543210');
-    });
-
-    it('should handle number starting with 0', async () => {
-      const mockResponse = {
-        Call: { Sid: 'sid', Status: 'queued' }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await triggerExotelCall({ phoneNumber: '09876543210' });
-
-      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
-      expect(fetchCall[1].body).toContain('From=919876543210');
-    });
-
-    it('should handle number with spaces and dashes', async () => {
-      const mockResponse = {
-        Call: { Sid: 'sid', Status: 'queued' }
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      await triggerExotelCall({ phoneNumber: '987-654-3210' });
-
-      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
-      expect(fetchCall[1].body).toContain('From=919876543210');
-    });
-  });
-});

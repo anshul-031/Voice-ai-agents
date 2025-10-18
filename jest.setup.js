@@ -1,6 +1,18 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 
+// Set up test environment variables
+process.env.MONGODB_URI = 'mongodb://localhost:27017/test'
+process.env.EXOTEL_AUTH_KEY = 'test_auth_key'
+process.env.EXOTEL_AUTH_TOKEN = 'test_auth_token'
+process.env.EXOTEL_SUBDOMAIN = 'test_subdomain'
+process.env.EXOTEL_ACCOUNT_SID = 'test_account_sid'
+process.env.EXOTEL_CALLER_ID = 'test_caller_id'
+process.env.EXOTEL_URL = 'https://test.exotel.com'
+process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test_api_key'
+process.env.SARVAM_API_KEY = 'test_sarvam_key'
+process.env.ASSEMBLYAI_API_KEY = 'test_assemblyai_key'
+
 // Only mock browser APIs if window is available (jsdom environment)
 if (typeof window !== 'undefined') {
   // Avoid jsdom unimplemented scrollTo warnings from animation libs

@@ -1,11 +1,7 @@
 import mongoose from 'mongoose';
 
 // Use connection string without explicit TLS parameters - let Mongoose handle it
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://mukulrai_db_user:rxHzQuYtSUFN6DHM@cluster0.nnefrop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-
-if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable');
-}
+const MONGODB_URI = process.env.MONGODB_URI;
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -28,6 +24,11 @@ if (!global.mongoose) {
 }
 
 async function dbConnect() {
+    // Check for MONGODB_URI here, not at module load time
+    if (!process.env.MONGODB_URI) {
+        throw new Error('Please define the MONGODB_URI environment variable');
+    }
+
     if (cached.conn) {
         // Check if connection is still alive
         if (cached.conn.connection.readyState === 1) {
@@ -50,7 +51,7 @@ async function dbConnect() {
         };
 
         console.log('[MongoDB] Creating new connection...');
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+        cached.promise = mongoose.connect(process.env.MONGODB_URI!, opts).then((mongoose) => {
             console.log('[MongoDB] Connected successfully');
             return mongoose;
         }).catch((error) => {

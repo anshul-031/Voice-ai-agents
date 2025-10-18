@@ -328,6 +328,42 @@ describe('API: /api/campaign-contacts', () => {
       ])
       expect(response.status).toBe(201)
     })
+
+    it('should handle mixed case headers and partial missing fields', async () => {
+      const csvContent = `number,Name,description
+1234567890,John Doe,Customer
+0987654321,,Lead
+5555555555,Bob Johnson,`
+
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
+        { _id: '1', number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' },
+        { _id: '2', number: '0987654321', name: '', description: 'Lead', campaign_id: 'campaign-123', call_done: 'no' },
+        { _id: '3', number: '5555555555', name: 'Bob Johnson', description: '', campaign_id: 'campaign-123', call_done: 'no' }
+      ])
+
+      const formData = new FormData()
+      const file = new File([csvContent], 'contacts.csv', { type: 'text/csv' })
+      formData.append('file', file)
+      formData.append('campaign_id', 'campaign-123')
+
+      const request = new NextRequest('http://localhost:3000/api/campaign-contacts', {
+        method: 'POST',
+        body: formData
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(CampaignContact.insertMany).toHaveBeenCalledWith([
+        { number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' },
+        { number: '0987654321', name: '', description: 'Lead', campaign_id: 'campaign-123', call_done: 'no' },
+        { number: '5555555555', name: 'Bob Johnson', description: '', campaign_id: 'campaign-123', call_done: 'no' }
+      ])
+      expect(response.status).toBe(201)
+      expect(data.success).toBe(true)
+      expect(data.count).toBe(3)
+    })
   })
 
   describe('DELETE Request - Delete contact by id', () => {

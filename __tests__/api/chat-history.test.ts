@@ -141,6 +141,49 @@ describe('API: /api/chat/history', () => {
       expect(data.error).toBe('Failed to fetch chat history')
       expect(data.details).toBe('Database error')
     })
+
+    it('should handle invalid limit and skip parameters', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      
+      const mockChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([])
+      }
+      ;(Chat.find as jest.Mock).mockReturnValue(mockChain)
+
+      const request = new NextRequest('http://localhost:3000/api/chat/history?sessionId=session-123&limit=invalid&skip=notanumber')
+
+      await GET(request)
+
+      // Should pass NaN when parsing fails
+      expect(mockChain.skip).toHaveBeenCalledWith(NaN)
+      expect(mockChain.limit).toHaveBeenCalledWith(NaN)
+    })
+
+    it('should handle non-Error database errors', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      
+      const mockChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue('String error')
+      }
+      ;(Chat.find as jest.Mock).mockReturnValue(mockChain)
+
+      const request = new NextRequest('http://localhost:3000/api/chat/history?sessionId=session-123')
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Failed to fetch chat history')
+      expect(data.details).toBe('Unknown error')
+    })
   })
 
   describe('DELETE Request - Delete chat history', () => {
@@ -199,6 +242,20 @@ describe('API: /api/chat/history', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to delete chat history')
       expect(data.details).toBe('Delete failed')
+    })
+
+    it('should handle non-Error database errors', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(Chat.deleteMany as jest.Mock).mockRejectedValue('String error')
+
+      const request = new NextRequest('http://localhost:3000/api/chat/history?sessionId=session-123')
+
+      const response = await DELETE(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Failed to delete chat history')
+      expect(data.details).toBe('Unknown error')
     })
   })
 })

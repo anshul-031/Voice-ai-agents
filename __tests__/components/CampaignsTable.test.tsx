@@ -79,6 +79,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -92,6 +93,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -109,6 +111,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -124,6 +127,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -139,6 +143,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -157,6 +162,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -176,6 +182,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -192,6 +199,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -209,6 +217,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -226,6 +235,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -259,6 +269,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -283,6 +294,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 
@@ -307,6 +319,7 @@ describe('CampaignsTable Component', () => {
           onEditCampaign={mockHandlers.onEditCampaign}
           onAddCampaign={mockHandlers.onAddCampaign}
           onViewCampaign={mockHandlers.onViewCampaign}
+          onStartCampaign={mockHandlers.onStartCampaign}
         />
       )
 

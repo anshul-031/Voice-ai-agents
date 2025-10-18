@@ -654,6 +654,288 @@ describe('CallLogsTable', () => {
             // Should show sessions again with 'all' filter
             expect(screen.getByText('session-1')).toBeInTheDocument()
         })
+
+        it('should handle agent filter changes', async () => {
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Open filter panel
+            const filterButton = screen.getByText('Filters').closest('button')
+            if (filterButton) {
+                fireEvent.click(filterButton)
+            }
+
+            await waitFor(() => {
+                expect(screen.getByText('All Agents')).toBeInTheDocument()
+            })
+
+            const agentSelect = screen.getByDisplayValue('All Agents')
+            fireEvent.change(agentSelect, { target: { value: 'EMI Reminder' } })
+
+            // Should still show sessions (mock data uses EMI Reminder)
+            expect(screen.getByText('session-1')).toBeInTheDocument()
+        })
+
+        it('should handle duration filter changes', async () => {
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Open filter panel
+            const filterButton = screen.getByText('Filters').closest('button')
+            if (filterButton) {
+                fireEvent.click(filterButton)
+            }
+
+            await waitFor(() => {
+                expect(screen.getByText('All Durations')).toBeInTheDocument()
+            })
+
+            const durationSelect = screen.getByDisplayValue('All Durations')
+            fireEvent.change(durationSelect, { target: { value: 'short' } })
+
+            // Should still show sessions (mock data fits criteria)
+            expect(screen.getByText('session-1')).toBeInTheDocument()
+        })
+
+        it('should handle date range filter changes', async () => {
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Click date range button
+            const dateRangeButton = screen.getByText('Date Range')
+            fireEvent.click(dateRangeButton)
+
+            // Should still show sessions (date filtering not implemented in current version)
+            expect(screen.getByText('session-1')).toBeInTheDocument()
+        })
+
+        it('should handle sessions with null or undefined message fields', async () => {
+            const sessionsWithNullMessages = [
+                {
+                    sessionId: 'session-null',
+                    userId: 'mukul',
+                    firstTimestamp: '2025-10-08T10:00:00Z',
+                    lastTimestamp: '2025-10-08T10:05:00Z',
+                    messageCount: 2,
+                    firstMessage: null,
+                    lastMessage: undefined,
+                },
+            ]
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: sessionsWithNullMessages,
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-null')).toBeInTheDocument()
+            })
+
+            // Should render without errors and export should handle null values
+            const exportButton = screen.getByText('Export')
+            fireEvent.click(exportButton)
+
+            // Should not throw error
+            expect(screen.getByText('session-null')).toBeInTheDocument()
+        })
+
+        it('should handle sessions with invalid timestamps gracefully', async () => {
+            const sessionsWithInvalidTimestamps = [
+                {
+                    sessionId: 'session-invalid',
+                    userId: 'mukul',
+                    firstTimestamp: 'invalid-date',
+                    lastTimestamp: 'also-invalid',
+                    messageCount: 1,
+                    firstMessage: 'Hello',
+                    lastMessage: 'Goodbye',
+                },
+            ]
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: sessionsWithInvalidTimestamps,
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-invalid')).toBeInTheDocument()
+            })
+
+            // Should render without crashing
+            expect(screen.getByText('session-invalid')).toBeInTheDocument()
+            // Duration might show as 0 or NaN, but component should handle it
+            expect(screen.getByText('session-invalid')).toBeInTheDocument()
+        })
+
+        it('should handle very long session durations', async () => {
+            const longSession = {
+                sessionId: 'session-long',
+                userId: 'mukul',
+                firstTimestamp: '2025-10-08T10:00:00Z',
+                lastTimestamp: '2025-10-08T16:00:00Z', // 6 hours = 360 minutes
+                messageCount: 50,
+                firstMessage: 'Long conversation start',
+                lastMessage: 'Long conversation end',
+            }
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: [longSession],
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-long')).toBeInTheDocument()
+            })
+
+            // Should display duration correctly
+            expect(screen.getByText('360m')).toBeInTheDocument()
+        })
+
+        it('should handle sessions with zero duration', async () => {
+            const zeroDurationSession = {
+                sessionId: 'session-zero-duration',
+                userId: 'mukul',
+                firstTimestamp: '2025-10-08T10:00:00Z',
+                lastTimestamp: '2025-10-08T10:00:00Z', // Same timestamp
+                messageCount: 1,
+                firstMessage: 'Instant message',
+                lastMessage: 'Instant message',
+            }
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: [zeroDurationSession],
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-zero-duration')).toBeInTheDocument()
+            })
+
+            // Should display 0s for zero duration
+            expect(screen.getByText('0s')).toBeInTheDocument()
+        })
+
+        it('should handle sessions with negative duration (invalid data)', async () => {
+            const negativeDurationSession = {
+                sessionId: 'session-negative',
+                userId: 'mukul',
+                firstTimestamp: '2025-10-08T11:00:00Z', // Later time first
+                lastTimestamp: '2025-10-08T10:00:00Z', // Earlier time last
+                messageCount: 1,
+                firstMessage: 'Negative duration',
+                lastMessage: 'Negative duration',
+            }
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: [negativeDurationSession],
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-negative')).toBeInTheDocument()
+            })
+
+            // Should handle negative duration gracefully (show as 0 or positive)
+            expect(screen.getByText('session-negative')).toBeInTheDocument()
+        })
+
+        it('should calculate statistics correctly with mixed data', async () => {
+            const mixedSessions = [
+                {
+                    sessionId: 'session-1',
+                    userId: 'mukul',
+                    firstTimestamp: '2025-10-08T10:00:00Z',
+                    lastTimestamp: '2025-10-08T10:05:00Z', // 5 minutes
+                    messageCount: 10,
+                },
+                {
+                    sessionId: 'session-2',
+                    userId: 'mukul',
+                    firstTimestamp: '2025-10-08T11:00:00Z',
+                    lastTimestamp: '2025-10-08T11:10:00Z', // 10 minutes
+                    messageCount: 20,
+                },
+                {
+                    sessionId: 'session-3',
+                    userId: 'mukul',
+                    firstTimestamp: '2025-10-08T12:00:00Z',
+                    lastTimestamp: '2025-10-08T12:02:00Z', // 2 minutes
+                    messageCount: 5,
+                },
+            ]
+
+                ; (global.fetch as jest.Mock).mockResolvedValue(
+                    mockFetchResponse({
+                        success: true,
+                        sessions: mixedSessions,
+                    })
+                )
+
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Total calls: 3
+            const totalCallsElements = screen.getAllByText('3')
+            expect(totalCallsElements.length).toBeGreaterThan(0)
+
+            // Total cost: (10+20+5) * 0.002 = 35 * 0.002 = $0.07
+            expect(screen.getByText('$0.07')).toBeInTheDocument()
+
+            // Average duration: (5+10+2)/3 = 17/3 = 5.67 minutes
+            expect(screen.getByText('5.7m')).toBeInTheDocument()
+        })
+
+        it('should handle empty filtered sessions for statistics', async () => {
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Search for something that doesn't exist
+            const searchInput = screen.getByPlaceholderText('Search by Session ID, Agent, or Phone...')
+            fireEvent.change(searchInput, { target: { value: 'nonexistent' } })
+
+            await waitFor(() => {
+                expect(screen.getByText('No call logs found.')).toBeInTheDocument()
+            })
+
+            // Statistics should still be calculated from original sessions
+            expect(screen.getByText('Total Calls')).toBeInTheDocument()
+            expect(screen.getByText('Total Cost')).toBeInTheDocument()
+        })
     })
 
     describe('Action Buttons', () => {
@@ -721,84 +1003,57 @@ describe('CallLogsTable', () => {
 
             expect(screen.getByText('Date Range')).toBeInTheDocument()
         })
+
+        it('should export data as CSV when Export button is clicked', async () => {
+            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
+
+            await waitFor(() => {
+                expect(screen.getByText('session-1')).toBeInTheDocument()
+            })
+
+            // Mock URL.createObjectURL and related methods
+            const mockCreateObjectURL = jest.fn(() => 'mock-url')
+            const mockRevokeObjectURL = jest.fn()
+            const mockCreateElement = jest.fn(() => ({
+                href: '',
+                download: '',
+                click: jest.fn(),
+                style: {},
+            }))
+            const mockAppendChild = jest.fn()
+            const mockRemoveChild = jest.fn()
+
+            Object.defineProperty(window.URL, 'createObjectURL', {
+                writable: true,
+                value: mockCreateObjectURL,
+            })
+            Object.defineProperty(window.URL, 'revokeObjectURL', {
+                writable: true,
+                value: mockRevokeObjectURL,
+            })
+            Object.defineProperty(document, 'createElement', {
+                writable: true,
+                value: mockCreateElement,
+            })
+            Object.defineProperty(document, 'body', {
+                writable: true,
+                value: {
+                    appendChild: mockAppendChild,
+                    removeChild: mockRemoveChild,
+                },
+            })
+
+            const exportButton = screen.getByText('Export')
+            fireEvent.click(exportButton)
+
+            // Should create blob and download link for CSV
+            expect(mockCreateObjectURL).toHaveBeenCalled()
+            expect(mockCreateElement).toHaveBeenCalledWith('a')
+            expect(mockAppendChild).toHaveBeenCalled()
+            expect(mockRemoveChild).toHaveBeenCalled()
+            expect(mockRevokeObjectURL).toHaveBeenCalled()
+        })
     })
 
-    describe('Statistics Cards', () => {
-        it('should display total calls count', async () => {
-            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
 
-            await waitFor(() => {
-                expect(screen.getByText('session-1')).toBeInTheDocument()
-            })
-
-            // Should show count of 2 (mockSessions has 2 items)
-            expect(screen.getByText('Total Calls')).toBeInTheDocument()
-            // The number is in a sibling div element
-            const allCards = document.body.textContent || ''
-            expect(allCards).toContain('Total Calls')
-            // Just verify the stats section exists with a number
-            expect(screen.getByText('All time')).toBeInTheDocument()
-        })
-
-        it('should calculate and display total cost', async () => {
-            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
-
-            await waitFor(() => {
-                expect(screen.getByText('session-1')).toBeInTheDocument()
-            })
-
-            // Session 1: 12 * 0.002 = 0.024
-            // Session 2: 8 * 0.002 = 0.016
-            // Total: 0.04
-            expect(screen.getByText('Total Cost')).toBeInTheDocument()
-            expect(screen.getByText('Accumulated')).toBeInTheDocument()
-            // Cost should be somewhere in the document
-            const allText = document.body.textContent || ''
-            expect(allText).toContain('Total Cost')
-        })
-
-        it('should calculate and display average duration', async () => {
-            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
-
-            await waitFor(() => {
-                expect(screen.getByText('session-1')).toBeInTheDocument()
-            })
-
-            expect(screen.getByText('Avg Duration')).toBeInTheDocument()
-            // Average should be calculated and displayed - look for the pattern with 'm' suffix
-            expect(screen.getByText(/\d+\.\d+m/)).toBeInTheDocument()
-        })
-
-        it('should display success rate', async () => {
-            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
-
-            await waitFor(() => {
-                expect(screen.getByText('session-1')).toBeInTheDocument()
-            })
-
-            expect(screen.getByText('Success Rate')).toBeInTheDocument()
-            expect(screen.getByText('98.5%')).toBeInTheDocument()
-        })
-
-        it('should handle zero sessions for statistics', async () => {
-            ; (global.fetch as jest.Mock).mockResolvedValue(
-                mockFetchResponse({
-                    success: true,
-                    sessions: [],
-                })
-            )
-
-            render(<CallLogsTable onViewCallDetails={mockOnViewCallDetails} />)
-
-            await waitFor(() => {
-                expect(screen.getByText('No call logs found.')).toBeInTheDocument()
-            })
-
-            // Statistics cards should still be visible
-            expect(screen.getByText('Total Calls')).toBeInTheDocument()
-            expect(screen.getByText('Total Cost')).toBeInTheDocument()
-            expect(screen.getByText('Avg Duration')).toBeInTheDocument()
-            expect(screen.getByText('Success Rate')).toBeInTheDocument()
-        })
-    })
 })

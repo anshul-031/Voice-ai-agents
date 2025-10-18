@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 /**
  * Background process to trigger calls for all contacts
  */
-async function triggerCampaignCalls(campaignId: string, contacts: any[]) {
+export async function triggerCampaignCalls(campaignId: string, contacts: any[]) {
   await dbConnect();
   
   let completedCount = 0;

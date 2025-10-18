@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { processWhatsAppCallback } from '@/lib/whatsAppService';
 
-const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN;
-
 export async function POST(req: NextRequest) {
   try {
     const callbackResponse = await req.text(); // Get raw body as string
@@ -26,7 +24,7 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get('hub.challenge');
 
   if (mode && token) {
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    if (mode === 'subscribe' && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
       console.info('WEBHOOK VERIFIED');
       return new NextResponse(challenge, { status: 200 });
     }
