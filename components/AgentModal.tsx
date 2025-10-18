@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface VoiceAgent {
     id: string
@@ -23,62 +23,62 @@ interface AgentModalProps {
 }
 
 export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentModalProps) {
-    const [title, setTitle] = useState('')
-    const [prompt, setPrompt] = useState('')
-    const [llmModel, setLlmModel] = useState('Gemini 1.5 Flash')
-    const [sttModel, setSttModel] = useState('AssemblyAI Universal')
-    const [ttsModel, setTtsModel] = useState('Sarvam Manisha')
-    const [loading, setLoading] = useState(false)
+    const [title, setTitle] = useState('');
+    const [prompt, setPrompt] = useState('');
+    const [llmModel, setLlmModel] = useState('Gemini 1.5 Flash');
+    const [sttModel, setSttModel] = useState('AssemblyAI Universal');
+    const [ttsModel, setTtsModel] = useState('Sarvam Manisha');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (agent) {
-            setTitle(agent.title)
-            setPrompt(agent.prompt)
-            setLlmModel(agent.llmModel || 'Gemini 1.5 Flash')
-            setSttModel(agent.sttModel || 'AssemblyAI Universal')
-            setTtsModel(agent.ttsModel || 'Sarvam Manisha')
+            setTitle(agent.title);
+            setPrompt(agent.prompt);
+            setLlmModel(agent.llmModel || 'Gemini 1.5 Flash');
+            setSttModel(agent.sttModel || 'AssemblyAI Universal');
+            setTtsModel(agent.ttsModel || 'Sarvam Manisha');
         } else {
-            setTitle('')
-            setPrompt('')
-            setLlmModel('Gemini 1.5 Flash')
-            setSttModel('AssemblyAI Universal')
-            setTtsModel('Sarvam Manisha')
+            setTitle('');
+            setPrompt('');
+            setLlmModel('Gemini 1.5 Flash');
+            setSttModel('AssemblyAI Universal');
+            setTtsModel('Sarvam Manisha');
         }
-    }, [agent, isOpen])
+    }, [agent, isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
+        e.preventDefault();
+        setLoading(true);
 
         try {
-            const method = agent ? 'PUT' : 'POST'
+            const method = agent ? 'PUT' : 'POST';
             const body = agent
                 ? JSON.stringify({ id: agent.id, title, prompt, llmModel, sttModel, ttsModel })
-                : JSON.stringify({ userId: 'mukul', title, prompt, llmModel, sttModel, ttsModel })
+                : JSON.stringify({ userId: 'mukul', title, prompt, llmModel, sttModel, ttsModel });
 
             const res = await fetch('/api/voice-agents', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body
-            })
+                body,
+            });
 
             if (res.ok) {
-                onSuccess()
-                onClose()
-                setTitle('')
-                setPrompt('')
-                setLlmModel('Gemini 1.5 Flash')
-                setSttModel('AssemblyAI Universal')
-                setTtsModel('Sarvam Manisha')
+                onSuccess();
+                onClose();
+                setTitle('');
+                setPrompt('');
+                setLlmModel('Gemini 1.5 Flash');
+                setSttModel('AssemblyAI Universal');
+                setTtsModel('Sarvam Manisha');
             }
         } catch (error) {
-            console.error('Error saving agent:', error)
+            console.error('Error saving agent:', error);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
-    if (!isOpen) return null
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -205,5 +205,5 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 </form>
             </div>
         </div>
-    )
+    );
 }

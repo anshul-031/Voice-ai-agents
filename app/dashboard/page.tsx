@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import AgentModal from '@/components/AgentModal'
-import CallLogsTable from '@/components/CallLogsTable'
-import CampaignContactsModal from '@/components/CampaignContactsModal'
-import CampaignModal from '@/components/CampaignModal'
-import CampaignsTable from '@/components/CampaignsTable'
-import ChatHistory from '@/components/ChatHistory'
-import DashboardSidebar from '@/components/DashboardSidebar'
-import PhoneNumberModal from '@/components/PhoneNumberModal'
-import PhoneNumbersTable from '@/components/PhoneNumbersTable'
-import VoiceAgentsTable from '@/components/VoiceAgentsTable'
-import { useEffect, useState } from 'react'
+import AgentModal from '@/components/AgentModal';
+import CallLogsTable from '@/components/CallLogsTable';
+import CampaignContactsModal from '@/components/CampaignContactsModal';
+import CampaignModal from '@/components/CampaignModal';
+import CampaignsTable from '@/components/CampaignsTable';
+import ChatHistory from '@/components/ChatHistory';
+import DashboardSidebar from '@/components/DashboardSidebar';
+import PhoneNumberModal from '@/components/PhoneNumberModal';
+import PhoneNumbersTable from '@/components/PhoneNumbersTable';
+import VoiceAgentsTable from '@/components/VoiceAgentsTable';
+import { useEffect, useState } from 'react';
 
 interface VoiceAgent {
     id: string
@@ -24,96 +24,129 @@ interface VoiceAgent {
     createdAt: string
 }
 
+interface Campaign {
+    _id?: string;
+    title: string;
+    start_date: string;
+    updated_at: string;
+    status: 'running' | 'stopped' | 'completed';
+    agent_id: string;
+    user_id: string;
+    total_contacts?: number;
+    calls_completed?: number;
+    calls_failed?: number;
+    started_at?: string;
+}
+
+interface PhoneNumber {
+    id: string;
+    phoneNumber: string;
+    provider: string;
+    displayName: string;
+    status: string;
+    linkedAgentId?: string;
+    webhookUrl?: string;
+    websocketUrl?: string;
+    exotelConfig?: {
+        sid: string;
+        domain: string;
+        region: string;
+    };
+    lastUsed?: string;
+}
+
 export default function DashboardPage() {
-    const [activeView, setActiveView] = useState('voice-agents')
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [editingAgent, setEditingAgent] = useState<VoiceAgent | null>(null)
-    const [refreshKey, setRefreshKey] = useState(0)
-    const [showChatHistory, setShowChatHistory] = useState(false)
-    const [selectedSessionId, setSelectedSessionId] = useState<string>('')
+    const [activeView, setActiveView] = useState('voice-agents');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingAgent, setEditingAgent] = useState<VoiceAgent | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [showChatHistory, setShowChatHistory] = useState(false);
+    const [selectedSessionId, setSelectedSessionId] = useState<string>('');
 
     // Campaigns state
-    const [campaigns, setCampaigns] = useState<any[]>([])
-    const [campaignsLoading, setCampaignsLoading] = useState(false)
-    const [campaignModalOpen, setCampaignModalOpen] = useState(false)
-    const [editingCampaign, setEditingCampaign] = useState<any | null>(null)
-    const [campaignsRefreshKey, setCampaignsRefreshKey] = useState(0)
-    const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null)
-    const [contactsModalOpen, setContactsModalOpen] = useState(false)
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [campaignsLoading, setCampaignsLoading] = useState(false);
+    const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+    const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+    const [campaignsRefreshKey, setCampaignsRefreshKey] = useState(0);
+    const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null);
+    const [contactsModalOpen, setContactsModalOpen] = useState(false);
 
     // Phone Numbers state
-    const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false)
-    const [editingPhoneNumber, setEditingPhoneNumber] = useState<any | null>(null)
-    const [phoneNumbersRefreshKey, setPhoneNumbersRefreshKey] = useState(0)
+    const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false);
+    const [editingPhoneNumber, setEditingPhoneNumber] = useState<PhoneNumber | undefined>(undefined);
+    const [phoneNumbersRefreshKey, setPhoneNumbersRefreshKey] = useState(0);
 
     useEffect(() => {
         if (activeView === 'campaigns') {
-            setCampaignsLoading(true)
+            setCampaignsLoading(true);
             fetch('/api/campaigns')
                 .then(res => res.json())
                 .then(data => setCampaigns(data.data || []))
                 .catch(() => setCampaigns([]))
-                .finally(() => setCampaignsLoading(false))
+                .finally(() => setCampaignsLoading(false));
         }
-    }, [activeView, campaignsRefreshKey])
+    }, [activeView, campaignsRefreshKey]);
 
     const handleAddAgent = () => {
-        setEditingAgent(null)
-        setIsModalOpen(true)
-    }
+        setEditingAgent(null);
+        setIsModalOpen(true);
+    };
 
     const handleEditAgent = (agent: VoiceAgent) => {
-        setEditingAgent(agent)
-        setIsModalOpen(true)
-    }
+        setEditingAgent(agent);
+        setIsModalOpen(true);
+    };
 
     const handleModalClose = () => {
-        setIsModalOpen(false)
-        setEditingAgent(null)
-    }
+        setIsModalOpen(false);
+        setEditingAgent(null);
+    };
 
     const handleModalSuccess = () => {
-        setRefreshKey(prev => prev + 1) // Force refresh of the table
-    }
+        setRefreshKey(prev => prev + 1); // Force refresh of the table
+    };
 
     const handleViewCallDetails = (sessionId: string) => {
-        setSelectedSessionId(sessionId)
-        setShowChatHistory(true)
-    }
+        setSelectedSessionId(sessionId);
+        setShowChatHistory(true);
+    };
 
     // Campaign handlers
     const handleAddCampaign = () => {
-        setEditingCampaign(null)
-        setCampaignModalOpen(true)
-    }
+        setEditingCampaign(null);
+        setCampaignModalOpen(true);
+    };
 
-    const handleEditCampaign = (campaign: any) => {
-        setEditingCampaign(campaign)
-        setCampaignModalOpen(true)
-    }
+    const handleEditCampaign = (campaign: Campaign) => {
+        setEditingCampaign(campaign);
+        setCampaignModalOpen(true);
+    };
 
-    const handleViewCampaign = (campaign: any) => {
-        setViewingCampaignId(campaign._id)
-        setContactsModalOpen(true)
-    }
+    const handleViewCampaign = (campaign: Campaign) => {
+        if (campaign._id) {
+            setViewingCampaignId(campaign._id);
+            setContactsModalOpen(true);
+        }
+    };
 
     const handleCampaignModalClose = () => {
-        setCampaignModalOpen(false)
-        setEditingCampaign(null)
-    }
+        setCampaignModalOpen(false);
+        setEditingCampaign(null);
+    };
 
     const handleCampaignModalSuccess = () => {
-        setCampaignsRefreshKey(prev => prev + 1)
-    }
+        setCampaignsRefreshKey(prev => prev + 1);
+    };
 
     const handleContactsModalClose = () => {
-        setContactsModalOpen(false)
-        setViewingCampaignId(null)
-    }
+        setContactsModalOpen(false);
+        setViewingCampaignId(null);
+    };
 
-    const handleStartCampaign = async (campaign: any) => {
+    const handleStartCampaign = async (campaign: Campaign) => {
         if (!confirm(`Are you sure you want to start campaign "${campaign.title}"? This will trigger calls to all contacts in the campaign.`)) {
-            return
+            return;
         }
 
         try {
@@ -123,110 +156,110 @@ export default function DashboardPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ campaign_id: campaign._id }),
-            })
+            });
 
-            const data = await response.json()
+            const data = await response.json();
 
             if (response.ok && data.success) {
-                alert(`Campaign started successfully! Calling ${data.data.total_contacts} contacts.`)
-                setCampaignsRefreshKey(prev => prev + 1) // Refresh campaigns list
+                alert(`Campaign started successfully! Calling ${data.data.total_contacts} contacts.`);
+                setCampaignsRefreshKey(prev => prev + 1); // Refresh campaigns list
             } else {
-                alert(`Failed to start campaign: ${data.error || 'Unknown error'}`)
+                alert(`Failed to start campaign: ${data.error || 'Unknown error'}`);
             }
-        } catch (error: any) {
-            console.error('Error starting campaign:', error)
-            alert('An error occurred while starting the campaign.')
+        } catch (error: unknown) {
+            console.error('Error starting campaign:', error);
+            alert('An error occurred while starting the campaign.');
         }
-    }
+    };
 
     // Phone Number handlers
     const handleAddPhoneNumber = () => {
-        setEditingPhoneNumber(null)
-        setPhoneNumberModalOpen(true)
-    }
+        setEditingPhoneNumber(undefined);
+        setPhoneNumberModalOpen(true);
+    };
 
-    const handleEditPhoneNumber = (phone: any) => {
-        setEditingPhoneNumber(phone)
-        setPhoneNumberModalOpen(true)
-    }
+    const handleEditPhoneNumber = (phone: PhoneNumber) => {
+        setEditingPhoneNumber(phone);
+        setPhoneNumberModalOpen(true);
+    };
 
     const handlePhoneNumberModalClose = () => {
-        setPhoneNumberModalOpen(false)
-        setEditingPhoneNumber(null)
-    }
+        setPhoneNumberModalOpen(false);
+        setEditingPhoneNumber(undefined);
+    };
 
     const handlePhoneNumberModalSuccess = () => {
-        setPhoneNumbersRefreshKey(prev => prev + 1)
-    }
+        setPhoneNumbersRefreshKey(prev => prev + 1);
+    };
 
     const renderContent = () => {
         switch (activeView) {
-            case 'voice-agents':
-                return (
-                    <VoiceAgentsTable
-                        key={refreshKey}
-                        onAddAgent={handleAddAgent}
-                        onEditAgent={handleEditAgent}
-                    />
-                )
+        case 'voice-agents':
+            return (
+                <VoiceAgentsTable
+                    key={refreshKey}
+                    onAddAgent={handleAddAgent}
+                    onEditAgent={handleEditAgent}
+                />
+            );
 
-            case 'call-logs':
-                return (
-                    <CallLogsTable
-                        onViewCallDetails={handleViewCallDetails}
-                    />
-                )
+        case 'call-logs':
+            return (
+                <CallLogsTable
+                    onViewCallDetails={handleViewCallDetails}
+                />
+            );
 
-            case 'campaigns':
-                return campaignsLoading ? (
-                    <div className="flex-1 flex items-center justify-center text-gray-400">Loading campaigns...</div>
-                ) : (
-                    <CampaignsTable
-                        campaigns={campaigns}
-                        onAddCampaign={handleAddCampaign}
-                        onEditCampaign={handleEditCampaign}
-                        onViewCampaign={handleViewCampaign}
-                        onStartCampaign={handleStartCampaign}
-                    />
-                )
+        case 'campaigns':
+            return campaignsLoading ? (
+                <div className="flex-1 flex items-center justify-center text-gray-400">Loading campaigns...</div>
+            ) : (
+                <CampaignsTable
+                    campaigns={campaigns}
+                    onAddCampaign={handleAddCampaign}
+                    onEditCampaign={handleEditCampaign}
+                    onViewCampaign={handleViewCampaign}
+                    onStartCampaign={handleStartCampaign}
+                />
+            );
 
-            case 'phone-number':
-                return (
-                    <PhoneNumbersTable
-                        key={phoneNumbersRefreshKey}
-                        onAddPhone={handleAddPhoneNumber}
-                        onEditPhone={handleEditPhoneNumber}
-                    />
-                )
+        case 'phone-number':
+            return (
+                <PhoneNumbersTable
+                    key={phoneNumbersRefreshKey}
+                    onAddPhone={handleAddPhoneNumber}
+                    onEditPhone={handleEditPhoneNumber}
+                />
+            );
 
-            case 'agent-knowledge':
-            case 'api-keys':
-            case 'credentials':
-            case 'billing':
-            case 'transactions':
-            case 'documentation':
-            case 'whats-new':
-                return (
-                    <div className="flex-1 bg-[#0a0e13] flex flex-col">
-                        <div className="border-b border-gray-800 px-8 py-6">
-                            <h1 className="text-2xl font-semibold text-white capitalize">
-                                {activeView.replace('-', ' ')}
-                            </h1>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-gray-400">This feature is coming soon...</p>
-                        </div>
+        case 'agent-knowledge':
+        case 'api-keys':
+        case 'credentials':
+        case 'billing':
+        case 'transactions':
+        case 'documentation':
+        case 'whats-new':
+            return (
+                <div className="flex-1 bg-[#0a0e13] flex flex-col">
+                    <div className="border-b border-gray-800 px-8 py-6">
+                        <h1 className="text-2xl font-semibold text-white capitalize">
+                            {activeView.replace('-', ' ')}
+                        </h1>
                     </div>
-                )
-
-            default:
-                return (
-                    <div className="flex-1 bg-[#0a0e13] flex items-center justify-center">
-                        <p className="text-gray-400">Select a view from the sidebar</p>
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-400">This feature is coming soon...</p>
                     </div>
-                )
+                </div>
+            );
+
+        default:
+            return (
+                <div className="flex-1 bg-[#0a0e13] flex items-center justify-center">
+                    <p className="text-gray-400">Select a view from the sidebar</p>
+                </div>
+            );
         }
-    }
+    };
 
     return (
         <div className="flex h-screen bg-[#0a0e13] overflow-hidden">
@@ -270,5 +303,5 @@ export default function DashboardPage() {
                 initialSessionId={selectedSessionId}
             />
         </div>
-    )
+    );
 }

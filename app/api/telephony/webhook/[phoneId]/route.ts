@@ -4,15 +4,15 @@ import Chat from '@/models/Chat';
 
 
 import PhoneNumber from '@/models/PhoneNumber';
-import VoiceAgent from '@/models/VoiceAgent';
-import { NextRequest, NextResponse } from 'next/server';
+import VoiceAgent, { type IVoiceAgent } from '@/models/VoiceAgent';
+import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Exotel Webhook Handler
- * 
+ *
  * This endpoint receives incoming call webhooks from Exotel.
  * It identifies the phone number, finds the linked agent, and handles the call flow.
- * 
+ *
  * Exotel sends call events to this webhook with parameters like:
  * - CallSid: Unique identifier for the call
  * - From: Caller's phone number
@@ -29,7 +29,7 @@ interface RouteContext {
 
 export async function POST(
     request: NextRequest,
-    context: RouteContext
+    context: RouteContext,
 ) {
     const { phoneId } = await context.params;
     console.log('[Exotel Webhook] Incoming call for phone ID:', phoneId);
@@ -39,7 +39,7 @@ export async function POST(
 
         // Parse Exotel webhook data (can be form-urlencoded or JSON)
         const contentType = request.headers.get('content-type');
-        let exotelData: any = {};
+        let exotelData: Record<string, unknown> = {};
 
         if (contentType?.includes('application/x-www-form-urlencoded')) {
             const formData = await request.formData();
@@ -61,15 +61,15 @@ export async function POST(
         const phoneNumber = await PhoneNumber.findOne({
             $or: [
                 { _id: phoneId },
-                { webhookUrl: { $regex: phoneId } }
-            ]
+                { webhookUrl: { $regex: phoneId } },
+            ],
         });
 
         if (!phoneNumber) {
             console.error('[Exotel Webhook] Phone number not found for ID:', phoneId);
             return NextResponse.json(
                 { error: 'Phone number not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -93,7 +93,7 @@ export async function POST(
             console.error('[Exotel Webhook] No agent available');
             return NextResponse.json(
                 { error: 'No agent configured' },
-                { status: 500 }
+                { status: 500 },
             );
         }
 
@@ -128,7 +128,7 @@ export async function POST(
                 error: 'Failed to process webhook',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -137,11 +137,11 @@ export async function POST(
  * Generate Exotel XML response
  * This response tells Exotel how to handle the call
  */
-function generateExotelResponse(agent: any, sessionId: string, websocketUrl?: string): string {
+function generateExotelResponse(agent: IVoiceAgent, sessionId: string, websocketUrl?: string): string {
     // Exotel uses similar TwiML-like XML format
     // This is a basic example - you'll need to customize based on your Exotel setup
-    
-    const greeting = agent.prompt.includes('नमस्ते') 
+
+    const greeting = agent.prompt.includes('नमस्ते')
         ? 'नमस्ते। कृपया प्रतीक्षा करें।'
         : 'Hello, please wait while we connect you.';
 
@@ -165,7 +165,7 @@ function generateExotelResponse(agent: any, sessionId: string, websocketUrl?: st
 // Handle GET requests for webhook verification
 export async function GET(
     request: NextRequest,
-    context: RouteContext
+    context: RouteContext,
 ) {
     const { phoneId } = await context.params;
     return NextResponse.json({

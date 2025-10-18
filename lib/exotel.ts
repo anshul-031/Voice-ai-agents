@@ -112,11 +112,12 @@ export async function triggerExotelCall(params: ExotelCallParams): Promise<Exote
         phoneNumber: params.phoneNumber
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Network error while calling Exotel API';
     console.error('Exotel API Error:', error);
     return {
       success: false,
-      error: error.message || 'Network error while calling Exotel API',
+      error: errorMessage,
       phoneNumber: params.phoneNumber
     };
   }

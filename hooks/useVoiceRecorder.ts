@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { VoiceRecorderState } from '@/types';
+import type { VoiceRecorderState } from '@/types';
 
 interface UseVoiceRecorderOptions {
     onSegmentReady: (audioBlob: Blob) => void;
@@ -119,8 +119,8 @@ export function useVoiceRecorder({
                     channelCount: 1, // Mono audio for better STT performance
                     sampleRate: 44100, // Standard sample rate
                     // Try to get a high-quality audio track
-                    deviceId: undefined // Let the user choose or use default
-                }
+                    deviceId: undefined, // Let the user choose or use default
+                },
             });
 
             console.log('[useVoiceRecorder] Microphone access granted');
@@ -128,7 +128,7 @@ export function useVoiceRecorder({
                 label: t.label,
                 enabled: t.enabled,
                 muted: t.muted,
-                settings: t.getSettings()
+                settings: t.getSettings(),
             })));
 
             streamRef.current = stream;

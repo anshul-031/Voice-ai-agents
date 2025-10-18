@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // TODO: Add content filtering/safety checks
 // TODO: Consider adding streaming responses for better UX
@@ -22,7 +23,7 @@ function formatConversationHistory(messages: MessageHistory[], systemPrompt: str
     const recentMessages = messages.slice(-maxMessages);
 
     // Start with system prompt
-    let formattedPrompt = systemPrompt.trim() + '\n\n';
+    let formattedPrompt = `${systemPrompt.trim()}\n\n`;
 
     // Add conversation history
     if (recentMessages.length > 0) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
             promptLength: prompt?.length,
             userText: userText?.substring(0, 100),
             sessionId,
-            historyLength: conversationHistory?.length || 0
+            historyLength: conversationHistory?.length || 0,
         });
 
         if (!userText?.trim()) {
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
             model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
             console.log('[LLM] Using model: gemini-2.0-flash');
         } catch (errInit) {
-            console.warn('[LLM] Could not initialize gemini-2.0-flash, attempting fallback model (gemini-pro).', (errInit as any)?.message ?? errInit);
+            console.error('[LLM] Could not initialize gemini-2.0-flash, attempting fallback model (gemini-pro).', errInit instanceof Error ? errInit.message : errInit);
             try {
                 model = genAI.getGenerativeModel({ model: 'gemini-pro' });
                 console.log('[LLM] Using fallback model: gemini-pro');
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
                 // Last-resort: try JSON stringify as fallback
                 return JSON.stringify(raw);
             } catch (e) {
-                console.warn('Failed to extract text from LLM raw result', e);
+                console.error('Failed to extract text from LLM raw result', e);
                 return null;
             }
         };
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
                 // try a few common call shapes
                 try {
                     result = await (model as any).generate({ prompt: fullPrompt });
-                } catch (_eGen) {
+                } catch {
                     console.log('[LLM] Retrying generate with direct string parameter');
                     // older SDKs might accept a single string
                     result = await (model as any).generate(fullPrompt);
@@ -251,7 +252,7 @@ export async function POST(request: NextRequest) {
 
             const response: any = {
                 llmText: cleanedText,
-                sessionId: chatSessionId
+                sessionId: chatSessionId,
             };
 
             if (pdfCommand) {
@@ -349,7 +350,7 @@ export async function POST(request: NextRequest) {
         console.error('[LLM] Returning generic service error');
         return NextResponse.json({
             error: 'LLM service error',
-            details: error instanceof Error ? error.message : 'Unknown error'
+            details: error instanceof Error ? error.message : 'Unknown error',
         }, { status: 500 });
     }
 }

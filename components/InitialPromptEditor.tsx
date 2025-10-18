@@ -18,7 +18,7 @@
 
 //                 <div className="text-xs text-gray-400">
 //                     <span className={`
-//                         ${characterCount > maxCharacters * 0.8 ? 'text-yellow-500' : ''} 
+//                         ${characterCount > maxCharacters * 0.8 ? 'text-yellow-500' : ''}
 //                         ${characterCount > maxCharacters ? 'text-red-500' : ''}
 //                     `}>
 //                         {characterCount}
@@ -81,7 +81,7 @@ export default function InitialPromptEditor({ value, onChange }: InitialPromptEd
 
     const suggestions = [
         {
-            label: "Riya - PNB EMI Collection",
+            label: 'Riya - PNB EMI Collection',
             prompt: `# Role: You are Riya for collecting overdue EMI payments from customers of Punjab National Bank
 
 ## Profile
@@ -137,24 +137,24 @@ $130,000 should be "one hundred and thirty thousand dollars"
 6. If customer refuses → stay strict: "Please note, refusal से आपके account पर severe action हो सकता है। मैं strongly recommend करती हूँ कि आप immediately payment करें।"
 
 ## Init
-"नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?"`
+"नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?"`,
         },
         {
-            label: "Professional & Empathetic",
-            prompt: "You are a professional and empathetic EMI collection assistant. Always approach customers with understanding while helping them find practical payment solutions."
+            label: 'Professional & Empathetic',
+            prompt: 'You are a professional and empathetic EMI collection assistant. Always approach customers with understanding while helping them find practical payment solutions.',
         },
         {
-            label: "Focus on Solutions",
-            prompt: "You are a solution-focused AI assistant specializing in EMI collections. Provide clear, actionable guidance and payment alternatives to help customers manage their obligations effectively."
+            label: 'Focus on Solutions',
+            prompt: 'You are a solution-focused AI assistant specializing in EMI collections. Provide clear, actionable guidance and payment alternatives to help customers manage their obligations effectively.',
         },
         {
-            label: "Clear Communication",
-            prompt: "You are a clear and direct AI assistant for EMI collection support. Communicate payment information transparently and help customers understand their options without confusion."
+            label: 'Clear Communication',
+            prompt: 'You are a clear and direct AI assistant for EMI collection support. Communicate payment information transparently and help customers understand their options without confusion.',
         },
         {
-            label: "Payment Assistance",
-            prompt: "You are a helpful payment assistance specialist. Guide customers through EMI collection processes, offer flexible payment plans, and provide financial guidance with patience and clarity."
-        }
+            label: 'Payment Assistance',
+            prompt: 'You are a helpful payment assistance specialist. Guide customers through EMI collection processes, offer flexible payment plans, and provide financial guidance with patience and clarity.',
+        },
     ];
 
     return (

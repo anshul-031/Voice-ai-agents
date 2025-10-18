@@ -48,7 +48,7 @@
 
 import { motion } from 'framer-motion';
 import { Brain, Mic, Sparkles, Volume2 } from 'lucide-react';
-import { ModelConfig } from '../types';
+import type { ModelConfig } from '../types';
 
 interface TopModelBoxesProps {
     config: ModelConfig;
@@ -76,7 +76,7 @@ export default function TopModelBoxes({ config }: TopModelBoxesProps) {
             icon: Volume2,
             gradient: 'from-blue-600 via-blue-700 to-blue-800',
             glowColor: 'rgba(37, 99, 235, 0.5)',
-        }
+        },
     ];
 
     return (
@@ -114,7 +114,7 @@ export default function TopModelBoxes({ config }: TopModelBoxesProps) {
                             {/* Hover glow effect */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                                 style={{
-                                    background: `radial-gradient(circle at center, ${model.glowColor} 0%, transparent 70%)`
+                                    background: `radial-gradient(circle at center, ${model.glowColor} 0%, transparent 70%)`,
                                 }}
                             />
 
@@ -124,7 +124,7 @@ export default function TopModelBoxes({ config }: TopModelBoxesProps) {
                                     whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
                                     transition={{ duration: 0.5 }}
                                     style={{
-                                        boxShadow: `0 4px 20px ${model.glowColor}`
+                                        boxShadow: `0 4px 20px ${model.glowColor}`,
                                     }}
                                 >
                                     <Icon className="text-white drop-shadow-lg" size={22} />

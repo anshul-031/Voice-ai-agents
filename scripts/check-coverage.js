@@ -11,6 +11,8 @@ const fs = require('fs');
 const path = require('path');
 
 const threshold = Number(process.argv[2] || 90);
+const branchThreshold = Number(process.argv[3] || 80);
+const functionThreshold = Number(process.argv[4] || 85);
 
 function readJson(p) {
   try {
@@ -41,14 +43,25 @@ const metrics = {
 };
 
 const failed = Object.entries(metrics)
-  .filter(([, pct]) => typeof pct === 'number' && pct < threshold);
+  .filter(([key, pct]) => {
+    if (typeof pct !== 'number') return false;
+    switch (key) {
+      case 'branches':
+        return pct < branchThreshold;
+      case 'functions':
+        return pct < functionThreshold;
+      default:
+        return pct < threshold;
+    }
+  });
 
 if (failed.length > 0) {
-  console.error(`Coverage check failed. Minimum required: ${threshold}%`);
+  console.error(`Coverage check failed. Minimum required: statements ${threshold}%, branches ${branchThreshold}%, functions ${functionThreshold}%`);
   for (const [k, pct] of failed) {
-    console.error(` - ${k}: ${pct}%`);
+    const required = k === 'branches' ? branchThreshold : k === 'functions' ? functionThreshold : threshold;
+    console.error(` - ${k}: ${pct}% (required: ${required}%)`);
   }
   process.exit(1);
 }
 
-console.log(`Coverage check passed. All metrics >= ${threshold}%`);
+console.log(`Coverage check passed. Statements >= ${threshold}%, branches >= ${branchThreshold}%, functions >= ${functionThreshold}%`);

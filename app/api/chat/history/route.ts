@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
+import type { Types } from 'mongoose';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
     console.log('[Chat History] GET request received');
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
             console.error('[Chat History] No sessionId provided');
             return NextResponse.json(
                 { error: 'sessionId is required' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
             sessionId,
             count: chats.length,
             chats: chats.map(chat => ({
-                id: (chat._id as any).toString(),
+                id: (chat._id as Types.ObjectId).toString(),
                 role: chat.role,
                 content: chat.content,
                 timestamp: chat.timestamp,
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
                 error: 'Failed to fetch chat history',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -71,7 +72,7 @@ export async function DELETE(request: NextRequest) {
         if (!sessionId) {
             return NextResponse.json(
                 { error: 'sessionId is required' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -90,7 +91,7 @@ export async function DELETE(request: NextRequest) {
                 error: 'Failed to delete chat history',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

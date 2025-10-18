@@ -1,12 +1,39 @@
-'use client'
+'use client';
 
-import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+interface VoiceAgent {
+    id: string;
+    title: string;
+    prompt: string;
+    llmModel: string;
+    sttModel: string;
+    ttsModel: string;
+    userId: string;
+    lastUpdated: string;
+    createdAt: string;
+}
+
+interface PhoneNumber {
+    id: string;
+    phoneNumber: string;
+    provider: string;
+    displayName: string;
+    status: string;
+    linkedAgentId?: string;
+    exotelConfig?: {
+        sid: string;
+        appId?: string;
+        domain: string;
+        region: string;
+    };
+}
 
 interface PhoneNumberModalProps {
     isOpen: boolean
     onClose: () => void
-    phoneNumber?: any
+    phoneNumber?: PhoneNumber
     onSuccess: () => void
 }
 
@@ -22,9 +49,9 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
         exotelDomain: 'api.in.exotel.com',
         exotelRegion: 'in',
         linkedAgentId: '',
-    })
-    const [loading, setLoading] = useState(false)
-    const [agents, setAgents] = useState<any[]>([])
+    });
+    const [loading, setLoading] = useState(false);
+    const [agents, setAgents] = useState<VoiceAgent[]>([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -32,7 +59,7 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
             fetch('/api/voice-agents?userId=mukul')
                 .then(res => res.json())
                 .then(data => setAgents(data.agents || []))
-                .catch(() => setAgents([]))
+                .catch(() => setAgents([]));
 
             // Populate form if editing
             if (phoneNumber) {
@@ -47,7 +74,7 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
                     exotelDomain: phoneNumber.exotelConfig?.domain || 'api.in.exotel.com',
                     exotelRegion: phoneNumber.exotelConfig?.region || 'in',
                     linkedAgentId: phoneNumber.linkedAgentId || '',
-                })
+                });
             } else {
                 // Reset form for new phone number
                 setFormData({
@@ -61,22 +88,22 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
                     exotelDomain: 'api.in.exotel.com',
                     exotelRegion: 'in',
                     linkedAgentId: '',
-                })
+                });
             }
         }
-    }, [isOpen, phoneNumber])
+    }, [isOpen, phoneNumber]);
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
+        e.preventDefault();
+        setLoading(true);
 
         try {
-            const payload: any = {
+            const payload: Partial<Omit<PhoneNumber, 'id' | 'userId' | 'status'> & { exotelConfig?: Record<string, unknown> }> = {
                 phoneNumber: formData.phoneNumber,
                 displayName: formData.displayName,
                 provider: formData.provider,
                 linkedAgentId: formData.linkedAgentId || undefined,
-            }
+            };
 
             if (formData.provider === 'exotel') {
                 payload.exotelConfig = {
@@ -86,35 +113,35 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
                     appId: formData.exotelAppId || undefined,
                     domain: formData.exotelDomain,
                     region: formData.exotelRegion,
-                }
+                };
             }
 
             const url = phoneNumber
                 ? '/api/phone-numbers'
-                : '/api/phone-numbers'
+                : '/api/phone-numbers';
 
             const res = await fetch(url, {
                 method: phoneNumber ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(phoneNumber ? { ...payload, id: phoneNumber.id } : payload),
-            })
+            });
 
             if (res.ok) {
-                onSuccess()
-                onClose()
+                onSuccess();
+                onClose();
             } else {
-                const data = await res.json()
-                alert(data.error || 'Failed to save phone number')
+                const data = await res.json();
+                alert(data.error || 'Failed to save phone number');
             }
         } catch (error) {
-            console.error('Error saving phone number:', error)
-            alert('Failed to save phone number')
+            console.error('Error saving phone number:', error);
+            alert('Failed to save phone number');
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
-    if (!isOpen) return null
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -186,7 +213,7 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
                         {formData.provider === 'exotel' && (
                             <div className="border border-gray-700 rounded-lg p-4 space-y-4 bg-[#0a0e13]">
                                 <h3 className="text-sm font-semibold text-white mb-2">Exotel Configuration</h3>
-                                
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -327,5 +354,5 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
                 </form>
             </div>
         </div>
-    )
+    );
 }

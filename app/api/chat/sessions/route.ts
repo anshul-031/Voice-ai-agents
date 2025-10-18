@@ -1,6 +1,6 @@
 import dbConnect, { clearMongoConnection } from '@/lib/mongodb';
 import Chat from '@/models/Chat';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
     console.log('[Sessions API] GET request received');
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         // Connect to MongoDB
         try {
             await dbConnect();
-        } catch (_connError) {
+        } catch {
             console.error('[Sessions API] Connection error, clearing cache and retrying...');
             await clearMongoConnection();
             await dbConnect();
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
                     lastMessage: { $first: '$content' }, // First in sorted order (newest)
                     lastTimestamp: { $first: '$timestamp' },
                     firstTimestamp: { $last: '$timestamp' },
-                }
+                },
             },
 
             // Sort sessions by most recent activity
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
                     lastMessage: 1,
                     lastTimestamp: 1,
                     firstTimestamp: 1,
-                }
-            }
+                },
+            },
         ]);
 
         console.log('[Sessions API] Found', sessions.length, 'sessions for user:', userId);
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
             success: true,
             userId,
             sessions,
-            count: sessions.length
+            count: sessions.length,
         });
 
     } catch (error) {
@@ -76,9 +76,9 @@ export async function GET(request: NextRequest) {
             {
                 success: false,
                 error: 'Failed to fetch sessions',
-                details: error instanceof Error ? error.message : 'Unknown error'
+                details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

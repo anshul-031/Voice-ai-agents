@@ -129,7 +129,7 @@ export default function ChatHistory({ isOpen, onClose, initialSessionId }: ChatH
         return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
         });
     };
 
@@ -300,7 +300,7 @@ export default function ChatHistory({ isOpen, onClose, initialSessionId }: ChatH
                                                     className={`max-w-[80%] rounded-lg p-3 ${message.role === 'user'
                                                         ? 'bg-purple-600 text-white'
                                                         : 'bg-slate-600 text-white'
-                                                        }`}
+                                                    }`}
                                                 >
                                                     <p className="text-sm whitespace-pre-wrap break-words">
                                                         {message.content}
@@ -308,7 +308,7 @@ export default function ChatHistory({ isOpen, onClose, initialSessionId }: ChatH
                                                     <p className="text-xs opacity-70 mt-1">
                                                         {new Date(message.timestamp).toLocaleTimeString('en-US', {
                                                             hour: '2-digit',
-                                                            minute: '2-digit'
+                                                            minute: '2-digit',
                                                         })}
                                                     </p>
                                                 </div>
