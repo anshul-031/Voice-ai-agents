@@ -34,7 +34,7 @@ export interface ExotelCallResponse {
 /**
  * Formats phone number to Exotel format (91 + 10 digits)
  */
-function formatPhoneNumber(phoneNumber: string): string {
+export function formatPhoneNumber(phoneNumber: string): string {
   // Remove any non-digit characters
   const digits = phoneNumber.replace(/\D/g, '');
   

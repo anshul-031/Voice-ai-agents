@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Use connection string without explicit TLS parameters - let Mongoose handle it
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://mukulrai_db_user:rxHzQuYtSUFN6DHM@cluster0.nnefrop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable');

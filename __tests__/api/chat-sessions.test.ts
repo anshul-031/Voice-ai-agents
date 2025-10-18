@@ -158,5 +158,20 @@ describe('API: /api/chat/sessions', () => {
       expect(data.error).toBe('Failed to fetch sessions')
       expect(data.details).toBe('Aggregation failed')
     })
+
+    it('should handle non-Error instance errors', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(Chat.aggregate as jest.Mock).mockRejectedValue('String error')
+
+      const request = new NextRequest('http://localhost:3000/api/chat/sessions')
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Failed to fetch sessions')
+      expect(data.details).toBe('Unknown error')
+    })
   })
 })

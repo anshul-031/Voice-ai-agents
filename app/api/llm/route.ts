@@ -249,21 +249,6 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // Save assistant response to database (always save for call logs)
-            try {
-                await Chat.create({
-                    userId: 'mukul', // Hardcoded user for now
-                    sessionId: chatSessionId,
-                    role: 'assistant',
-                    content: cleanedText,
-                    timestamp: new Date(),
-                });
-                console.log('[LLM] Assistant response saved to database');
-            } catch (dbError) {
-                console.error('[LLM] Failed to save assistant response:', dbError);
-                // Continue even if DB save fails
-            }
-
             const response: any = {
                 llmText: cleanedText,
                 sessionId: chatSessionId
@@ -298,6 +283,30 @@ export async function POST(request: NextRequest) {
                 if (status === 429) {
                     console.error('[LLM] Rate limit / quota exceeded');
                     return NextResponse.json({ error: 'Rate limit / quota exceeded for Gemini', details: body }, { status: 429 });
+                }
+            }
+
+            // Check for specific error messages in the error
+            if (errGenerate instanceof Error) {
+                console.error('[LLM] Error type: Error');
+                console.error('[LLM] Error message:', errGenerate.message);
+                console.error('[LLM] Error stack:', errGenerate.stack);
+
+                if (errGenerate.message.includes('API_KEY') || errGenerate.message.includes('API key')) {
+                    console.error('[LLM] Invalid or missing API key detected');
+                    return NextResponse.json({ error: 'Invalid or missing Gemini API key' }, { status: 401 });
+                }
+                if (errGenerate.message.includes('SAFETY')) {
+                    console.error('[LLM] Content filtered by safety policies');
+                    return NextResponse.json({ error: 'Content filtered by safety policies' }, { status: 400 });
+                }
+                if (errGenerate.message.includes('QUOTA') || errGenerate.message.includes('quota')) {
+                    console.error('[LLM] API quota exceeded');
+                    return NextResponse.json({ error: 'API quota exceeded' }, { status: 429 });
+                }
+                if (errGenerate.message.includes('404') || errGenerate.message.includes('Not Found')) {
+                    console.error('[LLM] Model not found or invalid API key');
+                    return NextResponse.json({ error: 'Invalid API key or model not available. Please check your Gemini API key.' }, { status: 401 });
                 }
             }
 
