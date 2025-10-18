@@ -123,8 +123,10 @@ describe('lib and models import (esm-safe)', () => {
     jest.resetModules()
 
     try {
-      // Re-import to trigger the check
-      await expect(import('@/lib/mongodb')).rejects.toThrow('Please define the MONGODB_URI environment variable')
+      // Import should succeed now (error is deferred)
+      const mod = await import('@/lib/mongodb')
+      // But calling dbConnect should throw the error
+      await expect(mod.default()).rejects.toThrow('Please define the MONGODB_URI environment variable')
     } finally {
       // Restore original value
       process.env.MONGODB_URI = originalUri
