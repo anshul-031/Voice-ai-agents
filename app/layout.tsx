@@ -1,16 +1,16 @@
-import './globals.css'
+import './globals.css';
 
 export const metadata = {
-  title: 'AI Voice Assistant',
-  description: 'Voice-first AI assistant',
-}
+    title: 'AI Voice Assistant',
+    description: 'Voice-first AI assistant',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-      </body>
-    </html>
-  )
+    return (
+        <html lang="en">
+            <body>
+                {children}
+            </body>
+        </html>
+    );
 }

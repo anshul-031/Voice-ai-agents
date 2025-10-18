@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import VoiceAIAgent from '@/components/VoiceAIAgent';
-import { ModelConfig } from '@/types';
+import type { ModelConfig } from '@/types';
 
 const DEFAULT_PROMPT = `# Role: You are Riya for collecting overdue EMI payments from customers of Punjab National Bank
 

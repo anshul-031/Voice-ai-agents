@@ -27,6 +27,7 @@ describe('PhoneNumberModal', () => {
     phoneNumber: '+1234567890',
     displayName: 'Test Phone',
     provider: 'exotel',
+    status: 'active',
     exotelConfig: {
       sid: 'test-sid',
       appId: 'test-app-id',
@@ -208,7 +209,7 @@ describe('PhoneNumberModal', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/phone-numbers', {
+      expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/phone-numbers', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

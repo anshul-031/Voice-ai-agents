@@ -63,7 +63,7 @@ export function useContinuousCall({
     // Start the call
     const startCall = useCallback(async () => {
         console.log('[useContinuousCall] Starting call...');
-        
+
         if (isActiveRef.current) {
             console.log('[useContinuousCall] Call already active');
             return;
@@ -81,7 +81,7 @@ export function useContinuousCall({
                     autoGainControl: true,
                     channelCount: 1,
                     sampleRate: 44100,
-                }
+                },
             });
 
             console.log('[useContinuousCall] Microphone access granted');
@@ -98,8 +98,8 @@ export function useContinuousCall({
             const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
                 ? 'audio/webm;codecs=opus'
                 : MediaRecorder.isTypeSupported('audio/webm')
-                ? 'audio/webm'
-                : 'audio/mp4';
+                    ? 'audio/webm'
+                    : 'audio/mp4';
 
             console.log('[useContinuousCall] Using MIME type:', mimeType);
 
@@ -125,13 +125,13 @@ export function useContinuousCall({
             console.error('[useContinuousCall] Failed to start call:', error);
             setCallState('idle');
             isActiveRef.current = false;
-            
+
             // Clean up on error
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
                 streamRef.current = null;
             }
-            
+
             throw error;
         }
     }, [monitorAudioLevel]);
@@ -139,7 +139,7 @@ export function useContinuousCall({
     // End the call
     const endCall = useCallback(() => {
         console.log('[useContinuousCall] Ending call...');
-        
+
         if (!isActiveRef.current) {
             console.log('[useContinuousCall] No active call to end');
             return;

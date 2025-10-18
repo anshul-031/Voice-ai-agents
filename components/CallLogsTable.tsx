@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
     Calendar,
@@ -11,9 +11,9 @@ import {
     Filter,
     PhoneCall,
     RefreshCw,
-    Search
-} from 'lucide-react'
-import { useEffect, useState } from 'react'
+    Search,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ChatSession {
     sessionId: string
@@ -30,30 +30,30 @@ interface CallLogsTableProps {
 }
 
 export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps) {
-    const [sessions, setSessions] = useState<ChatSession[]>([])
-    const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'failed' | 'ongoing'>('all')
-    const [showFilters, setShowFilters] = useState(false)
+    const [sessions, setSessions] = useState<ChatSession[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'failed' | 'ongoing'>('all');
+    const [showFilters, setShowFilters] = useState(false);
 
     // ...existing code...
 
     // Export handler: downloads filteredSessions as CSV
     const handleExport = (format: 'csv' | 'json' = 'csv') => {
-        if (filteredSessions.length === 0) return
+        if (filteredSessions.length === 0) return;
         if (format === 'json') {
-            const blob = new Blob([JSON.stringify(filteredSessions, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = 'call-logs.json'
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
+            const blob = new Blob([JSON.stringify(filteredSessions, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'call-logs.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         } else {
             // CSV export
-            const headers = ['Session ID', 'User ID', 'Message Count', 'First Message', 'Last Message', 'First Timestamp', 'Last Timestamp']
+            const headers = ['Session ID', 'User ID', 'Message Count', 'First Message', 'Last Message', 'First Timestamp', 'Last Timestamp'];
             const rows = filteredSessions.map(s => [
                 s.sessionId,
                 s.userId,
@@ -61,80 +61,80 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                 s.firstMessage ?? '',
                 s.lastMessage ?? '',
                 s.firstTimestamp,
-                s.lastTimestamp
-            ])
+                s.lastTimestamp,
+            ]);
             const csv = [headers, ...rows]
                 .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-                .join('\n')
-            const blob = new Blob([csv], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = 'call-logs.csv'
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
+                .join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'call-logs.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
-    }
+    };
 
     useEffect(() => {
-        fetchSessions()
-    }, [])
+        fetchSessions();
+    }, []);
 
     const fetchSessions = async () => {
         try {
-            const res = await fetch('/api/chat/sessions?userId=mukul')
+            const res = await fetch('/api/chat/sessions?userId=mukul');
             if (res.ok) {
-                const data = await res.json()
+                const data = await res.json();
                 // API returns { success, userId, sessions, count }
-                setSessions(data.sessions || [])
+                setSessions(data.sessions || []);
             } else {
-                setSessions([])
+                setSessions([]);
             }
         } catch (error) {
-            console.error('Error fetching sessions:', error)
-            setSessions([])
+            console.error('Error fetching sessions:', error);
+            setSessions([]);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     const formatDuration = (start: string, end: string) => {
-        const startTime = new Date(start).getTime()
-        const endTime = new Date(end).getTime()
-        const durationMs = endTime - startTime
-        const seconds = Math.floor(durationMs / 1000)
-        const minutes = Math.floor(seconds / 60)
-        const remainingSeconds = seconds % 60
+        const startTime = new Date(start).getTime();
+        const endTime = new Date(end).getTime();
+        const durationMs = endTime - startTime;
+        const seconds = Math.floor(durationMs / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
 
         if (minutes > 0) {
-            return `${minutes}m`
+            return `${minutes}m`;
         } else {
-            return `${remainingSeconds}s`
+            return `${remainingSeconds}s`;
         }
-    }
+    };
 
     const calculateCost = (messageCount: number) => {
         // Mock cost calculation: $0.002 per message
-        const cost = messageCount * 0.002
-        return `$${cost.toFixed(4)}`
-    }
+        const cost = messageCount * 0.002;
+        return `$${cost.toFixed(4)}`;
+    };
 
     const filteredSessions = sessions.filter(session => {
-        const matchesSearch = session.sessionId.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesStatus = statusFilter === 'all' || statusFilter === 'completed' // Mock: all sessions are completed
-        return matchesSearch && matchesStatus
-    })
+        const matchesSearch = session.sessionId.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || statusFilter === 'completed'; // Mock: all sessions are completed
+        return matchesSearch && matchesStatus;
+    });
 
-    const totalCalls = filteredSessions.length
-    const totalCost = filteredSessions.reduce((sum, s) => sum + (s.messageCount * 0.002), 0)
+    const totalCalls = filteredSessions.length;
+    const totalCost = filteredSessions.reduce((sum, s) => sum + (s.messageCount * 0.002), 0);
     const avgDuration = filteredSessions.length > 0
         ? filteredSessions.reduce((sum, s) => {
-            const duration = new Date(s.lastTimestamp).getTime() - new Date(s.firstTimestamp).getTime()
-            return sum + duration
+            const duration = new Date(s.lastTimestamp).getTime() - new Date(s.firstTimestamp).getTime();
+            return sum + duration;
         }, 0) / filteredSessions.length / 1000 / 60
-        : 0
+        : 0;
 
     return (
         <div className="flex-1 bg-gradient-to-br from-[#0a0e13] via-[#0d1117] to-[#0a0e13] flex flex-col">
@@ -241,7 +241,7 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all ${showFilters
                                     ? 'bg-emerald-500 border-emerald-500 text-white'
                                     : 'bg-[#141b24] border-gray-700 text-gray-300 hover:bg-gray-800'
-                                    }`}
+                                }`}
                             >
                                 <Filter className="w-4 h-4" />
                                 <span className="text-sm font-medium">Filters</span>
@@ -263,7 +263,7 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                     <label className="block text-xs font-medium text-gray-400 mb-2">Status</label>
                                     <select
                                         value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                                        onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'failed' | 'ongoing')}
                                         className="w-full px-3 py-2 bg-[#0a0e13] border border-gray-700 rounded-lg text-gray-300 text-sm focus:outline-none focus:border-emerald-500"
                                     >
                                         <option value="all">All Status</option>
@@ -379,12 +379,12 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                             {new Date(session.lastTimestamp).toLocaleDateString('en-GB', {
                                                 day: '2-digit',
                                                 month: '2-digit',
-                                                year: 'numeric'
+                                                year: 'numeric',
                                             })},{' '}
                                             {new Date(session.lastTimestamp).toLocaleTimeString('en-GB', {
                                                 hour: '2-digit',
                                                 minute: '2-digit',
-                                                second: '2-digit'
+                                                second: '2-digit',
                                             })}
                                         </span>
                                     </div>
@@ -393,8 +393,8 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                                     <div className="flex items-center justify-center">
                                         <button
                                             onClick={(e) => {
-                                                e.stopPropagation()
-                                                onViewCallDetails?.(session.sessionId)
+                                                e.stopPropagation();
+                                                onViewCallDetails?.(session.sessionId);
                                             }}
                                             className="opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
@@ -447,5 +447,5 @@ export default function CallLogsTable({ onViewCallDetails }: CallLogsTableProps)
                 }
             `}</style>
         </div>
-    )
+    );
 }
