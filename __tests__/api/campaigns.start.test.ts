@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { POST, triggerCampaignCalls } from '@/app/api/campaigns/start/route';
+import { POST } from '@/app/api/campaigns/start/route';
 import { NextRequest } from 'next/server';
 
 // Mock dependencies
