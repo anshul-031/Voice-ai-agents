@@ -1,5 +1,5 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { act, renderHook, waitFor } from '@testing-library/react'
 
 // Build a factory that captures handlers via accessors for reliability
 const makeSRConstructor = (handlersStore: any) =>
@@ -12,6 +12,7 @@ const makeSRConstructor = (handlersStore: any) =>
       start: jest.fn(function (this: any) { this.started = true }),
       stop: jest.fn(function (this: any) { this.started = false }),
     }
+    handlersStore.instance = obj
     Object.defineProperty(obj, 'onresult', {
       get() { return handlersStore.onresult },
       set(v) { handlersStore.onresult = v },
@@ -94,8 +95,7 @@ describe('useSpeechRecognition', () => {
   it('auto-restarts on end when not paused, and pause/resume toggles this', async () => {
     const { result } = renderHook(() => useSpeechRecognition({}))
     await waitFor(() => expect(result.current.supported).toBe(true))
-    const ctor: jest.Mock = (window as any).SpeechRecognition
-    await waitFor(() => expect(ctor.mock.instances.length).toBeGreaterThan(0))
+    await waitFor(() => expect((window as any).__srHandlers.instance).toBeDefined())
 
     // start listening, then simulate onend; since shouldRestart=true, it should set isListening true again
     act(() => { result.current.startListening() })
@@ -119,8 +119,7 @@ describe('useSpeechRecognition', () => {
   it('handles not-allowed error by stopping and preventing restart', async () => {
     const { result } = renderHook(() => useSpeechRecognition({}))
     await waitFor(() => expect(result.current.supported).toBe(true))
-    const ctor: jest.Mock = (window as any).SpeechRecognition
-    await waitFor(() => expect(ctor.mock.instances.length).toBeGreaterThan(0))
+    await waitFor(() => expect((window as any).__srHandlers.instance).toBeDefined())
     await waitFor(() => expect(typeof (window as any).__srHandlers.onerror).toBe('function'))
 
     act(() => { result.current.startListening() })
@@ -132,5 +131,70 @@ describe('useSpeechRecognition', () => {
     act(() => { (window as any).__srHandlers.onend() })
     // should not restart due to pausedRef = true
     await waitFor(() => expect(result.current.isListening).toBe(false))
+  })
+
+  it('reports unsupported when browser SpeechRecognition APIs are missing', async () => {
+    delete (window as any).SpeechRecognition
+    delete (window as any).webkitSpeechRecognition
+    delete (window as any).__srHandlers
+
+    const { result } = renderHook(() => useSpeechRecognition({}))
+
+    await waitFor(() => expect(result.current.supported).toBe(false))
+    expect(result.current.isListening).toBe(false)
+
+    act(() => { result.current.startListening() })
+    expect(result.current.isListening).toBe(false)
+
+    act(() => { result.current.resume() })
+    expect(result.current.isListening).toBe(false)
+  })
+
+  it('swallows start errors without flipping listening state', async () => {
+    const { result } = renderHook(() => useSpeechRecognition({}))
+    await waitFor(() => expect(result.current.supported).toBe(true))
+    await waitFor(() => expect((window as any).__srHandlers.instance).toBeDefined())
+    const instance = (window as any).__srHandlers.instance
+    instance.start.mockImplementationOnce(() => { throw new Error('boom') })
+
+    act(() => { result.current.startListening() })
+
+    expect(instance.start).toHaveBeenCalled()
+    expect(result.current.isListening).toBe(false)
+  })
+
+  it('handles stop errors gracefully while resetting state', async () => {
+    const { result } = renderHook(() => useSpeechRecognition({}))
+    await waitFor(() => expect(result.current.supported).toBe(true))
+    await waitFor(() => expect((window as any).__srHandlers.instance).toBeDefined())
+    const instance = (window as any).__srHandlers.instance
+
+    act(() => { result.current.startListening() })
+    expect(result.current.isListening).toBe(true)
+
+    instance.stop.mockImplementationOnce(() => { throw new Error('stop fail') })
+
+    act(() => { result.current.stopListening() })
+
+    expect(instance.stop).toHaveBeenCalled()
+    expect(result.current.isListening).toBe(false)
+    expect(result.current.interimTranscript).toBe('')
+  })
+
+  it('continues despite restart errors after onend', async () => {
+    const { result } = renderHook(() => useSpeechRecognition({}))
+    await waitFor(() => expect(result.current.supported).toBe(true))
+    await waitFor(() => expect((window as any).__srHandlers.instance).toBeDefined())
+    const instance = (window as any).__srHandlers.instance
+
+    act(() => { result.current.startListening() })
+    expect(result.current.isListening).toBe(true)
+
+    instance.start.mockImplementationOnce(() => { throw new Error('restart fail') })
+
+    act(() => { (window as any).__srHandlers.onend() })
+
+    expect(instance.start).toHaveBeenCalledTimes(2)
+    expect(result.current.isListening).toBe(false)
   })
 })
