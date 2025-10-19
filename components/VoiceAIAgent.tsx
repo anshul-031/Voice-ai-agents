@@ -77,6 +77,7 @@ export default function VoiceAIAgent({
     // Audio playback tracking
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
     const isCallActiveRef = useRef<boolean>(false);
+    const messagesRef = useRef<Message[]>([]);
 
     // Model configuration
     const [modelConfig] = useState<ModelConfig>(defaultModelConfig);
@@ -103,6 +104,10 @@ export default function VoiceAIAgent({
                 console.error('[VoiceAIAgent] Failed to check config:', err);
             });
     }, []);
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     // Update prompt when defaultPrompt changes
     useEffect(() => {
@@ -145,12 +150,14 @@ export default function VoiceAIAgent({
                     timestamp: new Date(),
                 };
 
-                // Update messages state and capture current conversation history
-                let currentMessages: Message[] = [];
-                setMessages(prev => {
-                    currentMessages = [...prev, userMessage];
-                    return currentMessages;
-                });
+                const previousMessages = messagesRef.current;
+                const nextMessages = [...previousMessages, userMessage];
+                setMessages(nextMessages);
+
+                const conversationHistory = nextMessages.slice(0, -1).map(m => ({
+                    text: m.text,
+                    source: m.source,
+                }));
 
                 const llmResponse = await fetch('/api/llm', {
                     method: 'POST',
@@ -158,10 +165,7 @@ export default function VoiceAIAgent({
                     body: JSON.stringify({
                         prompt: initialPrompt,
                         userText: finalText,
-                        conversationHistory: currentMessages.slice(0, -1).map(m => ({
-                            text: m.text,
-                            source: m.source,
-                        })),
+                        conversationHistory,
                         sessionId,
                         agentId,
                     }),

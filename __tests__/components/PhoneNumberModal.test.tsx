@@ -3,356 +3,374 @@
  */
 
 import PhoneNumberModal from '@/components/PhoneNumberModal';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-// Mock fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+const originalFetch = global.fetch;
+const originalAlert = window.alert;
 
-// Mock window.alert
-const mockAlert = jest.fn();
-global.alert = mockAlert;
+const createResponse = <T,>(data: T, ok = true): Response => ({
+  ok,
+  json: jest.fn().mockResolvedValue(data),
+} as unknown as Response);
+
+const fillRequiredExotelFields = (
+  overrides: Partial<{
+    phoneNumber: string;
+    displayName: string;
+    apiKey: string;
+    apiToken: string;
+    sid: string;
+  }> = {}
+) => {
+  const {
+    phoneNumber = '+919876543210',
+    displayName = 'Support Line',
+    apiKey = 'api-key',
+    apiToken = 'api-token',
+    sid = 'sid-123',
+  } = overrides;
+
+  fireEvent.change(screen.getByPlaceholderText('+919876543210'), {
+    target: { value: phoneNumber },
+  });
+  fireEvent.change(screen.getByPlaceholderText('e.g., Support Line, Sales Number'), {
+    target: { value: displayName },
+  });
+  fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Key'), {
+    target: { value: apiKey },
+  });
+  fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Token'), {
+    target: { value: apiToken },
+  });
+  fireEvent.change(screen.getByPlaceholderText('Enter Exotel SID'), {
+    target: { value: sid },
+  });
+};
 
 describe('PhoneNumberModal', () => {
-  const mockOnClose = jest.fn();
-  const mockOnSuccess = jest.fn();
-
-  const mockAgents = [
-    { id: 'agent-1', name: 'Test Agent 1' },
-    { id: 'agent-2', name: 'Test Agent 2' },
-  ];
-
-  const mockPhoneNumber = {
-    id: '1',
-    phoneNumber: '+1234567890',
-    displayName: 'Test Phone',
-    provider: 'exotel',
-    status: 'active',
-    exotelConfig: {
-      sid: 'test-sid',
-      appId: 'test-app-id',
-      domain: 'api.in.exotel.com',
-      region: 'in',
-    },
-    linkedAgentId: 'agent-1',
-  };
+  let fetchMock: jest.Mock;
+  let alertSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: jest.fn().mockResolvedValue({ agents: mockAgents }),
-    });
+    fetchMock = jest.fn();
+    (global as typeof global & { fetch: jest.Mock }).fetch = fetchMock;
+    alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => undefined);
   });
 
-  it('does not render when isOpen is false', () => {
+  afterEach(() => {
+    (global as typeof global & { fetch: typeof fetch }).fetch = originalFetch;
+    alertSpy.mockRestore();
+    window.alert = originalAlert;
+  });
+
+  const agents = [
+    {
+      id: 'agent-1',
+      title: 'Support Agent',
+      prompt: '',
+      llmModel: '',
+      sttModel: '',
+      ttsModel: '',
+      userId: '',
+      lastUpdated: '',
+      createdAt: '',
+    },
+  ];
+
+  const existingPhoneNumber = {
+    id: 'phone-1',
+    phoneNumber: '+911234567890',
+    provider: 'exotel',
+    displayName: 'Existing Line',
+    status: 'active',
+    linkedAgentId: 'agent-1',
+    exotelConfig: {
+      sid: 'existing-sid',
+      appId: 'existing-app',
+      domain: 'api.us.exotel.com',
+      region: 'us',
+    },
+  } as const;
+
+  it('returns null when closed', () => {
     render(
       <PhoneNumberModal
         isOpen={false}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
+        onClose={jest.fn()}
+        onSuccess={jest.fn()}
       />
     );
 
     expect(screen.queryByText('Import Phone Number')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('renders add modal correctly', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('submits a new phone number with exotel configuration', async () => {
+    const onClose = jest.fn();
+    const onSuccess = jest.fn();
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Import Phone Number' })).toBeInTheDocument();
-    });
+    fetchMock
+      .mockResolvedValueOnce(createResponse({ agents }))
+      .mockResolvedValueOnce(createResponse({}, true));
 
-    // Check for form inputs by placeholder text since labels aren't properly associated
-    expect(screen.getByPlaceholderText('+919876543210')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g., Support Line, Sales Number')).toBeInTheDocument();
-    
-    // Check that provider select exists (first select in the form)
-    const selects = screen.getAllByRole('combobox');
-    expect(selects.length).toBeGreaterThanOrEqual(3); // Provider, Region, Agent selects
-  });
+    render(<PhoneNumberModal isOpen onClose={onClose} onSuccess={onSuccess} />);
 
-  it('renders edit modal correctly', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        phoneNumber={mockPhoneNumber}
-        onSuccess={mockOnSuccess}
-      />
-    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Edit Phone Number' })).toBeInTheDocument();
-    });
-
-    expect(screen.getByDisplayValue('+1234567890')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Test Phone')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('test-sid')).toBeInTheDocument();
-  });
-
-  it('fetches agents on open', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/voice-agents?userId=mukul');
-    });
-  });
-
-  it('handles form submission for new phone number', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValue({ agents: mockAgents }),
-    }).mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValue({}),
-    });
-
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('+919876543210')).toBeInTheDocument();
-    });
-
-    // Fill form
     fireEvent.change(screen.getByPlaceholderText('+919876543210'), {
-      target: { value: '+1234567890' },
+      target: { value: '+919876543210' },
     });
     fireEvent.change(screen.getByPlaceholderText('e.g., Support Line, Sales Number'), {
-      target: { value: 'Test Phone' },
+      target: { value: 'Support Line' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Key'), {
-      target: { value: 'test-api-key' },
+      target: { value: 'api-key' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Token'), {
-      target: { value: 'test-api-token' },
+      target: { value: 'api-token' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel SID'), {
-      target: { value: 'test-sid' },
+      target: { value: 'sid-123' },
     });
 
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Import Phone Number' });
-    fireEvent.click(submitButton);
+    await screen.findByRole('option', { name: 'Support Agent' });
+    const agentSelect = screen.getByText('-- No Agent Linked --').parentElement as HTMLSelectElement;
+    fireEvent.change(agentSelect, { target: { value: 'agent-1' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import Phone Number' }));
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/phone-numbers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumber: '+1234567890',
-          displayName: 'Test Phone',
-          provider: 'exotel',
-          exotelConfig: {
-            apiKey: 'test-api-key',
-            apiToken: 'test-api-token',
-            sid: 'test-sid',
-            appId: undefined,
-            domain: 'api.in.exotel.com',
-            region: 'in',
-          },
-        }),
-      });
-      expect(mockOnSuccess).toHaveBeenCalled();
-      expect(mockOnClose).toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        '/api/phone-numbers',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            phoneNumber: '+919876543210',
+            displayName: 'Support Line',
+            provider: 'exotel',
+            linkedAgentId: 'agent-1',
+            exotelConfig: {
+              apiKey: 'api-key',
+              apiToken: 'api-token',
+              sid: 'sid-123',
+              appId: undefined,
+              domain: 'api.in.exotel.com',
+              region: 'in',
+            },
+          }),
+        })
+      );
+      expect(onSuccess).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
     });
   });
 
-  it('handles form submission for editing phone number', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValue({ agents: mockAgents }),
-    }).mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValue({}),
-    });
+  it('prefills data for editing and alerts on update failure', async () => {
+    const onClose = jest.fn();
+    const onSuccess = jest.fn();
+
+    fetchMock
+      .mockResolvedValueOnce(createResponse({ agents }))
+      .mockResolvedValueOnce(createResponse({ error: 'Invalid configuration' }, false));
 
     render(
       <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        phoneNumber={mockPhoneNumber}
-        onSuccess={mockOnSuccess}
+        isOpen
+        phoneNumber={existingPhoneNumber}
+        onClose={onClose}
+        onSuccess={onSuccess}
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Phone')).toBeInTheDocument();
-    });
+    expect(screen.getByDisplayValue('+911234567890')).toBeDisabled();
+    expect(screen.getByDisplayValue('Existing Line')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('existing-sid')).toBeInTheDocument();
 
-    // Modify form
-    fireEvent.change(screen.getByDisplayValue('Test Phone'), {
-      target: { value: 'Updated Phone' },
-    });
+  const providerSelect = screen.getByDisplayValue('Exotel');
+  fireEvent.change(providerSelect, { target: { value: 'twilio' } });
+    await waitFor(() => expect(screen.queryByText('Exotel Configuration')).not.toBeInTheDocument());
 
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Update Phone Number' });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Update Phone Number' }));
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/phone-numbers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumber: '+1234567890',
-          displayName: 'Updated Phone',
-          provider: 'exotel',
-          linkedAgentId: 'agent-1',
-          exotelConfig: {
-            apiKey: '',
-            apiToken: '',
-            sid: 'test-sid',
-            appId: 'test-app-id',
-            domain: 'api.in.exotel.com',
-            region: 'in',
-          },
-          id: '1',
-        }),
-      });
-      expect(mockOnSuccess).toHaveBeenCalled();
-      expect(mockOnClose).toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        '/api/phone-numbers',
+        expect.objectContaining({ method: 'PUT' })
+      );
+      expect(alertSpy).toHaveBeenCalledWith('Invalid configuration');
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
-  it('handles form submission error', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValue({ agents: mockAgents }),
-    }).mockResolvedValueOnce({
-      ok: false,
-      json: jest.fn().mockResolvedValue({ error: 'Validation error' }),
-    });
+  it('prefills defaults when editing phone number missing optional fields', async () => {
+    fetchMock.mockResolvedValueOnce(createResponse({ agents }));
+
+    const incompletePhoneNumber = {
+      id: 'phone-2',
+      phoneNumber: '',
+      provider: '',
+      displayName: '',
+      status: 'inactive',
+    } as any;
 
     render(
       <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
+        isOpen
+        phoneNumber={incompletePhoneNumber}
+        onClose={jest.fn()}
+        onSuccess={jest.fn()}
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('+919876543210')).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul')
+    );
 
-    // Fill required fields
+    expect(screen.getByPlaceholderText('+919876543210')).toBeDisabled();
+    expect(screen.getByDisplayValue('Exotel')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter Exotel SID')).toHaveValue('');
+    expect(screen.getByPlaceholderText('api.in.exotel.com')).toHaveValue('api.in.exotel.com');
+    expect(screen.getByDisplayValue('India (in)')).toBeInTheDocument();
+
+    const agentSelect = screen
+      .getAllByRole('combobox')
+      .find((element) => within(element).queryByText('-- No Agent Linked --')) as HTMLSelectElement | undefined;
+    expect(agentSelect).toBeDefined();
+    expect((agentSelect as HTMLSelectElement).value).toBe('');
+  });
+
+  it('shows alert when submission throws', async () => {
+    const onClose = jest.fn();
+    const onSuccess = jest.fn();
+
+    fetchMock
+      .mockResolvedValueOnce(createResponse({ agents: [] }))
+      .mockRejectedValueOnce(new Error('network error'));
+
+    render(<PhoneNumberModal isOpen onClose={onClose} onSuccess={onSuccess} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
+
     fireEvent.change(screen.getByPlaceholderText('+919876543210'), {
-      target: { value: '+1234567890' },
+      target: { value: '+919876543210' },
     });
     fireEvent.change(screen.getByPlaceholderText('e.g., Support Line, Sales Number'), {
-      target: { value: 'Test Phone' },
+      target: { value: 'Support Line' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Key'), {
-      target: { value: 'test-api-key' },
+      target: { value: 'api-key' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel API Token'), {
-      target: { value: 'test-api-token' },
+      target: { value: 'api-token' },
     });
     fireEvent.change(screen.getByPlaceholderText('Enter Exotel SID'), {
-      target: { value: 'test-sid' },
+      target: { value: 'sid-123' },
     });
 
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: 'Import Phone Number' });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Import Phone Number' }));
 
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('Validation error');
+      expect(alertSpy).toHaveBeenCalledWith('Failed to save phone number');
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
-  it('closes modal when close button is clicked', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('invokes onClose when cancel button clicked', async () => {
+    const onClose = jest.fn();
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Import Phone Number' })).toBeInTheDocument();
-    });
+    fetchMock.mockResolvedValueOnce(createResponse({ agents }));
 
-    // Find the close button (first button in header with X icon)
-    const closeButton = screen.getAllByRole('button')[0];
-    fireEvent.click(closeButton);
+    render(<PhoneNumberModal isOpen onClose={onClose} onSuccess={jest.fn()} />);
 
-    expect(mockOnClose).toHaveBeenCalled();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it('allows form field changes', () => {
-    render(<PhoneNumberModal isOpen={true} onClose={jest.fn()} onSuccess={jest.fn()} />);
+  it('falls back to empty agent list when fetch fails initially', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('load error'));
 
-    // Test phone number input
-    const phoneInput = screen.getByPlaceholderText('+919876543210');
-    fireEvent.change(phoneInput, { target: { value: '+9876543210' } });
-    expect(phoneInput).toHaveValue('+9876543210');
+    render(<PhoneNumberModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} />);
 
-    // Test display name input
-    const displayNameInput = screen.getByPlaceholderText('e.g., Support Line, Sales Number');
-    fireEvent.change(displayNameInput, { target: { value: 'Test Line' } });
-    expect(displayNameInput).toHaveValue('Test Line');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
+
+    const agentSelect = screen
+      .getAllByRole('combobox')
+      .find((element) => within(element).queryByText('-- No Agent Linked --')) as HTMLSelectElement | undefined;
+    expect(agentSelect).toBeDefined();
+    const agentOptions = within(agentSelect as HTMLSelectElement).getAllByRole('option');
+    expect(agentOptions).toHaveLength(1);
+    expect(agentOptions[0]).toHaveTextContent('-- No Agent Linked --');
   });
 
-  it('shows exotel config fields when exotel provider is selected', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('defaults to empty agent list when response lacks agents array', async () => {
+    fetchMock.mockResolvedValueOnce(createResponse({}, true));
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Import Phone Number' })).toBeInTheDocument();
-    });
+    render(<PhoneNumberModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
 
-    // Exotel fields should be visible by default
-    expect(screen.getByPlaceholderText('Enter Exotel API Key')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter Exotel API Token')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter Exotel SID')).toBeInTheDocument();
+    const agentSelect = screen
+      .getAllByRole('combobox')
+      .find((element) => within(element).queryByText('-- No Agent Linked --')) as HTMLSelectElement | undefined;
+    expect(agentSelect).toBeDefined();
+    const options = within(agentSelect as HTMLSelectElement).getAllByRole('option');
+    expect(options).toHaveLength(1);
   });
 
-  it('hides exotel config fields when non-exotel provider is selected', async () => {
-    render(
-      <PhoneNumberModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('omits exotel config when provider is not exotel', async () => {
+    fetchMock
+      .mockResolvedValueOnce(createResponse({ agents: [] }))
+      .mockResolvedValueOnce(createResponse({}, true));
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Import Phone Number' })).toBeInTheDocument();
+    render(<PhoneNumberModal isOpen onClose={jest.fn()} onSuccess={jest.fn()} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
+
+    fireEvent.change(screen.getByPlaceholderText('+919876543210'), {
+      target: { value: '+918888888888' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('e.g., Support Line, Sales Number'), {
+      target: { value: 'General Line' },
     });
 
-    // Change provider to twilio
     const providerSelect = screen.getByDisplayValue('Exotel');
     fireEvent.change(providerSelect, { target: { value: 'twilio' } });
+    await waitFor(() => expect(screen.queryByText('Exotel Configuration')).not.toBeInTheDocument());
 
-    // Exotel fields should be hidden
-    expect(screen.queryByPlaceholderText('Enter your Exotel API Key')).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Enter your Exotel API Token')).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Enter your Exotel SID')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Import Phone Number' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [, requestInit] = fetchMock.mock.calls[1];
+    const payload = JSON.parse((requestInit as RequestInit).body as string);
+
+    expect(payload.provider).toBe('twilio');
+    expect(Object.prototype.hasOwnProperty.call(payload, 'exotelConfig')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload, 'linkedAgentId')).toBe(false);
+  });
+
+  it('alerts default message when server responds without error details', async () => {
+    const onClose = jest.fn();
+    const onSuccess = jest.fn();
+
+    fetchMock
+      .mockResolvedValueOnce(createResponse({ agents }))
+      .mockResolvedValueOnce(createResponse({}, false));
+
+    render(<PhoneNumberModal isOpen onClose={onClose} onSuccess={onSuccess} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/voice-agents?userId=mukul'));
+
+    fillRequiredExotelFields();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import Phone Number' }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(alertSpy).toHaveBeenCalledWith('Failed to save phone number');
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 });

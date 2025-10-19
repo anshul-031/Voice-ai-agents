@@ -70,6 +70,7 @@ describe('useContinuousCall', () => {
     jest.clearAllMocks();
     mockMediaRecorder.state = 'inactive';
     mockOnAudioLevelChange.mockClear();
+    (MockMediaRecorder as any).isTypeSupported.mockImplementation(() => true);
     mockGetUserMedia.mockResolvedValue({
       getTracks: jest.fn().mockReturnValue([
         { stop: jest.fn() },
@@ -253,28 +254,50 @@ describe('useContinuousCall', () => {
     expect(result.current.audioLevel).toBe(0);
   });
 
-  it('handles monitorAudioLevel when analyser is not available', async () => {
+  it('stops monitoring when the call ends during a frame', async () => {
     const { result } = renderHook(() =>
       useContinuousCall({ onAudioLevelChange: mockOnAudioLevelChange })
     );
 
-    // Start call to set up analyser
+    mockOnAudioLevelChange.mockImplementation(() => {
+      // Call endCall asynchronously to allow the frame to be scheduled
+      setTimeout(() => result.current.endCall(), 0);
+    });
+
     await act(async () => {
       await result.current.startCall();
     });
 
-    // Manually set analyser to null to test the early return
-    act(() => {
-      // Access the internal ref and set it to null
-      const hookInstance = result.current as any;
-      if (hookInstance._internalRefs?.analyserRef) {
-        hookInstance._internalRefs.analyserRef.current = null;
-      }
+    // Wait for the async endCall
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    // The monitorAudioLevel should handle null analyser gracefully
-    // This is tested implicitly by the successful operation
-    expect(result.current.callState).toBe('active');
+    expect(mockOnAudioLevelChange).toHaveBeenCalled();
+    expect(mockRequestAnimationFrame).toHaveBeenCalledTimes(1);
+  });  it('ignores pending monitor frames after the call has ended', async () => {
+    const { result } = renderHook(() =>
+      useContinuousCall({ onAudioLevelChange: mockOnAudioLevelChange })
+    );
+
+    await act(async () => {
+      await result.current.startCall();
+    });
+
+    // Reset the mock to ignore the call during start
+    mockOnAudioLevelChange.mockClear();
+
+    const animationFrameCallback = mockRequestAnimationFrame.mock.calls[0][0];
+
+    act(() => {
+      result.current.endCall();
+    });
+
+    act(() => {
+      animationFrameCallback();
+    });
+
+    expect(mockOnAudioLevelChange).not.toHaveBeenCalled();
   });
 
   it('handles MediaRecorder MIME type selection', async () => {
@@ -287,7 +310,49 @@ describe('useContinuousCall', () => {
     });
 
     expect(result.current.callState).toBe('active');
-    // MIME type selection is tested implicitly by successful MediaRecorder creation
+    expect(MockMediaRecorder).toHaveBeenCalled();
+    const [, options] = MockMediaRecorder.mock.calls[0];
+    expect(options.mimeType).toBe('audio/webm;codecs=opus');
+  });
+
+  it('falls back to audio/webm when opus is not supported', async () => {
+    (MockMediaRecorder as any).isTypeSupported.mockImplementation((type: string) => {
+      if (type === 'audio/webm;codecs=opus') {
+        return false;
+      }
+      if (type === 'audio/webm') {
+        return true;
+      }
+      return false;
+    });
+
+    const { result } = renderHook(() =>
+      useContinuousCall({ onAudioLevelChange: mockOnAudioLevelChange })
+    );
+
+    await act(async () => {
+      await result.current.startCall();
+    });
+
+    expect(MockMediaRecorder).toHaveBeenCalled();
+    const [, options] = MockMediaRecorder.mock.calls[0];
+    expect(options.mimeType).toBe('audio/webm');
+  });
+
+  it('falls back to audio/mp4 when webm is not supported', async () => {
+    (MockMediaRecorder as any).isTypeSupported.mockImplementation(() => false);
+
+    const { result } = renderHook(() =>
+      useContinuousCall({ onAudioLevelChange: mockOnAudioLevelChange })
+    );
+
+    await act(async () => {
+      await result.current.startCall();
+    });
+
+    expect(MockMediaRecorder).toHaveBeenCalled();
+    const [, options] = MockMediaRecorder.mock.calls[0];
+    expect(options.mimeType).toBe('audio/mp4');
   });
 
   it('handles AudioContext creation failure', async () => {

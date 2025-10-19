@@ -519,47 +519,6 @@ describe('AgentPage comprehensive', () => {
     mockParams.id = 'agent-123'
   })
 
-  it('handles delete when agent becomes null during operation', async () => {
-    // This test covers the early return in handleDelete when agent is null
-    // We'll render the component, let it load, then modify the mock to trigger onDelete
-    // when we can simulate agent being null
-    
-    let onDeleteCallback: (() => void) | null = null;
-    
-    // Custom mock that captures the onDelete callback
-    const customMock = jest.fn((props: any) => {
-      onDeleteCallback = props.onDelete;
-      return (
-        <div data-testid="VoiceAIAgent">
-          <div>{props.headerTitle}</div>
-          <button 
-            data-testid="delete-trigger" 
-            onClick={() => onDeleteCallback?.()}
-          >
-            Delete Agent
-          </button>
-        </div>
-      )
-    });
-
-    // Temporarily replace the mock
-    const originalMock = jest.requireMock('@/components/VoiceAIAgent');
-    jest.doMock('@/components/VoiceAIAgent', () => customMock);
-
-    render(<AgentPage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Agent')).toBeInTheDocument()
-    })
-
-    // Note: This test cannot actually call handleDelete when agent is null
-    // because the VoiceAIAgent is only rendered when agent exists.
-    // The early return in handleDelete is defensive code that may never be executed.
-
-    // Restore original mock
-    jest.doMock('@/components/VoiceAIAgent', () => originalMock);
-  })
-
   it('handles back navigation', async () => {
     render(<AgentPage />);
 

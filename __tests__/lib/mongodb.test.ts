@@ -2,87 +2,141 @@
 describe('lib/mongodb', () => {
   const ORIGINAL_ENV = process.env
 
+  const resetGlobalCache = () => {
+    try {
+      delete (global as any).mongoose
+    } catch (_) {
+      // ignore
+    }
+  }
+
   beforeEach(() => {
     jest.resetModules()
+    jest.clearAllMocks()
     process.env = { ...ORIGINAL_ENV }
     process.env.MONGODB_URI = 'mongodb://localhost/test'
-    // clear global cache if present
-    try { delete (global as any).mongoose } catch (_) {}
+    resetGlobalCache()
+
+    const mongooseMock = require('../mocks/mongoose')
+    mongooseMock.connection.readyState = 1
+    mongooseMock.connect.mockReset()
+    mongooseMock.connect.mockResolvedValue({ connection: mongooseMock.connection })
+    mongooseMock.connection.close.mockReset()
+    mongooseMock.connection.close.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
     process.env = ORIGINAL_ENV
-    jest.clearAllMocks()
-    try { delete (global as any).mongoose } catch (_) {}
+    resetGlobalCache()
   })
 
-  test('dbConnect calls mongoose.connect once and caches connection', async () => {
+  const importWithMock = async () => {
     const mongooseMock = require('../mocks/mongoose')
     jest.doMock('mongoose', () => mongooseMock)
+    resetGlobalCache()
+    return { mongooseMock, module: await import('@/lib/mongodb') }
+  }
 
-    // Ensure no cached global mongoose from previous tests
-    try { delete (global as any).mongoose } catch (_) {}
+  test('dbConnect calls mongoose.connect once and caches connection', async () => {
+    const { mongooseMock, module } = await importWithMock()
+    const dbConnect = module.default
 
-    // Import after mocking to ensure module picks the mock
-    const { default: dbConnect } = await import('@/lib/mongodb')
-
-    // Ensure connect resolves with an object having connection
-    mongooseMock.connect.mockResolvedValueOnce({ connection: mongooseMock.connection })
-
-    // First call should invoke connect
     const conn1 = await dbConnect()
     expect(mongooseMock.connect).toHaveBeenCalledTimes(1)
     expect(conn1).toBeDefined()
 
-    // Second call should return cached connection without calling connect again
     const conn2 = await dbConnect()
     expect(mongooseMock.connect).toHaveBeenCalledTimes(1)
     expect(conn2).toBe(conn1)
   })
 
-  test('clearMongoConnection closes and clears cached connection', async () => {
-    const mongooseMock = require('../mocks/mongoose')
-    jest.doMock('mongoose', () => mongooseMock)
+  test('dbConnect throws when the MongoDB URI is missing', async () => {
+    delete process.env.MONGODB_URI
+    const { mongooseMock, module } = await importWithMock()
+    const dbConnect = module.default
 
-    try { delete (global as any).mongoose } catch (_) {}
+    await expect(dbConnect()).rejects.toThrow('Please define the MONGODB_URI environment variable')
+    expect(mongooseMock.connect).not.toHaveBeenCalled()
+  })
 
-    const mongodb = await import('@/lib/mongodb')
-    const dbConnect = mongodb.default
+  test('dbConnect clears stale cached connection and reconnects', async () => {
+    const { mongooseMock, module } = await importWithMock()
+    const dbConnect = module.default
 
+    await dbConnect()
+    expect(mongooseMock.connect).toHaveBeenCalledTimes(1)
+
+    mongooseMock.connection.readyState = 0
     mongooseMock.connect.mockResolvedValueOnce({ connection: mongooseMock.connection })
 
-    // Populate cached connection
+    const reconnect = await dbConnect()
+    expect(reconnect).toBeDefined()
+    expect(mongooseMock.connect).toHaveBeenCalledTimes(2)
+  })
+
+  test('dbConnect resets cached promise after a connection rejection', async () => {
+    const mongooseMock = require('../mocks/mongoose')
+    mongooseMock.connect.mockImplementationOnce(() => Promise.reject(new Error('connect fail')))
+    mongooseMock.connect.mockImplementationOnce(() => Promise.resolve({ connection: mongooseMock.connection }))
+
+    jest.doMock('mongoose', () => mongooseMock)
+    resetGlobalCache()
+
+    const module = await import('@/lib/mongodb')
+    const dbConnect = module.default
+
+    let thrown: unknown
+    try {
+      await dbConnect()
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toBe('connect fail')
+    expect(mongooseMock.connect).toHaveBeenCalledTimes(1)
+
+    mongooseMock.connection.readyState = 1
+    await expect(dbConnect()).resolves.toEqual({ connection: mongooseMock.connection })
+    expect(mongooseMock.connect).toHaveBeenCalledTimes(2)
+  })
+
+  test('clearMongoConnection closes and clears cached connection', async () => {
+    const { mongooseMock, module } = await importWithMock()
+    const dbConnect = module.default
+
     await dbConnect()
-    expect(mongooseMock.connect).toHaveBeenCalled()
+    expect(mongooseMock.connect).toHaveBeenCalledTimes(1)
 
-    // Spy on close and call clearMongoConnection
-    mongooseMock.connection.close.mockResolvedValueOnce(undefined)
+    await module.clearMongoConnection()
+    expect(mongooseMock.connection.close).toHaveBeenCalled()
 
-    await mongodb.clearMongoConnection()
-
-    // After clearing, connect can be called again
+    mongooseMock.connection.readyState = 1
     mongooseMock.connect.mockResolvedValueOnce({ connection: mongooseMock.connection })
     await dbConnect()
     expect(mongooseMock.connect).toHaveBeenCalledTimes(2)
   })
 
-  test('dbConnect propagates connection errors when connect fails', async () => {
-    const mongooseMock = require('../mocks/mongoose')
-    jest.doMock('mongoose', () => mongooseMock)
-
-    try { delete (global as any).mongoose } catch (_) {}
+  test('dbConnect uses an existing global mongoose cache promise', async () => {
+    resetGlobalCache()
     jest.resetModules()
 
-    const { default: dbConnect } = await import('@/lib/mongodb')
+    const mongooseMock = require('../mocks/mongoose')
+    mongooseMock.connection.readyState = 1
+    const cachedPromise = Promise.resolve({ connection: mongooseMock.connection })
 
-    const error = new Error('connect fail')
-    mongooseMock.connect.mockRejectedValueOnce(error)
+    ;(global as any).mongoose = { conn: null, promise: cachedPromise }
 
-    await expect(dbConnect()).rejects.toThrow('connect fail')
+    jest.doMock('mongoose', () => mongooseMock)
+
+    const module = await import('@/lib/mongodb')
+    const dbConnect = module.default
+
+    const conn = await dbConnect()
+    expect(conn).toEqual({ connection: mongooseMock.connection })
   })
 
   test('dbConnect re-export from dbConnect.ts works', async () => {
-    // Import from dbConnect.ts to ensure re-export coverage
     const { default: dbConnectFromDbConnect } = await import('@/lib/dbConnect')
     expect(dbConnectFromDbConnect).toBeDefined()
   })

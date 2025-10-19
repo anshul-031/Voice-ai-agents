@@ -597,4 +597,18 @@ describe('triggerCampaignCalls', () => {
       updated_at: expect.any(Date)
     });
   });
+
+  it('should handle non-Error exceptions during call processing', async () => {
+    const mockContacts = [
+      { _id: 'contact1', number: '+1234567890', name: 'Test Contact 1', call_status: 'pending', call_error: '', save: jest.fn().mockResolvedValue(undefined) },
+    ];
+
+    mockTriggerExotelCall.mockRejectedValue('String error'); // Throw a string, not an Error object
+
+    await actualTriggerCampaignCalls('campaign123', mockContacts);
+
+    expect(mockContacts[0].call_status).toBe('failed');
+    expect(mockContacts[0].call_error).toBe('Unknown error'); // Should use 'Unknown error' for non-Error objects
+    expect(mockContacts[0].save).toHaveBeenCalled();
+  });
 });
