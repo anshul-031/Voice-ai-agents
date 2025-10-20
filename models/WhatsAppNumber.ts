@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Document, Model, Schema, model, models } from 'mongoose';
 
 export interface IWhatsAppNumber extends Document {
     userId: string;
@@ -41,7 +41,7 @@ const WhatsAppNumberSchema = new Schema<IWhatsAppNumber>(
             default: 'active',
         },
         lastInteractionAt: Date,
-        settings: Schema.Types.Mixed,
+        settings: (Schema as unknown as { Types?: { Mixed?: unknown } }).Types?.Mixed || Object,
     },
     {
         timestamps: true,
@@ -50,4 +50,8 @@ const WhatsAppNumberSchema = new Schema<IWhatsAppNumber>(
 
 WhatsAppNumberSchema.index({ phoneNumberId: 1 });
 
-export default mongoose.models.WhatsAppNumber || mongoose.model<IWhatsAppNumber>('WhatsAppNumber', WhatsAppNumberSchema);
+const WhatsAppNumberModel =
+    (models?.WhatsAppNumber as Model<IWhatsAppNumber> | undefined) ||
+    model<IWhatsAppNumber>('WhatsAppNumber', WhatsAppNumberSchema);
+
+export default WhatsAppNumberModel;
