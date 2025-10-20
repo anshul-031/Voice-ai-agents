@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  */
-import { formatConversationHistory, generateAgentReply } from '@/lib/voiceAgentPipeline';
 import type { MessageHistory } from '@/lib/voiceAgentPipeline';
+import { formatConversationHistory, generateAgentReply } from '@/lib/voiceAgentPipeline';
 
 jest.mock('@google/generative-ai', () => {
   const mockGetGenerativeModel = jest.fn();
@@ -217,9 +217,9 @@ describe('voiceAgentPipeline', () => {
     });
 
     it('throws when GEMINI_API_KEY is missing', async () => {
-      const envWithoutKey = { ...originalEnv } as Record<string, string | undefined>;
-      delete envWithoutKey.GEMINI_API_KEY;
-      process.env = envWithoutKey;
+  const envWithoutKey: NodeJS.ProcessEnv = { ...originalEnv };
+  delete envWithoutKey.GEMINI_API_KEY;
+  process.env = envWithoutKey;
 
       await expect(
         generateAgentReply({
