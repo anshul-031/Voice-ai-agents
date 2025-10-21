@@ -18,7 +18,13 @@ jest.mock('@/components/CampaignsTable', () => jest.fn((props: any) => (
     <button data-testid="add-campaign-btn" onClick={props.onAddCampaign}>Add Campaign</button>
     <button data-testid="edit-campaign-btn" onClick={() => props.onEditCampaign?.({ _id: '1', title: 'Test Campaign' })}>Edit Campaign</button>
     <button data-testid="view-campaign-btn" onClick={() => props.onViewCampaign?.({ _id: '1', title: 'Test Campaign' })}>View Campaign</button>
-    <button data-testid="start-campaign-btn" onClick={() => props.onStartCampaign?.({ _id: '1', title: 'Test Campaign' })}>Start Campaign</button>
+    <button
+      data-testid="retrigger-campaign-btn"
+      disabled={props.retriggeringId === '1'}
+      onClick={() => props.onRetriggerCampaign?.({ _id: '1', title: 'Test Campaign' })}
+    >
+      {props.retriggeringId === '1' ? 'Retriggering…' : 'Retrigger Campaign'}
+    </button>
   </div>
 )))
 jest.mock('@/components/PhoneNumbersTable', () => jest.fn((props: any) => (
@@ -238,7 +244,7 @@ describe('DashboardPage comprehensive', () => {
       })
     })
 
-    it('starts campaign successfully', async () => {
+    it('retrigger campaign successfully', async () => {
       mockConfirm.mockReturnValue(true)
       // Mock campaigns loading first, then campaign start
       ;(global.fetch as jest.Mock)
@@ -248,7 +254,7 @@ describe('DashboardPage comprehensive', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ success: true, data: { total_contacts: 5 } })
+          json: async () => ({ success: true })
         })
 
       render(<DashboardPage />)
@@ -256,17 +262,17 @@ describe('DashboardPage comprehensive', () => {
       fireEvent.click(campaignsButton)
 
       await waitFor(() => {
-        const startButton = screen.getByTestId('start-campaign-btn')
-        fireEvent.click(startButton)
+        const retriggerButton = screen.getByTestId('retrigger-campaign-btn')
+        fireEvent.click(retriggerButton)
       })
 
       await waitFor(() => {
-        expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to start campaign "Test Campaign"? This will trigger calls to all contacts in the campaign.')
-        expect(mockAlert).toHaveBeenCalledWith('Campaign started successfully! Calling 5 contacts.')
+        expect(mockConfirm).toHaveBeenCalledWith('Retrigger campaign "Test Campaign"?')
+        expect(mockAlert).toHaveBeenCalledWith('Campaign retriggered successfully.')
       })
     })
 
-    it('handles campaign start failure', async () => {
+    it('handles campaign retrigger failure', async () => {
       mockConfirm.mockReturnValue(true)
       // Mock campaigns loading first, then campaign start failure
       ;(global.fetch as jest.Mock)
@@ -276,7 +282,7 @@ describe('DashboardPage comprehensive', () => {
         })
         .mockResolvedValueOnce({
           ok: false,
-          json: async () => ({ error: 'Campaign start failed' })
+          json: async () => ({ error: 'Failed to retrigger campaign' })
         })
 
       render(<DashboardPage />)
@@ -284,16 +290,16 @@ describe('DashboardPage comprehensive', () => {
       fireEvent.click(campaignsButton)
 
       await waitFor(() => {
-        const startButton = screen.getByTestId('start-campaign-btn')
-        fireEvent.click(startButton)
+        const retriggerButton = screen.getByTestId('retrigger-campaign-btn')
+        fireEvent.click(retriggerButton)
       })
 
       await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith('Failed to start campaign: Campaign start failed')
+        expect(mockAlert).toHaveBeenCalledWith('Failed to retrigger campaign')
       })
     })
 
-    it('cancels campaign start when user declines', async () => {
+    it('cancels campaign retrigger when user declines', async () => {
       mockConfirm.mockReturnValue(false)
 
       render(<DashboardPage />)
@@ -301,12 +307,12 @@ describe('DashboardPage comprehensive', () => {
       fireEvent.click(campaignsButton)
 
       await waitFor(() => {
-        const startButton = screen.getByTestId('start-campaign-btn')
-        fireEvent.click(startButton)
+        const retriggerButton = screen.getByTestId('retrigger-campaign-btn')
+        fireEvent.click(retriggerButton)
       })
 
       expect(mockConfirm).toHaveBeenCalled()
-      expect(global.fetch).not.toHaveBeenCalledWith('/api/campaigns/start', expect.any(Object))
+      expect(global.fetch).not.toHaveBeenCalledWith('/api/campaigns/1/retrigger', expect.any(Object))
     })
 
     it('handles campaign fetch error gracefully', async () => {
