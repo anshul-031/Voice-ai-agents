@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+vb-exotel-*.zip
 
 # debug
 npm-debug.log*

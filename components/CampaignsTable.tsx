@@ -13,14 +13,15 @@ export interface Campaign {
 }
 
 interface CampaignsTableProps {
-  onEditCampaign: (campaign: Campaign) => void
-  onAddCampaign: () => void
-  onViewCampaign: (campaign: Campaign) => void
-  onStartCampaign: (campaign: Campaign) => void
-  campaigns: Campaign[]
+    onEditCampaign: (campaign: Campaign) => void
+    onAddCampaign: () => void
+    onViewCampaign: (campaign: Campaign) => void
+    onRetriggerCampaign: (campaign: Campaign) => void
+    retriggeringId?: string | null
+    campaigns: Campaign[]
 }
 
-export default function CampaignsTable({ onEditCampaign, onAddCampaign, onViewCampaign, onStartCampaign, campaigns }: CampaignsTableProps) {
+export default function CampaignsTable({ onEditCampaign, onAddCampaign, onViewCampaign, onRetriggerCampaign, retriggeringId, campaigns }: CampaignsTableProps) {
     return (
         <div className="flex-1 bg-[#0a0e13] flex flex-col">
             <div className="border-b border-gray-800 px-8 py-6 flex items-center justify-between">
@@ -97,12 +98,12 @@ export default function CampaignsTable({ onEditCampaign, onAddCampaign, onViewCa
                       Edit
                                         </button>
                                         <button
-                                            onClick={() => onStartCampaign(campaign)}
-                                            disabled={campaign.status === 'running' && !!campaign.started_at}
+                                            onClick={() => onRetriggerCampaign(campaign)}
+                                            disabled={retriggeringId === campaign._id}
                                             className="px-3 py-1.5 text-sm text-purple-400 hover:bg-purple-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={campaign.status === 'running' && campaign.started_at ? 'Campaign is running' : 'Start Campaign'}
+                                            title="Retrigger Campaign"
                                         >
-                      Start
+                                            {retriggeringId === campaign._id ? 'Retriggering…' : 'Retrigger'}
                                         </button>
                                     </div>
                                 </div>
