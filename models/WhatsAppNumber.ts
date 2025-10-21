@@ -6,9 +6,17 @@ export interface IWhatsAppNumber extends Document {
     phoneNumberId?: string;
     displayName?: string;
     linkedAgentId?: string;
+    webhookUrl?: string;
     status: 'active' | 'inactive';
     lastInteractionAt?: Date;
     settings?: Record<string, unknown>;
+    metaConfig?: {
+        appId: string;
+        appSecret: string;
+        businessId: string;
+        accessToken: string;
+        graphApiVersion?: string;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -55,6 +63,7 @@ const WhatsAppNumberSchema = new Schema<IWhatsAppNumber>(
             type: String,
             index: true,
         },
+        webhookUrl: String,
         status: {
             type: String,
             enum: ['active', 'inactive'],
@@ -62,6 +71,23 @@ const WhatsAppNumberSchema = new Schema<IWhatsAppNumber>(
         },
         lastInteractionAt: Date,
         settings: (Schema as unknown as { Types?: { Mixed?: unknown } }).Types?.Mixed || Object,
+        metaConfig: {
+            appId: {
+                type: String,
+            },
+            appSecret: {
+                type: String,
+            },
+            businessId: {
+                type: String,
+            },
+            accessToken: {
+                type: String,
+            },
+            graphApiVersion: {
+                type: String,
+            },
+        },
     },
     {
         timestamps: true,
@@ -94,6 +120,7 @@ const ensureIndex = (
 
 ensureIndex(WhatsAppNumberSchema, { phoneNumber: 1 }, { unique: true });
 ensureIndex(WhatsAppNumberSchema, { phoneNumberId: 1 }, { sparse: true });
+ensureIndex(WhatsAppNumberSchema, { userId: 1, status: 1 });
 
 const WhatsAppNumberModel =
     (models?.WhatsAppNumber as Model<IWhatsAppNumber> | undefined) ||

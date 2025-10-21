@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/mongodb';
 import type { MessageHistory } from '@/lib/voiceAgentPipeline';
 import { generateAgentReply } from '@/lib/voiceAgentPipeline';
+import { normalizeWhatsAppNumber } from '@/lib/whatsappUtils';
 import VoiceAgent, { type IVoiceAgent } from '@/models/VoiceAgent';
 import WhatsAppMessage, { type WhatsAppMessageDirection, type WhatsAppMessageType } from '@/models/WhatsAppMessage';
 import WhatsAppNumber, { type IWhatsAppNumber } from '@/models/WhatsAppNumber';
@@ -122,25 +123,68 @@ export interface MetaMessageResponse {
     }>;
 }
 
+const DEFAULT_GRAPH_API_VERSION = 'v20.0';
+
+interface SendMessageOptions {
+    accessToken?: string;
+    phoneNumberId?: string;
+    graphApiVersion?: string;
+    apiUrl?: string;
+}
+
+interface ResolvedSendContext {
+    url: string;
+    token: string;
+}
+
 /**
  * Sends a message to the Meta WhatsApp API.
  * @param metaMessageRequest The message request object
  * @returns The parsed MetaMessageResponse or null on error
  */
-export async function sendMessage(metaMessageRequest: MetaMessageRequest): Promise<MetaMessageResponse | null> {
+function resolveSendContext(options?: SendMessageOptions): ResolvedSendContext | null {
+    const trimmedToken = options?.accessToken?.trim();
+    if (options?.apiUrl && trimmedToken) {
+        return {
+            url: options.apiUrl,
+            token: trimmedToken,
+        };
+    }
+
+    if (options?.phoneNumberId && trimmedToken) {
+        const version = options.graphApiVersion?.trim() || DEFAULT_GRAPH_API_VERSION;
+        return {
+            url: `https://graph.facebook.com/${version}/${options.phoneNumberId}/messages`,
+            token: trimmedToken,
+        };
+    }
+
+    const envUrl = process.env.NEXT_PUBLIC_META_WHATSAPP_API_URL?.trim();
+    const envToken = process.env.NEXT_PUBLIC_META_WHATSAPP_API_TOKEN?.trim();
+
+    if (envUrl && envToken) {
+        return {
+            url: envUrl,
+            token: envToken,
+        };
+    }
+
+    return null;
+}
+
+export async function sendMessage(metaMessageRequest: MetaMessageRequest, options?: SendMessageOptions): Promise<MetaMessageResponse | null> {
     console.info('Entering sendMessage method');
     try {
-        const url = process.env.NEXT_PUBLIC_META_WHATSAPP_API_URL;
-        const token = process.env.NEXT_PUBLIC_META_WHATSAPP_API_TOKEN;
-        if (!url || !token) {
-            console.error('Meta WhatsApp API URL or Token is not set in environment variables');
+        const context = resolveSendContext(options);
+        if (!context) {
+            console.error('Meta WhatsApp API configuration is missing. Cannot send WhatsApp message.');
             return null;
         }
-        const response = await fetch(url, {
+        const response = await fetch(context.url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${context.token}`,
             },
             body: JSON.stringify(metaMessageRequest),
         });
@@ -190,10 +234,10 @@ function getMetaMessageRequest(mobileNo: string, message: string): MetaMessageRe
  * @param message - message body
  * @returns MetaMessageResponse or null on error
  */
-export async function sendTextMessage(mobileNo: string, message: string): Promise<MetaMessageResponse | null> {
+export async function sendTextMessage(mobileNo: string, message: string, options?: SendMessageOptions): Promise<MetaMessageResponse | null> {
     const request = getMetaMessageRequest(mobileNo, message);
     console.info('MetaMessageRequest:', request);
-    return await sendMessage(request);
+    return await sendMessage(request, options);
 }
 /**
  * Processes WhatsApp webhook callback and extracts user phone number and message.
@@ -223,10 +267,17 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
             return;
         }
 
+        const normalizedCustomerForStorage = normalizeWhatsAppNumber(customerNumber) || customerNumber;
+
         await dbConnect();
 
         const configuredNumber = await findConfiguredWhatsAppNumber(metadata, message);
         const agent = await resolveVoiceAgent(configuredNumber);
+        const sendOptions = buildSendMessageOptions(configuredNumber);
+
+        const configuredNumberId = configuredNumber?._id
+            ? (typeof configuredNumber._id === 'string' ? configuredNumber._id : configuredNumber._id.toString())
+            : undefined;
 
         const sessionId = buildSessionId(customerNumber, businessNumber);
 
@@ -238,13 +289,17 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
         if (inboundContent) {
             await WhatsAppMessage.create({
                 sessionId,
-                phoneNumber: customerNumber,
+                phoneNumber: normalizedCustomerForStorage,
                 direction: 'inbound',
                 messageType,
                 content: inboundContent,
                 messageId: message.id,
                 agentId: agent?.id,
-                metadata: { metadata, message },
+                metadata: {
+                    metadata,
+                    message,
+                    configuredWhatsAppNumberId: configuredNumberId,
+                },
             });
         }
 
@@ -252,7 +307,7 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
             console.error('No voice agent configured for WhatsApp number');
             if (customerNumber) {
                 const fallback = 'Sorry, we are unable to process your request right now.';
-                await sendAndPersistOutbound(sessionId, customerNumber, fallback, 'text', undefined);
+                await sendAndPersistOutbound(sessionId, customerNumber, fallback, 'text', undefined, undefined, sendOptions);
             }
             return;
         }
@@ -260,7 +315,7 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
         if (!shouldProcessAsText) {
             console.warn('Received non-text message. Responding with unsupported notice.');
             const unsupported = 'This channel currently supports text messages only. Please send your query as text.';
-            await sendAndPersistOutbound(sessionId, customerNumber, unsupported, 'unsupported', agent.id);
+            await sendAndPersistOutbound(sessionId, customerNumber, unsupported, 'unsupported', agent.id, undefined, sendOptions);
             return;
         }
 
@@ -281,12 +336,14 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
                 agent.id,
                 {
                     model: agentReply.modelName,
+                    voiceAgentId: agent.id,
                 },
+                sendOptions,
             );
         } catch (pipelineError) {
             console.error('Voice agent pipeline error:', pipelineError instanceof Error ? pipelineError.message : pipelineError);
             const failure = 'I am facing an issue generating a response right now. Please try again later.';
-            await sendAndPersistOutbound(sessionId, customerNumber, failure, 'unsupported', agent.id);
+            await sendAndPersistOutbound(sessionId, customerNumber, failure, 'unsupported', agent.id, undefined, sendOptions);
         }
     } catch (e: any) {
         console.error('Error in processWhatsAppCallback:', e?.message || e);
@@ -313,20 +370,37 @@ function resolveBusinessNumber(metadata: any, message: any): string | undefined 
     return metadata?.display_phone_number || metadata?.phone_number_id || message?.to;
 }
 
+function pushMatcher(matchers: Array<Record<string, unknown>>, matcher: Record<string, unknown>) {
+    const serialized = JSON.stringify(matcher);
+    if (!matchers.some(existing => JSON.stringify(existing) === serialized)) {
+        matchers.push(matcher);
+    }
+}
+
+function addPhoneMatchers(matchers: Array<Record<string, unknown>>, value?: string) {
+    if (!value) {
+        return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return;
+    }
+    pushMatcher(matchers, { phoneNumber: trimmed });
+    const normalized = normalizeWhatsAppNumber(trimmed);
+    if (normalized && normalized !== trimmed) {
+        pushMatcher(matchers, { phoneNumber: normalized });
+    }
+}
+
 async function findConfiguredWhatsAppNumber(metadata: any, message: any): Promise<IWhatsAppNumber | null> {
     const matchers: Array<Record<string, unknown>> = [];
 
     if (metadata?.phone_number_id) {
-        matchers.push({ phoneNumberId: metadata.phone_number_id });
+        pushMatcher(matchers, { phoneNumberId: metadata.phone_number_id });
     }
 
-    if (metadata?.display_phone_number) {
-        matchers.push({ phoneNumber: metadata.display_phone_number });
-    }
-
-    if (message?.to) {
-        matchers.push({ phoneNumber: message.to });
-    }
+    addPhoneMatchers(matchers, metadata?.display_phone_number);
+    addPhoneMatchers(matchers, message?.to);
 
     if (!matchers.length) {
         return null;
@@ -358,8 +432,23 @@ async function resolveVoiceAgent(number: IWhatsAppNumber | null): Promise<IVoice
     return null;
 }
 
+function normalizeSessionComponent(value: string): string {
+    const trimmed = value?.trim?.() ?? '';
+    if (!trimmed) {
+        return '';
+    }
+
+    if (/[a-zA-Z]/.test(trimmed)) {
+        return trimmed;
+    }
+
+    return normalizeWhatsAppNumber(trimmed) || trimmed;
+}
+
 function buildSessionId(customerNumber: string, businessNumber: string): string {
-    return `whatsapp_${businessNumber}_${customerNumber}`;
+    const normalizedCustomer = normalizeSessionComponent(customerNumber);
+    const normalizedBusiness = normalizeSessionComponent(businessNumber);
+    return `whatsapp_${normalizedBusiness}_${normalizedCustomer}`;
 }
 
 function mapStoredMessageToHistory(message: any): MessageHistory {
@@ -371,6 +460,26 @@ function mapStoredMessageToHistory(message: any): MessageHistory {
     };
 }
 
+function buildSendMessageOptions(number: IWhatsAppNumber | null): SendMessageOptions | undefined {
+    if (!number?.metaConfig) {
+        return undefined;
+    }
+
+    const accessToken = number.metaConfig.accessToken?.trim();
+    const phoneNumberId = number.phoneNumberId?.trim();
+    const graphApiVersion = number.metaConfig.graphApiVersion?.trim();
+
+    if (!accessToken || !phoneNumberId) {
+        return undefined;
+    }
+
+    return {
+        accessToken,
+        phoneNumberId,
+        graphApiVersion,
+    };
+}
+
 async function sendAndPersistOutbound(
     sessionId: string,
     customerNumber: string,
@@ -378,12 +487,13 @@ async function sendAndPersistOutbound(
     messageType: WhatsAppMessageType,
     agentId?: string,
     metadata?: Record<string, unknown>,
+    options?: SendMessageOptions,
 ) {
-    await sendTextMessage(customerNumber, message);
+    await sendTextMessage(customerNumber, message, options);
 
     await WhatsAppMessage.create({
         sessionId,
-        phoneNumber: customerNumber,
+        phoneNumber: normalizeWhatsAppNumber(customerNumber) || customerNumber,
         direction: 'outbound',
         messageType,
         content: message,
@@ -419,4 +529,5 @@ export const __testExports = {
     buildSessionId,
     mapStoredMessageToHistory,
     extractInboundContent,
+    buildSendMessageOptions,
 };

@@ -38,6 +38,7 @@ describe('Schema ensureIndex fallback', () => {
     runWithIndexesDisabled('@/models/WhatsAppNumber', [
       [{ phoneNumber: 1 }, { unique: true }],
       [{ phoneNumberId: 1 }, { sparse: true }],
+      [{ userId: 1, status: 1 }, undefined],
     ]);
   });
 

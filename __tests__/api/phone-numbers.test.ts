@@ -34,10 +34,25 @@ jest.mock('@/models/PhoneNumber', () => {
 const mockDbConnect = require('@/lib/mongodb');
 const mockPhoneNumber = require('@/models/PhoneNumber');
 
+const originalEnv = process.env;
+
 describe('/api/phone-numbers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDbConnect.mockResolvedValue(undefined);
+    process.env = { ...originalEnv, NEXT_PUBLIC_APP_URL: 'https://example.com' };
+    mockPhoneNumberInstance.save.mockResolvedValue({
+      _id: { toString: () => 'phone1' },
+      webhookUrl: 'https://example.com/api/telephony/webhook/phone_123',
+      websocketUrl: 'wss://example.com/api/telephony/ws/phone_123',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
   describe('GET', () => {
@@ -58,6 +73,21 @@ describe('/api/phone-numbers', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        {
+          _id: { toString: () => 'phone2' },
+          userId: 'user1',
+          phoneNumber: '+1987654321',
+          provider: 'twilio',
+          displayName: 'No Config Phone',
+          exotelConfig: undefined,
+          linkedAgentId: null,
+          webhookUrl: 'http://example.com/other-webhook',
+          websocketUrl: 'ws://example.com/other-ws',
+          status: 'inactive',
+          lastUsed: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       ];
       const mockQuery = {
         sort: jest.fn().mockReturnThis(),
@@ -74,8 +104,11 @@ describe('/api/phone-numbers', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.userId).toBe('user1');
-      expect(data.count).toBe(1);
+  expect(data.count).toBe(2);
       expect(mockPhoneNumber.find).toHaveBeenCalledWith({ userId: 'user1' });
+      expect(data.phoneNumbers[0].exotelConfig?.apiKey).toBe('***y123');
+      expect(data.phoneNumbers[0].exotelConfig?.apiToken).toBe('***n123');
+  expect(data.phoneNumbers[1].exotelConfig).toBeUndefined();
     });
 
     it('should use default userId when not provided', async () => {
@@ -118,6 +151,25 @@ describe('/api/phone-numbers', () => {
       expect(data.success).toBe(false);
       expect(data.error).toBe('Failed to fetch phone numbers');
       expect(data.details).toBe('Unknown error');
+    });
+
+    it('should surface errors from query execution', async () => {
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('query failed')),
+      };
+      mockPhoneNumber.find.mockReturnValue(mockQuery);
+
+      const request = new NextRequest('http://localhost/api/phone-numbers');
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(mockQuery.exec).toHaveBeenCalled();
+      expect(response.status).toBe(500);
+      expect(data.error).toBe('Failed to fetch phone numbers');
+      expect(data.details).toBe('query failed');
     });
   });
 
@@ -235,6 +287,47 @@ describe('/api/phone-numbers', () => {
       expect(data.error).toBe('Failed to create phone number');
       expect(data.details).toBe('Unknown error');
     });
+
+    it('should omit exotel config for non-exotel providers and derive ws urls from http base', async () => {
+      process.env.NEXT_PUBLIC_APP_URL = 'http://dev.local';
+      mockPhoneNumber.findOne.mockResolvedValue(null);
+
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
+      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.13579);
+
+  mockPhoneNumber.mockImplementationOnce((data: any) => ({
+        ...data,
+        _id: { toString: () => 'generated' },
+        save: jest.fn().mockResolvedValue(undefined),
+      }));
+
+      const request = new NextRequest('http://localhost/api/phone-numbers', {
+        method: 'POST',
+        body: JSON.stringify({
+          phoneNumber: '+1999888777',
+          displayName: 'Tech Line',
+          provider: 'twilio',
+          exotelConfig: { apiKey: 'should-not-pass' },
+        }),
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+      const callArgs = mockPhoneNumber.mock.calls[mockPhoneNumber.mock.calls.length - 1][0];
+  const randomValue = randomSpy.mock.results[0]?.value ?? 0.13579;
+  const nowValue = nowSpy.mock.results[0]?.value ?? 1700000000000;
+  const suffix = randomValue.toString(36).substring(2, 11);
+  const expectedId = `phone_${nowValue}_${suffix}`;
+
+      expect(callArgs.exotelConfig).toBeUndefined();
+      expect(callArgs.webhookUrl).toBe(`http://dev.local/api/telephony/webhook/${expectedId}`);
+      expect(callArgs.websocketUrl).toBe(`ws://dev.local/api/telephony/ws/${expectedId}`);
+      expect(response.status).toBe(200);
+      expect(data.phoneNumber.provider).toBe('twilio');
+
+      nowSpy.mockRestore();
+      randomSpy.mockRestore();
+    });
   });
 
   describe('PUT', () => {
@@ -285,6 +378,41 @@ describe('/api/phone-numbers', () => {
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Missing required field: id');
+    });
+
+    it('should persist exotel config and linked agent when supplied', async () => {
+      mockPhoneNumber.findByIdAndUpdate.mockResolvedValue({
+        _id: { toString: () => 'phone1' },
+        userId: 'user1',
+        phoneNumber: '+1234567890',
+        displayName: 'Updated',
+        exotelConfig: { apiKey: 'key', apiToken: 'token' },
+        linkedAgentId: 'agent-2',
+        status: 'active',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const request = new NextRequest('http://localhost/api/phone-numbers', {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: 'phone1',
+          exotelConfig: { apiKey: 'key', apiToken: 'token' },
+          linkedAgentId: 'agent-2',
+        }),
+      });
+
+      const response = await PUT(request);
+      await response.json();
+
+      expect(mockPhoneNumber.findByIdAndUpdate).toHaveBeenCalledWith(
+        'phone1',
+        expect.objectContaining({
+          exotelConfig: { apiKey: 'key', apiToken: 'token' },
+          linkedAgentId: 'agent-2',
+        }),
+        { new: true, runValidators: true },
+      );
     });
 
     it('should return 404 if phone number not found', async () => {

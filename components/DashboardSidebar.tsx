@@ -9,6 +9,7 @@ import {
     FileText,
     Key,
     Megaphone,
+    MessageCircle,
     Phone,
     PhoneCall,
     Receipt,
@@ -44,6 +45,7 @@ export default function DashboardSidebar({ activeView, onNavigate }: DashboardSi
     const navItems = [
         { id: 'voice-agents', label: 'Voice Agents', icon: Bot },
         { id: 'phone-number', label: 'Phone Number', icon: Phone },
+        { id: 'whatsapp-number', label: 'WhatsApp Number', icon: MessageCircle },
         { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
         { id: 'agent-knowledge', label: 'Agent Knowledge', icon: BookOpen },
         { id: 'call-logs', label: 'Call Logs', icon: PhoneCall },
