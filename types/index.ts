@@ -40,9 +40,50 @@ export interface LLMResponse {
         }>;
         fileName?: string;
     };
+    toolInvocation?: ToolInvocationResult;
 }
 
 export interface TTSResponse {
     audioUrl?: string;
     audioData?: string; // base64 encoded audio
+}
+
+export interface AgentToolHeader {
+    key: string;
+    value: string;
+}
+
+export interface AgentToolParameter {
+    name: string;
+    description?: string;
+    type?: string;
+    required?: boolean;
+}
+
+export interface AgentToolDefinition {
+    _id?: string;
+    agentId?: string;
+    name: string;
+    description?: string;
+    webhookUrl: string;
+    method: 'GET' | 'POST';
+    headers: AgentToolHeader[];
+    parameters: AgentToolParameter[];
+    triggerPhrases: string[];
+    successMessage?: string;
+    failureMessage?: string;
+    runAfterCall?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface ToolInvocationResult {
+    toolId: string;
+    toolName: string;
+    success: boolean;
+    reason?: string;
+    payload?: Record<string, unknown> | null;
+    responseStatus?: number;
+    responseBody?: unknown;
+    error?: string | null;
 }

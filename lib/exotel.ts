@@ -3,15 +3,17 @@
  * Handles outbound calling via Exotel API
  */
 
-// Exotel configuration from environment variables
-const EXOTEL_CONFIG = {
-  authKey: process.env.EXOTEL_AUTH_KEY || '',
-  authToken: process.env.EXOTEL_AUTH_TOKEN || '',
-  subdomain: process.env.EXOTEL_SUBDOMAIN || '',
-  accountSid: process.env.EXOTEL_ACCOUNT_SID || '',
-  callerId: process.env.EXOTEL_CALLER_ID || '',
-  url: process.env.EXOTEL_URL || ''
-};
+// Resolve Exotel configuration from environment variables on each call
+function getExotelConfig() {
+  return {
+    authKey: process.env.EXOTEL_AUTH_KEY || '',
+    authToken: process.env.EXOTEL_AUTH_TOKEN || '',
+    subdomain: process.env.EXOTEL_SUBDOMAIN || '',
+    accountSid: process.env.EXOTEL_ACCOUNT_SID || '',
+    callerId: process.env.EXOTEL_CALLER_ID || '',
+    url: process.env.EXOTEL_URL || ''
+  };
+}
 
 export interface ExotelCallParams {
   phoneNumber: string; // 10-digit phone number
@@ -58,6 +60,7 @@ function formatPhoneNumber(phoneNumber: string): string {
  */
 export async function triggerExotelCall(params: ExotelCallParams): Promise<ExotelCallResponse> {
   try {
+    const config = getExotelConfig();
     const formattedNumber = formatPhoneNumber(params.phoneNumber);
     
     // Validate phone number format
@@ -70,16 +73,16 @@ export async function triggerExotelCall(params: ExotelCallParams): Promise<Exote
     }
 
     // Prepare authentication header
-    const authString = Buffer.from(`${EXOTEL_CONFIG.authKey}:${EXOTEL_CONFIG.authToken}`).toString('base64');
+  const authString = Buffer.from(`${config.authKey}:${config.authToken}`).toString('base64');
     
     // Prepare API endpoint
-    const apiUrl = `https://${EXOTEL_CONFIG.subdomain}/v1/Accounts/${EXOTEL_CONFIG.accountSid}/Calls/connect.json`;
+  const apiUrl = `https://${config.subdomain}/v1/Accounts/${config.accountSid}/Calls/connect.json`;
     
     // Prepare request body
     const formData = new URLSearchParams();
     formData.append('From', formattedNumber);
-    formData.append('CallerId', EXOTEL_CONFIG.callerId);
-    formData.append('Url', EXOTEL_CONFIG.url);
+  formData.append('CallerId', config.callerId);
+  formData.append('Url', config.url);
     
     // Make API request
     const response = await fetch(apiUrl, {
@@ -149,25 +152,26 @@ export async function triggerBulkCalls(
  * Validates Exotel configuration
  */
 export function validateExotelConfig(): { valid: boolean; errors: string[] } {
+  const config = getExotelConfig();
   const errors: string[] = [];
   
-  if (!EXOTEL_CONFIG.authKey) {
+  if (!config.authKey) {
     errors.push('EXOTEL_AUTH_KEY is missing');
   }
   
-  if (!EXOTEL_CONFIG.authToken) {
+  if (!config.authToken) {
     errors.push('EXOTEL_AUTH_TOKEN is missing');
   }
   
-  if (!EXOTEL_CONFIG.accountSid) {
+  if (!config.accountSid) {
     errors.push('EXOTEL_ACCOUNT_SID is missing');
   }
   
-  if (!EXOTEL_CONFIG.callerId) {
+  if (!config.callerId) {
     errors.push('EXOTEL_CALLER_ID is missing');
   }
   
-  if (!EXOTEL_CONFIG.url) {
+  if (!config.url) {
     errors.push('EXOTEL_URL is missing');
   }
   

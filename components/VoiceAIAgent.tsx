@@ -2,6 +2,7 @@
 'use client';
 
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
+import AgentToolManager from '@/components/AgentToolManager';
 import ChatBox from '@/components/ChatBox';
 import ChatHistory from '@/components/ChatHistory';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -179,6 +180,10 @@ export default function VoiceAIAgent({
                     throw new Error(err.error || 'LLM request failed');
                 }
                 const llmData: LLMResponse = await llmResponse.json();
+
+                if (llmData.toolInvocation) {
+                    console.log('[VoiceAIAgent] Tool invocation result (STT):', llmData.toolInvocation);
+                }
 
                 // Check if PDF generation was requested
                 let pdfAttachment = undefined;
@@ -542,6 +547,10 @@ export default function VoiceAIAgent({
             const llmData: LLMResponse = await llmResponse.json();
             console.log('[VoiceAIAgent] LLM response:', llmData.llmText);
 
+            if (llmData.toolInvocation) {
+                console.log('[VoiceAIAgent] Tool invocation result (text chat):', llmData.toolInvocation);
+            }
+
             // Check if PDF generation was requested
             let pdfAttachment = undefined;
             if (llmData.pdfCommand) {
@@ -727,119 +736,126 @@ export default function VoiceAIAgent({
                     {/* Model Configuration */}
                     <TopModelBoxes config={modelConfig} />
 
-                    {/* System Prompt */}
-                    <InitialPromptEditor value={initialPrompt} onChange={setInitialPrompt} />
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+                        <div className="space-y-6">
+                            {/* System Prompt */}
+                            <InitialPromptEditor value={initialPrompt} onChange={setInitialPrompt} />
 
-                    {/* Chat Interface - Modern Design */}
-                    <div className="glass-panel rounded-2xl overflow-hidden h-[600px] flex flex-col animate-scale-in">
-                        {/* Modern Chat Header */}
-                        <div className="p-4 border-b border-white/5 bg-black/20 backdrop-blur-sm space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <h3 className="text-lg font-semibold text-white/90">Conversation</h3>
+                            {/* Tools manager */}
+                            <AgentToolManager agentId={agentId} />
+                        </div>
 
-                                    {/* Control Buttons */}
-                                    <motion.div
-                                        className="flex items-center gap-2"
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        {/* History Button */}
-                                        <motion.button
-                                            onClick={() => setShowChatHistory(true)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
-                                            title="View chat history"
-                                            disabled={isProcessing}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
+                        {/* Chat Interface - Modern Design */}
+                        <div className="glass-panel rounded-2xl overflow-hidden h-[600px] flex flex-col animate-scale-in">
+                            {/* Modern Chat Header */}
+                            <div className="p-4 border-b border-white/5 bg-black/20 backdrop-blur-sm space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-lg font-semibold text-white/90">Conversation</h3>
+
+                                        {/* Control Buttons */}
+                                        <motion.div
+                                            className="flex items-center gap-2"
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.3 }}
                                         >
-                                            <Clock size={13} />
-                                            <span>History</span>
-                                        </motion.button>
-
-                                        {/* Clear Chat - Only for TEXT CHAT mode */}
-                                        {isTextChatMode && messages.length > 0 && !isCallActive && (
+                                            {/* History Button */}
                                             <motion.button
-                                                onClick={handleRestartConversation}
+                                                onClick={() => setShowChatHistory(true)}
                                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
-                                                title="Clear chat messages"
+                                                title="View chat history"
                                                 disabled={isProcessing}
-                                                initial={{ opacity: 0, scale: 0.9 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.9 }}
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                             >
-                                                <RotateCcw size={13} />
-                                                <span>Clear</span>
+                                                <Clock size={13} />
+                                                <span>History</span>
                                             </motion.button>
-                                        )}
-                                    </motion.div>
-                                </div>
 
-                                <div className="flex items-center gap-4">
-                                    {/* Modern Status Indicator */}
-                                    {(() => {
-                                        const statusConfig = isCallActive 
-                                            ? { color: 'bg-green-500', glow: 'shadow-[0_0_12px_rgba(48,209,88,0.5)]', label: 'On Call', sublabel: sttIsListening ? 'Listening' : 'Active' }
-                                            : isProcessing
-                                            ? { color: 'bg-blue-500', glow: 'shadow-[0_0_12px_rgba(10,132,255,0.5)]', label: 'Processing', sublabel: '' }
-                                            : { color: 'bg-white/20', glow: '', label: 'Ready', sublabel: '' };
-                                        
-                                        return (
-                                            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                                                <div className={`w-2 h-2 rounded-full ${statusConfig.color} ${statusConfig.glow} ${isCallActive ? 'animate-pulse' : ''}`}></div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-medium text-white/90">{statusConfig.label}</span>
-                                                    {statusConfig.sublabel && (
-                                                        <span className="text-[10px] text-white/50">{statusConfig.sublabel}</span>
-                                                    )}
+                                            {/* Clear Chat - Only for TEXT CHAT mode */}
+                                            {isTextChatMode && messages.length > 0 && !isCallActive && (
+                                                <motion.button
+                                                    onClick={handleRestartConversation}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
+                                                    title="Clear chat messages"
+                                                    disabled={isProcessing}
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    <RotateCcw size={13} />
+                                                    <span>Clear</span>
+                                                </motion.button>
+                                            )}
+                                        </motion.div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        {/* Modern Status Indicator */}
+                                        {(() => {
+                                            const statusConfig = isCallActive
+                                                ? { color: 'bg-green-500', glow: 'shadow-[0_0_12px_rgba(48,209,88,0.5)]', label: 'On Call', sublabel: sttIsListening ? 'Listening' : 'Active' }
+                                                : isProcessing
+                                                ? { color: 'bg-blue-500', glow: 'shadow-[0_0_12px_rgba(10,132,255,0.5)]', label: 'Processing', sublabel: '' }
+                                                : { color: 'bg-white/20', glow: '', label: 'Ready', sublabel: '' };
+
+                                            return (
+                                                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                                                    <div className={`w-2 h-2 rounded-full ${statusConfig.color} ${statusConfig.glow} ${isCallActive ? 'animate-pulse' : ''}`}></div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium text-white/90">{statusConfig.label}</span>
+                                                        {statusConfig.sublabel && (
+                                                            <span className="text-[10px] text-white/50">{statusConfig.sublabel}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })()}
+                                            );
+                                        })()}
 
-                                    {/* Text Chat Button */}
-                                    <motion.button
-                                        onClick={toggleTextInput}
-                                        className={`flex items-center justify-center w-11 h-11 rounded-xl transition-all border ${
-                                            showTextInput
-                                                ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400/30 shadow-lg shadow-blue-500/25'
-                                                : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
-                                        }`}
-                                        title="Text chat mode"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <MessageSquare size={20} className="text-white" />
-                                    </motion.button>
+                                        {/* Text Chat Button */}
+                                        <motion.button
+                                            onClick={toggleTextInput}
+                                            className={`flex items-center justify-center w-11 h-11 rounded-xl transition-all border ${
+                                                showTextInput
+                                                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400/30 shadow-lg shadow-blue-500/25'
+                                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
+                                            }`}
+                                            title="Text chat mode"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <MessageSquare size={20} className="text-white" />
+                                        </motion.button>
 
-                                    {/* Call Button - Modern Design */}
-                                    <motion.button
-                                        onClick={handleCallToggle}
-                                        className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold transition-all border shadow-lg ${
-                                            isCallActive
-                                                ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-400/30 shadow-red-500/25 hover:shadow-red-500/40 text-white'
-                                                : 'bg-gradient-to-br from-green-500 to-green-600 border-green-400/30 shadow-green-500/25 hover:shadow-green-500/40 text-white'
-                                        }`}
-                                        title={isCallActive ? "End Call" : "Start Call"}
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        disabled={callState === 'connecting' || callState === 'ending'}
-                                    >
-                                        {isCallActive ? (
-                                            <>
-                                                <PhoneOff size={19} strokeWidth={2.5} />
-                                                <span className="text-sm">End Call</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Phone size={19} strokeWidth={2.5} />
-                                                <span className="text-sm">Start Call</span>
-                                            </>
-                                        )}
-                                    </motion.button>
+                                        {/* Call Button - Modern Design */}
+                                        <motion.button
+                                            onClick={handleCallToggle}
+                                            className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold transition-all border shadow-lg ${
+                                                isCallActive
+                                                    ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-400/30 shadow-red-500/25 hover:shadow-red-500/40 text-white'
+                                                    : 'bg-gradient-to-br from-green-500 to-green-600 border-green-400/30 shadow-green-500/25 hover:shadow-green-500/40 text-white'
+                                            }`}
+                                            title={isCallActive ? 'End Call' : 'Start Call'}
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            disabled={callState === 'connecting' || callState === 'ending'}
+                                        >
+                                            {isCallActive ? (
+                                                <>
+                                                    <PhoneOff size={19} strokeWidth={2.5} />
+                                                    <span className="text-sm">End Call</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Phone size={19} strokeWidth={2.5} />
+                                                    <span className="text-sm">Start Call</span>
+                                                </>
+                                            )}
+                                        </motion.button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -938,17 +954,17 @@ export default function VoiceAIAgent({
                                     </div>
                                 </motion.div>
                             )}
-                        </div>
 
-                        {/* Chat Messages Area */}
-                        <div className="flex-1 min-h-0">
-                            <ChatBox
-                                messages={messages}
-                                isOpen={isChatOpen}
-                                isListening={isCallActive}
-                                isProcessing={isProcessing}
-                                processingStep={processingStep}
-                            />
+                            {/* Chat Messages Area */}
+                            <div className="flex-1 min-h-0">
+                                <ChatBox
+                                    messages={messages}
+                                    isOpen={isChatOpen}
+                                    isListening={isCallActive}
+                                    isProcessing={isProcessing}
+                                    processingStep={processingStep}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

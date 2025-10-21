@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         // Calculate total messages (history + current user message)
         const totalMessages = (conversationHistory?.length || 0) + 1;
         const shouldSaveToHistory = totalMessages > 2;
+    let assistantMessageSaved = false;
 
         console.log('[LLM] Total messages in conversation:', totalMessages, 'Save to history:', shouldSaveToHistory);
 
@@ -220,6 +221,7 @@ export async function POST(request: NextRequest) {
                         timestamp: new Date(),
                     });
                     console.log('[LLM] Assistant response saved to database (conversation has >2 messages)');
+                    assistantMessageSaved = true;
                 } catch (dbError) {
                     console.error('[LLM] Failed to save assistant response:', dbError);
                     // Continue even if DB save fails
@@ -250,18 +252,20 @@ export async function POST(request: NextRequest) {
             }
 
             // Save assistant response to database (always save for call logs)
-            try {
-                await Chat.create({
-                    userId: 'mukul', // Hardcoded user for now
-                    sessionId: chatSessionId,
-                    role: 'assistant',
-                    content: cleanedText,
-                    timestamp: new Date(),
-                });
-                console.log('[LLM] Assistant response saved to database');
-            } catch (dbError) {
-                console.error('[LLM] Failed to save assistant response:', dbError);
-                // Continue even if DB save fails
+            if (!assistantMessageSaved) {
+                try {
+                    await Chat.create({
+                        userId: 'mukul', // Hardcoded user for now
+                        sessionId: chatSessionId,
+                        role: 'assistant',
+                        content: cleanedText,
+                        timestamp: new Date(),
+                    });
+                    console.log('[LLM] Assistant response saved to database');
+                } catch (dbError) {
+                    console.error('[LLM] Failed to save assistant response:', dbError);
+                    // Continue even if DB save fails
+                }
             }
 
             const response: any = {

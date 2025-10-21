@@ -122,17 +122,12 @@ describe('API: /api/tts', () => {
     it('should handle long text', async () => {
       process.env.SARVAM_API_KEY = 'test_key'
 
-      const mockSarvamResponse = {
-        audios: ['SGVsbG8gd29ybGQ=']
-      }
-      const mockResponse = {
+      ;(global.fetch as jest.Mock).mockImplementation(async () => ({
         ok: true,
         status: 200,
-        json: async () => mockSarvamResponse,
+        json: async () => ({ audios: ['SGVsbG8gd29ybGQ='] }),
         headers: new Headers(),
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce(mockResponse)
+      }))
 
       const longText = 'A'.repeat(5000)
       const request = new NextRequest('http://localhost:3000/api/tts', {
