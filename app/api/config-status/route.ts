@@ -16,7 +16,7 @@ export async function GET() {
     console.log('[config-status] Configuration status:', {
         stt: assemblyAIConfigured,
         llm: geminiConfigured,
-        tts: sarvamConfigured
+        tts: sarvamConfigured,
     });
 
     const allConfigured = assemblyAIConfigured && geminiConfigured && sarvamConfigured;
@@ -26,11 +26,11 @@ export async function GET() {
         services: {
             stt: assemblyAIConfigured,
             llm: geminiConfigured,
-            tts: sarvamConfigured
+            tts: sarvamConfigured,
         },
-        allConfigured: allConfigured,
+        allConfigured,
         message: allConfigured
             ? 'All services configured successfully!'
-            : 'Some API keys are missing or using placeholder values'
+            : 'Some API keys are missing or using placeholder values',
     });
 }

@@ -1,6 +1,7 @@
 import dbConnect, { clearMongoConnection } from '@/lib/mongodb';
-import VoiceAgent from '@/models/VoiceAgent';
-import { NextRequest, NextResponse } from 'next/server';
+import VoiceAgent, { type IVoiceAgent } from '@/models/VoiceAgent';
+import type { Types } from 'mongoose';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // GET - Fetch all voice agents for a user
 export async function GET(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
 
         try {
             await dbConnect();
-        } catch (_connError) {
+        } catch {
             console.error('[Voice Agents API] Connection error, clearing cache and retrying...');
             await clearMongoConnection();
             await dbConnect();
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
             success: true,
             userId,
             agents: agents.map(agent => ({
-                id: (agent._id as any).toString(),
+                id: (agent._id as Types.ObjectId).toString(),
                 userId: agent.userId,
                 title: agent.title,
                 prompt: agent.prompt,
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
                 error: 'Failed to fetch voice agents',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
             console.error('[Voice Agents API] Missing required fields');
             return NextResponse.json(
                 { error: 'Missing required fields: title, prompt' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
                 error: 'Failed to create voice agent',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -129,11 +130,11 @@ export async function PUT(request: NextRequest) {
         if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel)) {
             return NextResponse.json(
                 { error: 'Missing required fields: id and at least one of (title, prompt, llmModel, sttModel, ttsModel)' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
-        const updateData: any = { lastUpdated: new Date() };
+        const updateData: Partial<IVoiceAgent> = { lastUpdated: new Date() };
         if (title) updateData.title = title.trim();
         if (prompt) updateData.prompt = prompt.trim();
         if (llmModel) updateData.llmModel = llmModel;
@@ -143,13 +144,13 @@ export async function PUT(request: NextRequest) {
         const agent = await VoiceAgent.findByIdAndUpdate(
             id,
             updateData,
-            { new: true, runValidators: true }
+            { new: true, runValidators: true },
         );
 
         if (!agent) {
             return NextResponse.json(
                 { error: 'Voice agent not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -177,7 +178,7 @@ export async function PUT(request: NextRequest) {
                 error: 'Failed to update voice agent',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -195,7 +196,7 @@ export async function DELETE(request: NextRequest) {
         if (!id) {
             return NextResponse.json(
                 { error: 'Agent ID is required' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -204,7 +205,7 @@ export async function DELETE(request: NextRequest) {
         if (!result) {
             return NextResponse.json(
                 { error: 'Voice agent not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -222,7 +223,7 @@ export async function DELETE(request: NextRequest) {
                 error: 'Failed to delete voice agent',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

@@ -11,7 +11,7 @@ interface AudioLevelIndicatorProps {
 export default function AudioLevelIndicator({ level, isListening }: AudioLevelIndicatorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationFrameRef = useRef<number | undefined>(undefined);
-    const [barHeights, setBarHeights] = useState<number[]>(Array(64).fill(5));
+    const [_barHeights, setBarHeights] = useState<number[]>(Array(64).fill(5));
     const percentage = Math.min(100, level * 1000);
 
     useEffect(() => {
@@ -33,7 +33,7 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
         window.addEventListener('resize', updateCanvasSize);
 
         const barCount = 64;
-        let currentHeights = Array(barCount).fill(5);
+        const currentHeights = Array(barCount).fill(5);
         let targetHeights = Array(barCount).fill(5);
         let phase = 0;
 
@@ -54,21 +54,21 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
                 // Update target heights based on audio level and wave pattern
                 for (let i = 0; i < barCount; i++) {
                     const normalizedIndex = i / barCount;
-                    
+
                     // Create multiple wave patterns
                     const wave1 = Math.sin(phase + normalizedIndex * Math.PI * 2) * 0.3;
                     const wave2 = Math.sin(phase * 1.5 + normalizedIndex * Math.PI * 4) * 0.2;
                     const wave3 = Math.cos(phase * 0.8 + normalizedIndex * Math.PI * 6) * 0.15;
-                    
+
                     // Combine waves with audio level
                     const combined = (wave1 + wave2 + wave3 + 1) / 2;
                     const baseHeight = (percentage / 100) * combined;
-                    
+
                     // Add randomness for natural feel
                     const randomFactor = Math.random() * 0.2 + 0.9;
                     targetHeights[i] = Math.max(5, Math.min(95, baseHeight * randomFactor * 100));
                 }
-                
+
                 phase += 0.05;
             } else {
                 // Return to idle state
@@ -91,7 +91,7 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
 
                 // Create gradient based on height
                 const gradient = ctx.createLinearGradient(x, y, x, height);
-                
+
                 if (isListening) {
                     const intensity = currentHeights[i] / 100;
                     gradient.addColorStop(0, `rgba(34, 211, 238, ${0.8 * intensity})`); // Cyan
@@ -103,7 +103,7 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
                 }
 
                 ctx.fillStyle = gradient;
-                
+
                 // Draw rounded rectangle
                 const radius = barWidth / 2;
                 ctx.beginPath();
@@ -151,7 +151,7 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
                             isListening ? 'bg-gradient-to-br from-green-400 to-green-500 shadow-lg shadow-green-500/50' : 'bg-white/10'
                         }`}
                         animate={isListening ? { scale: [1, 1.2, 1], opacity: [1, 0.8, 1] } : {}}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                     />
                     <span className="text-xs font-semibold text-white/80">
                         {isListening ? 'Listening' : 'Idle'}
@@ -159,15 +159,15 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
                 </div>
                 <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm">
                     <span className={`text-xs font-mono font-bold transition-colors ${
-                        percentage > 70 ? 'text-green-400' : 
-                        percentage > 40 ? 'text-blue-400' : 
-                        'text-white/40'
+                        percentage > 70 ? 'text-green-400' :
+                            percentage > 40 ? 'text-blue-400' :
+                                'text-white/40'
                     }`}>
                         {percentage.toFixed(0)}%
                     </span>
                 </div>
             </div>
-            
+
             {/* Advanced Canvas-Based Visualizer */}
             <div className="relative w-full h-32 bg-gradient-to-br from-black/60 to-black/30 rounded-2xl overflow-hidden border border-white/5 backdrop-blur-md shadow-2xl">
                 {/* Animated Background Glow */}
@@ -188,14 +188,14 @@ export default function AudioLevelIndicator({ level, isListening }: AudioLevelIn
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                     </>
                 )}
-                
+
                 {/* Canvas Visualizer */}
                 <canvas
                     ref={canvasRef}
                     className="absolute inset-0 w-full h-full"
                     style={{ imageRendering: 'crisp-edges' }}
                 />
-                
+
                 {/* Active Indicator Overlay */}
                 {isListening && percentage > 20 && (
                     <motion.div

@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
             console.error('[generate-pdf] Missing required fields');
             return NextResponse.json(
                 { error: 'Missing required fields: title, sections' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -74,86 +74,86 @@ export async function POST(request: NextRequest) {
             checkPageBreak();
 
             switch (section.type) {
-                case 'heading':
-                    const headingLevel = section.level || 1;
-                    const fontSize = headingLevel === 1 ? 16 : headingLevel === 2 ? 14 : 12;
-                    doc.setFontSize(fontSize);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(section.content as string, margin, yPosition);
-                    yPosition += fontSize / 2 + 5;
-                    break;
+            case 'heading':
+                const headingLevel = section.level || 1;
+                const fontSize = headingLevel === 1 ? 16 : headingLevel === 2 ? 14 : 12;
+                doc.setFontSize(fontSize);
+                doc.setFont('helvetica', 'bold');
+                doc.text(section.content as string, margin, yPosition);
+                yPosition += fontSize / 2 + 5;
+                break;
 
-                case 'text':
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'normal');
-                    const textLines = doc.splitTextToSize(section.content as string, maxWidth);
-                    
-                    for (const line of textLines) {
-                        checkPageBreak(10);
-                        doc.text(line, margin, yPosition);
+            case 'text':
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'normal');
+                const textLines = doc.splitTextToSize(section.content as string, maxWidth);
+
+                for (const line of textLines) {
+                    checkPageBreak(10);
+                    doc.text(line, margin, yPosition);
+                    yPosition += 6;
+                }
+                yPosition += 4;
+                break;
+
+            case 'list':
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'normal');
+                const items = section.content as string[];
+
+                for (const item of items) {
+                    checkPageBreak(10);
+                    doc.text('•', margin, yPosition);
+                    const itemLines = doc.splitTextToSize(item, maxWidth - 10);
+
+                    for (let i = 0; i < itemLines.length; i++) {
+                        if (i > 0) {
+                            checkPageBreak(10);
+                        }
+                        doc.text(itemLines[i], margin + 7, yPosition);
                         yPosition += 6;
                     }
-                    yPosition += 4;
-                    break;
+                }
+                yPosition += 4;
+                break;
 
-                case 'list':
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'normal');
-                    const items = section.content as string[];
-                    
-                    for (const item of items) {
-                        checkPageBreak(10);
-                        doc.text('•', margin, yPosition);
-                        const itemLines = doc.splitTextToSize(item, maxWidth - 10);
-                        
-                        for (let i = 0; i < itemLines.length; i++) {
-                            if (i > 0) {
-                                checkPageBreak(10);
-                            }
-                            doc.text(itemLines[i], margin + 7, yPosition);
-                            yPosition += 6;
-                        }
+            case 'table':
+                const tableData = section.content as string[][];
+                if (tableData.length === 0) break;
+
+                const colWidth = maxWidth / tableData[0].length;
+                const rowHeight = 8;
+
+                doc.setFontSize(10);
+
+                for (let i = 0; i < tableData.length; i++) {
+                    checkPageBreak(rowHeight + 5);
+
+                    // Header row styling
+                    if (i === 0) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFillColor(240, 240, 240);
+                        doc.rect(margin, yPosition - 5, maxWidth, rowHeight, 'F');
+                    } else {
+                        doc.setFont('helvetica', 'normal');
                     }
-                    yPosition += 4;
-                    break;
 
-                case 'table':
-                    const tableData = section.content as string[][];
-                    if (tableData.length === 0) break;
+                    // Draw cells
+                    for (let j = 0; j < tableData[i].length; j++) {
+                        const x = margin + (j * colWidth);
+                        doc.text(tableData[i][j], x + 2, yPosition);
 
-                    const colWidth = maxWidth / tableData[0].length;
-                    const rowHeight = 8;
-
-                    doc.setFontSize(10);
-                    
-                    for (let i = 0; i < tableData.length; i++) {
-                        checkPageBreak(rowHeight + 5);
-
-                        // Header row styling
-                        if (i === 0) {
-                            doc.setFont('helvetica', 'bold');
-                            doc.setFillColor(240, 240, 240);
-                            doc.rect(margin, yPosition - 5, maxWidth, rowHeight, 'F');
-                        } else {
-                            doc.setFont('helvetica', 'normal');
-                        }
-
-                        // Draw cells
-                        for (let j = 0; j < tableData[i].length; j++) {
-                            const x = margin + (j * colWidth);
-                            doc.text(tableData[i][j], x + 2, yPosition);
-                            
-                            // Draw cell borders
-                            doc.rect(x, yPosition - 5, colWidth, rowHeight);
-                        }
-
-                        yPosition += rowHeight;
+                        // Draw cell borders
+                        doc.rect(x, yPosition - 5, colWidth, rowHeight);
                     }
-                    yPosition += 6;
-                    break;
 
-                default:
-                    console.warn('[generate-pdf] Unknown section type:', section.type);
+                    yPosition += rowHeight;
+                }
+                yPosition += 6;
+                break;
+
+            default:
+                console.error('[generate-pdf] Unknown section type:', section.type);
             }
         }
 
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
                 `Page ${i} of ${totalPages}`,
                 pageWidth / 2,
                 pageHeight - 10,
-                { align: 'center' }
+                { align: 'center' },
             );
         }
 
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
                 error: 'Failed to generate PDF',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

@@ -21,7 +21,8 @@
     "test:unit": "jest --testPathPattern=__tests__",
     "test:unit:components": "jest --testPathPattern=__tests__/components",
     "test:unit:hooks": "jest --testPathPattern=__tests__/hooks",
-    "test:unit:api": "jest --testPathPattern=__tests__/api"
+    "test:unit:api": "jest --testPathPattern=__tests__/api",
+    "pr":"npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

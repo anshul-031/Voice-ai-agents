@@ -1,0 +1,110 @@
+# GitHub Copilot Instructions for Voice AI Agents Project
+
+## ⚠️ CRITICAL: Quality Checks Required for EVERY Code Change
+
+**MANDATORY REQUIREMENT**: Before implementing ANY code change, modification, or feature, you MUST verify and ensure the following quality checks pass:
+
+### 🔍 Pre-Implementation Verification
+- [ ] **Build Check**: Run `npm run build` - ensure no build errors exist
+- [ ] **Lint Check**: Run `npm run lint` - ensure no linting errors (warnings acceptable for external APIs)
+- [ ] **Type Check**: Run `npm run typecheck` - ensure no TypeScript compilation errors
+- [ ] **Test Coverage**: Run `npm run test:coverage` - ensure ≥90% code coverage maintained
+
+### 🚀 Implementation Requirements
+When implementing any feature or fixing any issue:
+
+#### 1. **Linting Standards**
+- Run `npm run lint` after every significant change
+- Fix ALL critical linting errors immediately
+- Address warnings in new code (external API warnings may be acceptable)
+- Maintain consistent code style and formatting
+
+#### 2. **TypeScript Type Safety**
+- Run `npm run typecheck` after every change
+- Fix ALL TypeScript compilation errors
+- Use proper types instead of `any` - prefer specific union types
+- Ensure type safety across all components and API routes
+
+#### 3. **Build Verification**
+- Run `npm run build` after every change
+- Fix any build errors immediately
+- Ensure production build succeeds
+- Verify no runtime errors in built application
+
+#### 4. **Test Coverage Requirements**
+- Run `npm run test:coverage` after every change
+- Maintain minimum **90% code coverage** at all times
+- Add comprehensive tests for new features
+- Ensure all existing tests continue to pass
+- Write tests for bug fixes to prevent regressions
+
+### 📋 Code Review Checklist (MANDATORY)
+Before marking any task as complete, verify ALL of these:
+
+**Quality Gates:**
+- [ ] `npm run lint` passes (0 errors, acceptable warnings only)
+- [ ] `npm run typecheck` passes (0 TypeScript errors)
+- [ ] `npm run build` succeeds (production build works)
+- [ ] `npm run test:coverage` shows ≥90% coverage
+- [ ] All tests pass
+
+**Code Quality:**
+- [ ] No `any` types used (except where absolutely necessary for external APIs)
+- [ ] Proper error handling implemented
+- [ ] Type safety maintained throughout
+- [ ] No console statements in production code (use proper logging)
+- [ ] Input validation implemented
+- [ ] Security considerations addressed
+
+**Documentation & Testing:**
+- [ ] New features have corresponding tests
+- [ ] API changes documented
+- [ ] Breaking changes clearly marked
+- [ ] Test coverage maintained or improved
+
+## 🔄 Development Workflow
+
+1. **Pre-Change Verification**: Always check current status of all quality metrics
+2. **Incremental Implementation**: Make small, verifiable changes
+3. **Continuous Validation**: Run quality checks after each change
+4. **Comprehensive Testing**: Ensure functionality works and tests pass
+5. **Final Verification**: Confirm all quality gates pass before commit
+
+## 🚨 Blocking Conditions
+
+**NEVER commit code that fails any of these checks:**
+- Build fails (`npm run build`)
+- TypeScript errors exist (`npm run typecheck`)
+- Linting errors present (`npm run lint`)
+- Test coverage drops below 90% (`npm run test:coverage`)
+- Tests are failing
+
+## 📊 CI/CD Integration
+
+All quality checks are automatically enforced:
+- **Pull Requests**: Require all checks to pass
+- **Build Failures**: Block merges automatically
+- **Coverage Reports**: Generated and tracked in CI
+- **Quality Gates**: Enforced at pipeline level
+
+## 🎯 Project-Specific Guidelines
+
+- **API Routes**: Strict TypeScript types, proper error handling
+- **Components**: React best practices, accessibility compliance
+- **Database**: Mongoose validation, proper indexing
+- **External APIs**: Graceful error handling, fallback mechanisms
+- **Security**: Input sanitization, no sensitive data exposure
+
+## ⚡ Quick Commands Reference
+```bash
+# Quality checks (run in this order)
+npm run lint          # Check code style and quality
+npm run typecheck     # Verify TypeScript compilation
+npm run build         # Ensure production build works
+npm run test:coverage # Verify ≥90% test coverage
+
+# Combined check
+npm run lint && npm run typecheck && npm run build && npm run test:coverage
+```
+
+**REMEMBER**: Quality is not optional - it's a requirement for every single code change. Always verify all quality gates pass before considering any task complete.

@@ -42,7 +42,6 @@ const PhoneNumberSchema: Schema = new Schema(
         phoneNumber: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
         },
         provider: {
@@ -101,9 +100,53 @@ const PhoneNumberSchema: Schema = new Schema(
     }
 );
 
-// Create composite indexes for efficient queries
-PhoneNumberSchema.index({ userId: 1, status: 1 });
-PhoneNumberSchema.index({ linkedAgentId: 1 });
-PhoneNumberSchema.index({ phoneNumber: 1 }, { unique: true, background: true });
+type PhoneNumberIndexOptions = Parameters<Schema<IPhoneNumber>['index']>[1];
+type PhoneNumberIndexEntry = [Record<string, unknown>, PhoneNumberIndexOptions | undefined];
+
+const INDEX_METADATA_KEY = Symbol('declaredIndexes');
+
+const getDeclaredIndexes = (schema: Schema<IPhoneNumber>): PhoneNumberIndexEntry[] => {
+    const typedSchema = schema as unknown as {
+        indexes?: () => PhoneNumberIndexEntry[];
+        [INDEX_METADATA_KEY]?: PhoneNumberIndexEntry[];
+    };
+
+    if (typeof typedSchema.indexes === 'function') {
+        return typedSchema.indexes();
+    }
+
+    if (!typedSchema[INDEX_METADATA_KEY]) {
+        typedSchema[INDEX_METADATA_KEY] = [];
+    }
+
+    return typedSchema[INDEX_METADATA_KEY] as PhoneNumberIndexEntry[];
+};
+
+const ensureIndex = (
+    schema: Schema<IPhoneNumber>,
+    fields: Record<string, 1 | -1>,
+    options?: PhoneNumberIndexOptions,
+) => {
+    const normalizedFields = JSON.stringify(Object.entries(fields).sort(([a], [b]) => a.localeCompare(b)));
+    const normalizedOptions = JSON.stringify(options ?? {});
+    const declaredIndexes = getDeclaredIndexes(schema);
+
+    const exists = declaredIndexes.some(([currentFields, currentOptions]) => {
+        const normalizedCurrentFields = JSON.stringify(Object.entries(currentFields).sort(([a], [b]) => a.localeCompare(b)));
+        const normalizedCurrentOptions = JSON.stringify(currentOptions ?? {});
+        return normalizedCurrentFields === normalizedFields && normalizedCurrentOptions === normalizedOptions;
+    });
+
+    if (!exists) {
+        schema.index(fields, options);
+        if (typeof (schema as any).indexes !== 'function') {
+            declaredIndexes.push([fields, options]);
+        }
+    }
+};
+
+ensureIndex(PhoneNumberSchema, { userId: 1, status: 1 });
+ensureIndex(PhoneNumberSchema, { linkedAgentId: 1 });
+ensureIndex(PhoneNumberSchema, { phoneNumber: 1 }, { unique: true, background: true });
 
 export default mongoose.models.PhoneNumber || mongoose.model<IPhoneNumber>('PhoneNumber', PhoneNumberSchema);

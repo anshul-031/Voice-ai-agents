@@ -135,7 +135,7 @@
 import { motion } from 'framer-motion';
 import { Bot, Download, FileText, Mic, User } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Message } from '../types';
+import type { Message } from '../types';
 
 interface ChatBoxProps {
     messages: Message[];
@@ -150,7 +150,7 @@ export default function ChatBox({
     isOpen,
     isListening: _isListening,
     isProcessing,
-    processingStep
+    processingStep: _processingStep,
 }: ChatBoxProps) {
     const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -158,7 +158,7 @@ export default function ChatBox({
         if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
             scrollRef.current.scrollTo({
                 top: scrollRef.current.scrollHeight,
-                behavior: 'smooth'
+                behavior: 'smooth',
             });
         }
     }, [messages]);
@@ -188,15 +188,15 @@ export default function ChatBox({
                             <motion.div
                                 className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-500/20 to-cyan-500/10 rounded-[2rem] flex items-center justify-center border border-blue-500/20 backdrop-blur-sm shadow-2xl"
                                 whileHover={{ scale: 1.05, rotate: 5 }}
-                                animate={{ 
+                                animate={{
                                     boxShadow: [
                                         '0 0 30px rgba(10, 132, 255, 0.2)',
                                         '0 0 50px rgba(10, 132, 255, 0.4)',
-                                        '0 0 30px rgba(10, 132, 255, 0.2)'
-                                    ]
+                                        '0 0 30px rgba(10, 132, 255, 0.2)',
+                                    ],
                                 }}
-                                transition={{ 
-                                    boxShadow: { duration: 2, repeat: Infinity }
+                                transition={{
+                                    boxShadow: { duration: 2, repeat: Infinity },
                                 }}
                             >
                                 <Mic className="h-16 w-16 text-blue-400 drop-shadow-2xl" strokeWidth={1.5} />
@@ -227,7 +227,7 @@ export default function ChatBox({
                                     animate={{
                                         scale: [1, 1.05, 1],
                                     }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                 >
                                     <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
                                 </motion.div>
@@ -249,12 +249,12 @@ export default function ChatBox({
                                     <div className={`px-5 py-3.5 rounded-2xl shadow-xl backdrop-blur-sm border transition-all duration-300 hover:shadow-2xl ${message.source === 'user'
                                         ? 'bg-gradient-to-br from-blue-600/90 to-blue-500/90 border-blue-400/30 text-white'
                                         : 'glass-card border-slate-600/30 text-white'
-                                        }`}>
+                                    }`}>
                                         <div className="flex items-center gap-2.5 mb-2.5">
                                             <div className={`w-7 h-7 rounded-full flex items-center justify-center shadow-md ${message.source === 'user'
                                                 ? 'bg-blue-400'
                                                 : 'bg-gradient-to-br from-slate-600 to-slate-700'
-                                                }`}>
+                                            }`}>
                                                 {message.source === 'user' ? (
                                                     <User size={14} className="text-white drop-shadow" />
                                                 ) : (
@@ -295,8 +295,8 @@ export default function ChatBox({
                                                     </div>
                                                     <button
                                                         onClick={() => handleDownloadPDF(
-                                                            message.pdfAttachment!.pdfData,
-                                                            message.pdfAttachment!.fileName
+                                                            message.pdfAttachment?.pdfData || '',
+                                                            message.pdfAttachment?.fileName || '',
                                                         )}
                                                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
                                                     >
@@ -330,12 +330,12 @@ export default function ChatBox({
                                             key={i}
                                             className="w-1.5 h-1.5 rounded-full bg-blue-400"
                                             animate={{
-                                                opacity: [0.3, 1, 0.3]
+                                                opacity: [0.3, 1, 0.3],
                                             }}
                                             transition={{
                                                 duration: 1,
                                                 repeat: Infinity,
-                                                delay: i * 0.15
+                                                delay: i * 0.15,
                                             }}
                                         />
                                     ))}

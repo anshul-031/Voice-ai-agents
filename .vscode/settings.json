@@ -16,6 +16,9 @@
     "top_p": 1,
     "inlineSuggestEnable": true
   },
+  "github.copilot.advanced.customInstructions": {
+    "afterChanges": "Please check for lint, build, typecheck, and unit test issues."
+  },
   "github.copilot.chat.followUps": "always",
   "github.copilot.chat.localeOverride": "en",
   "typescript.preferences.includePackageJsonAutoImports": "auto",

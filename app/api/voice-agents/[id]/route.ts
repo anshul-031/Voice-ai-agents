@@ -1,10 +1,10 @@
 import dbConnect from '@/lib/mongodb';
 import VoiceAgent from '@/models/VoiceAgent';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     try {
         await dbConnect();
@@ -14,7 +14,7 @@ export async function GET(
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'Agent ID is required' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -23,7 +23,7 @@ export async function GET(
         if (!agent) {
             return NextResponse.json(
                 { success: false, error: 'Agent not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -45,7 +45,7 @@ export async function GET(
         console.error('[GET /api/voice-agents/[id]] Error:', error);
         return NextResponse.json(
             { success: false, error: 'Failed to fetch agent' },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

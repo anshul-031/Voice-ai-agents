@@ -11,7 +11,7 @@ import {
     Trash2,
     Edit,
     Save,
-    X
+    X,
 } from 'lucide-react';
 
 interface VoiceAgent {
@@ -236,9 +236,9 @@ export default function Sidebar({ isOpen, onToggle, onSelectAgent, onViewSession
                                     <button
                                         onClick={() => setActiveTab('call-log')}
                                         className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors ${activeTab === 'call-log'
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-slate-800 text-gray-400 hover:text-white'
-                                            }`}
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-slate-800 text-gray-400 hover:text-white'
+                                        }`}
                                     >
                                         <Phone className="w-4 h-4" />
                                         <span className="text-sm font-medium">Call Log</span>
@@ -246,9 +246,9 @@ export default function Sidebar({ isOpen, onToggle, onSelectAgent, onViewSession
                                     <button
                                         onClick={() => setActiveTab('voice-agents')}
                                         className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors ${activeTab === 'voice-agents'
-                                                ? 'bg-purple-600 text-white'
-                                                : 'bg-slate-800 text-gray-400 hover:text-white'
-                                            }`}
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-slate-800 text-gray-400 hover:text-white'
+                                        }`}
                                     >
                                         <Bot className="w-4 h-4" />
                                         <span className="text-sm font-medium">Agents</span>

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import AudioLevelIndicator from '@/components/AudioLevelIndicator';
@@ -10,7 +9,7 @@ import InitialPromptEditor from '@/components/InitialPromptEditor';
 import TopModelBoxes from '@/components/TopModelBoxes';
 import { useContinuousCall } from '@/hooks/useContinuousCall';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { LLMResponse, Message, ModelConfig, TTSResponse } from '@/types';
+import type { LLMResponse, Message, ModelConfig, TTSResponse } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Clock, MessageSquare, Phone, PhoneOff, RotateCcw, Send } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -79,6 +78,7 @@ export default function VoiceAIAgent({
     // Audio playback tracking
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
     const isCallActiveRef = useRef<boolean>(false);
+    const messagesRef = useRef<Message[]>([]);
 
     // Model configuration
     const [modelConfig] = useState<ModelConfig>(defaultModelConfig);
@@ -105,6 +105,10 @@ export default function VoiceAIAgent({
                 console.error('[VoiceAIAgent] Failed to check config:', err);
             });
     }, []);
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     // Update prompt when defaultPrompt changes
     useEffect(() => {
@@ -133,10 +137,10 @@ export default function VoiceAIAgent({
 
             // Mimic the same flow as handleAudioSegment but with direct text
             if (!finalText?.trim()) return;
-            
+
             console.log('[VoiceAIAgent] Processing speech:', finalText);
             setIsProcessing(true);
-            
+
             try {
                 setProcessingStep('Generating response...');
 
@@ -147,12 +151,14 @@ export default function VoiceAIAgent({
                     timestamp: new Date(),
                 };
 
-                // Update messages state and capture current conversation history
-                let currentMessages: Message[] = [];
-                setMessages(prev => {
-                    currentMessages = [...prev, userMessage];
-                    return currentMessages;
-                });
+                const previousMessages = messagesRef.current;
+                const nextMessages = [...previousMessages, userMessage];
+                setMessages(nextMessages);
+
+                const conversationHistory = nextMessages.slice(0, -1).map(m => ({
+                    text: m.text,
+                    source: m.source,
+                }));
 
                 const llmResponse = await fetch('/api/llm', {
                     method: 'POST',
@@ -160,21 +166,18 @@ export default function VoiceAIAgent({
                     body: JSON.stringify({
                         prompt: initialPrompt,
                         userText: finalText,
-                        conversationHistory: currentMessages.slice(0, -1).map(m => ({
-                            text: m.text,
-                            source: m.source
-                        })),
-                        sessionId: sessionId,
-                        agentId: agentId
+                        conversationHistory,
+                        sessionId,
+                        agentId,
                     }),
                 });
-                
+
                 // Check again if call is still active
                 if (!isCallActiveRef.current) {
                     console.log('[VoiceAIAgent] Call ended during LLM processing, aborting');
                     return;
                 }
-                
+
                 if (!llmResponse.ok) {
                     const err = await llmResponse.json();
                     throw new Error(err.error || 'LLM request failed');
@@ -232,7 +235,7 @@ export default function VoiceAIAgent({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: llmData.llmText }),
                 });
-                
+
                 // Check again if call is still active before playing audio
                 if (!isCallActiveRef.current) {
                     console.log('[VoiceAIAgent] Call ended during TTS generation, aborting');
@@ -240,11 +243,11 @@ export default function VoiceAIAgent({
                     setIsProcessing(false);
                     return;
                 }
-                
+
                 // Clear processing state once TTS response is received
                 setProcessingStep('');
                 setIsProcessing(false);
-                
+
                 if (ttsResponse.ok) {
                     const ttsData: TTSResponse = await ttsResponse.json();
                     if (ttsData.audioData && isCallActiveRef.current) {
@@ -252,10 +255,10 @@ export default function VoiceAIAgent({
                         const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         const audio = new Audio(audioUrl);
-                        
+
                         // Track current audio for cleanup
                         currentAudioRef.current = audio;
-                        
+
                         audio.play().catch(err => console.error('[VoiceAIAgent] Audio playback error:', err));
                         audio.addEventListener('ended', () => {
                             URL.revokeObjectURL(audioUrl);
@@ -301,9 +304,9 @@ export default function VoiceAIAgent({
     // Send automatic greeting when call connects
     const sendGreetingMessage = useCallback(async () => {
         const greetingText = 'नमस्ते जी, मैं रिया बोल रही हूँ Punjab National Bank की तरफ़ से। क्या मेरी बात अभिजीत जी से हो रही है?';
-        
+
         console.log('[VoiceAIAgent] Sending automatic greeting message');
-        
+
         // Add assistant greeting to messages
         const greetingMessage: Message = {
             id: `greeting-${Date.now()}`,
@@ -312,37 +315,37 @@ export default function VoiceAIAgent({
             timestamp: new Date(),
         };
         setMessages(prev => [...prev, greetingMessage]);
-        
+
         // Generate TTS for greeting
         try {
             setProcessingStep('Generating greeting...');
             setIsProcessing(true);
-            
+
             const ttsResponse = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: greetingText }),
             });
-            
+
             setProcessingStep('');
             setIsProcessing(false);
-            
+
             if (!isCallActiveRef.current) {
                 console.log('[VoiceAIAgent] Call ended before greeting TTS completed');
                 return;
             }
-            
+
             if (ttsResponse.ok) {
                 const ttsData = await ttsResponse.json();
                 if (ttsData.audioData && isCallActiveRef.current) {
                     const audio = new Audio(`data:audio/wav;base64,${ttsData.audioData}`);
                     currentAudioRef.current = audio;
-                    
+
                     audio.onended = () => {
                         console.log('[VoiceAIAgent] Greeting audio playback ended');
                         currentAudioRef.current = null;
                     };
-                    
+
                     await audio.play();
                     console.log('[VoiceAIAgent] Playing greeting audio');
                 }
@@ -362,10 +365,10 @@ export default function VoiceAIAgent({
 
         if (isCallActive || isChatOpen) {
             console.log('[VoiceAIAgent] Ending call...');
-            
+
             // Set flag to stop processing new speech
             isCallActiveRef.current = false;
-            
+
             // Stop any currently playing audio
             if (currentAudioRef.current) {
                 console.log('[VoiceAIAgent] Stopping audio playback');
@@ -373,54 +376,54 @@ export default function VoiceAIAgent({
                 currentAudioRef.current.currentTime = 0;
                 currentAudioRef.current = null;
             }
-            
+
             // Stop STT first to prevent new transcriptions
             sttStop();
-            
+
             // End the call (stops microphone)
             endCall();
-            
+
             // Close chat UI
             setIsChatOpen(false);
-            
+
             // Clear call messages (fresh call each time)
             setMessages([]);
-            
+
             // Clear any processing state
             setProcessingStep('');
             setIsProcessing(false);
-            
+
             // Generate new session ID for next call
             const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             setSessionId(newSessionId);
             console.log('[VoiceAIAgent] Generated new session ID for next call:', newSessionId);
-            
+
             console.log('[VoiceAIAgent] Call ended successfully');
         } else {
             console.log('[VoiceAIAgent] Starting fresh call...');
-            
+
             // Clear messages for fresh call
             setMessages([]);
             setIsTextChatMode(false); // This is a call, not text chat
-            
+
             // Generate new session ID
             const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             setSessionId(newSessionId);
             console.log('[VoiceAIAgent] Generated new session ID for call:', newSessionId);
-            
+
             setIsChatOpen(true);
             try {
                 // Set flag to allow processing speech
                 isCallActiveRef.current = true;
-                
+
                 // Start continuous call
                 await startCall();
-                
+
                 // Start real-time STT
                 sttStart();
-                
+
                 console.log('[VoiceAIAgent] Call started successfully');
-                
+
                 // Send automatic greeting message
                 sendGreetingMessage();
             } catch (error) {
@@ -435,7 +438,7 @@ export default function VoiceAIAgent({
     // Handle restart conversation (for TEXT CHAT mode only)
     const handleRestartConversation = useCallback(() => {
         console.log('[VoiceAIAgent] Clear chat requested');
-        
+
         // Clear both chat and display messages
         setMessages([]);
         setChatMessages([]);
@@ -453,7 +456,7 @@ export default function VoiceAIAgent({
 
         // Set flag to stop processing new speech
         isCallActiveRef.current = false;
-        
+
         // Stop any currently playing audio
         if (currentAudioRef.current) {
             console.log('[VoiceAIAgent] Stopping audio playback');
@@ -471,7 +474,7 @@ export default function VoiceAIAgent({
 
         // Clear messages
         setMessages([]);
-        
+
         // Clear processing state
         setProcessingStep('');
         setIsProcessing(false);
@@ -514,8 +517,8 @@ export default function VoiceAIAgent({
             const updatedMessages = [...chatMessages, userMessage];
             setChatMessages(updatedMessages);
             setMessages(updatedMessages);
-            
-            let currentMessages = updatedMessages;
+
+            const currentMessages = updatedMessages;
 
             setProcessingStep('Generating response...');
 
@@ -523,11 +526,11 @@ export default function VoiceAIAgent({
             const llmPayload = {
                 prompt: initialPrompt,
                 userText: userMessageText,
-                sessionId: sessionId,
-                agentId: agentId,
+                sessionId,
+                agentId,
                 conversationHistory: currentMessages.slice(0, -1).map(m => ({
                     text: m.text,
-                    source: m.source
+                    source: m.source,
                 })),
             };
 
@@ -588,7 +591,7 @@ export default function VoiceAIAgent({
                 timestamp: new Date(),
                 pdfAttachment,
             };
-            
+
             // Update chat messages state
             const finalMessages = [...currentMessages, assistantMessage];
             setChatMessages(finalMessages);
@@ -657,7 +660,7 @@ export default function VoiceAIAgent({
     const toggleTextInput = useCallback(() => {
         const willShow = !showTextInput;
         setShowTextInput(willShow);
-        
+
         if (willShow) {
             // When opening text chat, make sure we're in text chat mode
             if (!isChatOpen) {

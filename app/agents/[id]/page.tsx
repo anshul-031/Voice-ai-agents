@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import VoiceAIAgent from '@/components/VoiceAIAgent';
-import { ModelConfig } from '@/types';
+import type { ModelConfig } from '@/types';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -21,7 +21,7 @@ export default function AgentPage() {
     const params = useParams();
     const router = useRouter();
     const agentId = params.id as string;
-    
+
     const [agent, setAgent] = useState<VoiceAgent | null>(null);
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
@@ -35,14 +35,14 @@ export default function AgentPage() {
         const fetchAgent = async () => {
             try {
                 const res = await fetch(`/api/voice-agents/${agentId}`);
-                
+
                 if (!res.ok) {
                     router.push('/dashboard');
                     return;
                 }
 
                 const data = await res.json();
-                
+
                 if (data.success && data.agent) {
                     setAgent(data.agent);
                     setModelConfig({
@@ -66,7 +66,7 @@ export default function AgentPage() {
 
     const handleDelete = async () => {
         if (!agent) return;
-        
+
         if (!confirm(`Are you sure you want to delete "${agent.title}"? This action cannot be undone.`)) {
             return;
         }

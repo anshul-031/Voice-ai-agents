@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '../test-utils'
 import InitialPromptEditor from '@/components/InitialPromptEditor'
+import { fireEvent, render, screen } from '../test-utils'
 
 describe('InitialPromptEditor - Riya Template', () => {
     const mockOnChange = jest.fn()
@@ -334,6 +334,24 @@ describe('InitialPromptEditor - Riya Template', () => {
             // New content should not contain old content
             expect(solutionsContent).not.toContain('Punjab National Bank')
             expect(solutionsContent).not.toContain('नमस्ते जी')
+        })
+    })
+
+    describe('Character counter styling', () => {
+        it('should highlight near-limit character counts in yellow', () => {
+            render(<InitialPromptEditor value={'a'.repeat(4500)} onChange={mockOnChange} />)
+
+            const counter = screen.getByText('4500')
+            expect(counter).toHaveClass('text-yellow-500')
+            expect(counter).not.toHaveClass('text-red-500')
+        })
+
+        it('should highlight over-limit character counts in red', () => {
+            render(<InitialPromptEditor value={'a'.repeat(5001)} onChange={mockOnChange} />)
+
+            const counter = screen.getByText('5001')
+            expect(counter).toHaveClass('text-yellow-500')
+            expect(counter).toHaveClass('text-red-500')
         })
     })
 })

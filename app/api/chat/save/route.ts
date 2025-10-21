@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
     console.log('[Chat Save] POST request received');
@@ -16,20 +16,20 @@ export async function POST(request: NextRequest) {
             console.error('[Chat Save] Missing required fields');
             return NextResponse.json(
                 { error: 'Missing required fields: sessionId, messages' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
         // Filter only user and assistant messages
         const filteredMessages = messages.filter(
-            msg => ['user', 'assistant'].includes(msg.role)
+            msg => ['user', 'assistant'].includes(msg.role),
         );
 
         if (filteredMessages.length === 0) {
             console.error('[Chat Save] No valid user/assistant messages to save');
             return NextResponse.json(
                 { error: 'No valid user/assistant messages to save' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
                 error: 'Failed to save chat',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

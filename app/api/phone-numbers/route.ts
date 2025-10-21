@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/mongodb';
-import PhoneNumber from '@/models/PhoneNumber';
-import { NextRequest, NextResponse } from 'next/server';
+import PhoneNumber, { type IPhoneNumber } from '@/models/PhoneNumber';
+import type { Types } from 'mongoose';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // GET - Fetch all phone numbers for a user
 export async function GET(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
             success: true,
             userId,
             phoneNumbers: phoneNumbers.map(phone => ({
-                id: (phone._id as any).toString(),
+                id: (phone._id as Types.ObjectId).toString(),
                 userId: phone.userId,
                 phoneNumber: phone.phoneNumber,
                 provider: phone.provider,
@@ -32,8 +33,8 @@ export async function GET(request: NextRequest) {
                 exotelConfig: phone.exotelConfig ? {
                     ...phone.exotelConfig,
                     // Don't expose sensitive data in GET response
-                    apiKey: phone.exotelConfig.apiKey ? '***' + phone.exotelConfig.apiKey.slice(-4) : undefined,
-                    apiToken: phone.exotelConfig.apiToken ? '***' + phone.exotelConfig.apiToken.slice(-4) : undefined,
+                    apiKey: phone.exotelConfig.apiKey ? `***${phone.exotelConfig.apiKey.slice(-4)}` : undefined,
+                    apiToken: phone.exotelConfig.apiToken ? `***${phone.exotelConfig.apiToken.slice(-4)}` : undefined,
                     sid: phone.exotelConfig.sid,
                     appId: phone.exotelConfig.appId,
                     domain: phone.exotelConfig.domain,
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
                 error: 'Failed to fetch phone numbers',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
             console.error('[Phone Numbers API] Missing required fields');
             return NextResponse.json(
                 { error: 'Missing required fields: phoneNumber, displayName' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -103,14 +104,14 @@ export async function POST(request: NextRequest) {
         if (existing) {
             return NextResponse.json(
                 { error: 'Phone number already exists' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
         // Generate webhook URLs
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com';
         const phoneId = `phone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         const webhookUrl = `${baseUrl}/api/telephony/webhook/${phoneId}`;
         const websocketUrl = `${baseUrl.replace('https://', 'wss://').replace('http://', 'ws://')}/api/telephony/ws/${phoneId}`;
 
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
                 error: 'Failed to create phone number',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -188,11 +189,11 @@ export async function PUT(request: NextRequest) {
         if (!id) {
             return NextResponse.json(
                 { error: 'Missing required field: id' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
-        const updateData: any = { updatedAt: new Date() };
+        const updateData: Partial<IPhoneNumber> = { updatedAt: new Date() };
         if (displayName) updateData.displayName = displayName.trim();
         if (exotelConfig) updateData.exotelConfig = exotelConfig;
         if (linkedAgentId !== undefined) updateData.linkedAgentId = linkedAgentId;
@@ -201,13 +202,13 @@ export async function PUT(request: NextRequest) {
         const phoneNumber = await PhoneNumber.findByIdAndUpdate(
             id,
             updateData,
-            { new: true, runValidators: true }
+            { new: true, runValidators: true },
         );
 
         if (!phoneNumber) {
             return NextResponse.json(
                 { error: 'Phone number not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -239,7 +240,7 @@ export async function PUT(request: NextRequest) {
                 error: 'Failed to update phone number',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -257,7 +258,7 @@ export async function DELETE(request: NextRequest) {
         if (!id) {
             return NextResponse.json(
                 { error: 'Phone number ID is required' },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -266,7 +267,7 @@ export async function DELETE(request: NextRequest) {
         if (!result) {
             return NextResponse.json(
                 { error: 'Phone number not found' },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -284,7 +285,7 @@ export async function DELETE(request: NextRequest) {
                 error: 'Failed to delete phone number',
                 details: error instanceof Error ? error.message : 'Unknown error',
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

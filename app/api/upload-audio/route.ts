@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // TODO: Add rate limiting to prevent API abuse
 // TODO: Add input validation for audio file size/type
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         console.log('[upload-audio] Received audio file:', {
             name: audioFile.name,
             size: audioFile.size,
-            type: audioFile.type
+            type: audioFile.type,
         });
 
         // Validate audio file
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
                 language_detection: true, // Automatically detect language
                 entity_detection: true, // Better entity recognition
                 punctuate: true, // Add proper punctuation
-                format_text: true // Apply formatting to improve readability
+                format_text: true, // Apply formatting to improve readability
             }),
         });
 
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
                 console.log('[upload-audio] Transcribed text:', result.text);
                 return NextResponse.json({
                     text: result.text || '',
-                    transcriptId: transcriptId,
+                    transcriptId,
                 });
             } else if (result.status === 'error') {
                 console.error('[upload-audio] AssemblyAI transcription error:', result.error);

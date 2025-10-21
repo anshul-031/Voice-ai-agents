@@ -133,7 +133,7 @@ describe('API: /api/chat/save', () => {
       expect(data.error).toContain('Missing required fields')
     })
 
-    it('should return 400 for no valid user/assistant messages', async () => {
+    it('should return 400 for no valid user/assistant messages to save', async () => {
       const invalidData = {
         sessionId: 'session-123',
         messages: [
@@ -179,6 +179,52 @@ describe('API: /api/chat/save', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Failed to save chat')
       expect(data.details).toBe('Save failed')
+    })
+
+    it('should return 400 when messages is not an array', async () => {
+      const invalidData = {
+        sessionId: 'session-123',
+        messages: 'not an array'
+      }
+
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+
+      const request = new NextRequest('http://localhost:3000/api/chat/save', {
+        method: 'POST',
+        body: JSON.stringify(invalidData)
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Missing required fields')
+    })
+
+    it('should handle non-Error instance save errors', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(Chat as any).mockImplementation(function() {
+        return {
+          save: jest.fn().mockRejectedValue('String error')
+        }
+      })
+
+      const request = new NextRequest('http://localhost:3000/api/chat/save', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'session-123',
+          messages: [
+            { role: 'user', content: 'Test' }
+          ]
+        })
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Failed to save chat')
+      expect(data.details).toBe('Unknown error')
     })
   })
 })

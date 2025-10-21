@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { Copy, Edit2, ExternalLink, Phone, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Copy, Edit2, ExternalLink, Phone, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PhoneNumber {
     id: string
@@ -27,53 +27,53 @@ interface PhoneNumbersTableProps {
 }
 
 export default function PhoneNumbersTable({ onAddPhone, onEditPhone }: PhoneNumbersTableProps) {
-    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
-    const [loading, setLoading] = useState(true)
-    const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchPhoneNumbers()
-    }, [])
+        fetchPhoneNumbers();
+    }, []);
 
     const fetchPhoneNumbers = async () => {
-        setLoading(true)
+        setLoading(true);
         try {
-            const res = await fetch('/api/phone-numbers?userId=mukul')
+            const res = await fetch('/api/phone-numbers?userId=mukul');
             if (res.ok) {
-                const data = await res.json()
-                setPhoneNumbers(data.phoneNumbers || [])
+                const data = await res.json();
+                setPhoneNumbers(data.phoneNumbers || []);
             }
         } catch (error) {
-            console.error('Error fetching phone numbers:', error)
+            console.error('Error fetching phone numbers:', error);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this phone number?')) return
+        if (!confirm('Are you sure you want to delete this phone number?')) return;
 
         try {
             const res = await fetch(`/api/phone-numbers?id=${id}`, {
                 method: 'DELETE',
-            })
+            });
 
             if (res.ok) {
-                fetchPhoneNumbers()
+                fetchPhoneNumbers();
             } else {
-                alert('Failed to delete phone number')
+                alert('Failed to delete phone number');
             }
         } catch (error) {
-            console.error('Error deleting phone number:', error)
-            alert('Failed to delete phone number')
+            console.error('Error deleting phone number:', error);
+            alert('Failed to delete phone number');
         }
-    }
+    };
 
     const copyToClipboard = (text: string, type: string) => {
-        navigator.clipboard.writeText(text)
-        setCopiedUrl(`${type}-${text}`)
-        setTimeout(() => setCopiedUrl(null), 2000)
-    }
+        navigator.clipboard.writeText(text);
+        setCopiedUrl(`${type}-${text}`);
+        setTimeout(() => setCopiedUrl(null), 2000);
+    };
 
     return (
         <div className="flex-1 bg-gradient-to-br from-[#0a0e13] via-[#0d1117] to-[#0a0e13] flex flex-col">
@@ -209,13 +209,13 @@ export default function PhoneNumbersTable({ onAddPhone, onEditPhone }: PhoneNumb
                                 {/* Webhook URLs */}
                                 <div className="border-t border-gray-700/50 pt-4 space-y-2">
                                     <div className="text-xs font-medium text-gray-400 mb-2">Configure in Exotel Portal:</div>
-                                    
+
                                     {phone.webhookUrl && (
                                         <div className="bg-[#0a0e13] rounded-lg p-3 border border-gray-700/50">
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="text-xs font-medium text-gray-400">HTTPS Webhook</span>
                                                 <button
-                                                    onClick={() => copyToClipboard(phone.webhookUrl!, 'webhook')}
+                                                    onClick={() => copyToClipboard(phone.webhookUrl as string, 'webhook')}
                                                     className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
                                                 >
                                                     <Copy className="w-3 h-3" />
@@ -231,7 +231,7 @@ export default function PhoneNumbersTable({ onAddPhone, onEditPhone }: PhoneNumb
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="text-xs font-medium text-gray-400">WebSocket URL</span>
                                                 <button
-                                                    onClick={() => copyToClipboard(phone.websocketUrl!, 'websocket')}
+                                                    onClick={() => copyToClipboard(phone.websocketUrl as string, 'websocket')}
                                                     className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
                                                 >
                                                     <Copy className="w-3 h-3" />
@@ -248,5 +248,5 @@ export default function PhoneNumbersTable({ onAddPhone, onEditPhone }: PhoneNumb
                 )}
             </div>
         </div>
-    )
+    );
 }
