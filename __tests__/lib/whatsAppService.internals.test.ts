@@ -22,11 +22,13 @@ const {
   resolveVoiceAgent,
   inferMessageType,
   resolveBusinessNumber,
+  buildSendMessageOptions,
 } = __testExports as {
   findConfiguredWhatsAppNumber: (metadata: any, message: any) => Promise<any>;
   resolveVoiceAgent: (number: any) => Promise<any>;
   inferMessageType: (message: any) => string;
   resolveBusinessNumber: (metadata: any, message: any) => string | undefined;
+  buildSendMessageOptions: (number: any) => any;
 };
 
 describe('whatsAppService internal helpers', () => {
@@ -57,12 +59,17 @@ describe('whatsAppService internal helpers', () => {
   it('findConfiguredWhatsAppNumber queries Mongo when identifiers exist', async () => {
     WhatsAppNumber.findOne.mockResolvedValue({ id: 'match' });
 
-    const result = await findConfiguredWhatsAppNumber({ phone_number_id: 'id-1' }, { to: '+200' });
+    const result = await findConfiguredWhatsAppNumber(
+      { phone_number_id: 'id-1', display_phone_number: '+91 98730 16484 ' },
+      { to: '+91-98730 16484' },
+    );
 
     expect(WhatsAppNumber.findOne).toHaveBeenCalledWith({
       $or: [
         { phoneNumberId: 'id-1' },
-        { phoneNumber: '+200' },
+        { phoneNumber: '+91 98730 16484' },
+        { phoneNumber: '+919873016484' },
+        { phoneNumber: '+91-98730 16484' },
       ],
     });
     expect(result).toEqual({ id: 'match' });
@@ -99,5 +106,19 @@ describe('whatsAppService internal helpers', () => {
     expect(VoiceAgent.findOne).toHaveBeenCalledWith({ userId: 'user-2' });
     expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(agent).toEqual({ id: 'latest', prompt: 'Prompt' });
+  });
+
+  it('buildSendMessageOptions returns undefined without complete credentials', () => {
+    expect(buildSendMessageOptions(null)).toBeUndefined();
+    expect(buildSendMessageOptions({ metaConfig: { accessToken: 'token' } })).toBeUndefined();
+  });
+
+  it('buildSendMessageOptions returns token and phone id when present', () => {
+    const options = buildSendMessageOptions({
+      phoneNumberId: '123',
+      metaConfig: { accessToken: 'token', graphApiVersion: 'v18.0' },
+    });
+
+    expect(options).toEqual({ accessToken: 'token', phoneNumberId: '123', graphApiVersion: 'v18.0' });
   });
 });
