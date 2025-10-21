@@ -409,3 +409,14 @@ function extractInboundContent(message: any): string | undefined {
     }
     return '[unsupported]';
 }
+
+// Export internal helpers for targeted unit testing without duplicating logic.
+export const __testExports = {
+    findConfiguredWhatsAppNumber,
+    resolveVoiceAgent,
+    inferMessageType,
+    resolveBusinessNumber,
+    buildSessionId,
+    mapStoredMessageToHistory,
+    extractInboundContent,
+};

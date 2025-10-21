@@ -265,6 +265,37 @@ describe('lib/whatsAppService', () => {
       delete process.env.WHATSAPP_VOICE_AGENT_ID;
     });
 
+    it('falls back to most recent agent for the user when linked agent is missing', async () => {
+      const messageTemplate = cloneMessageTemplate();
+      mockDbConnect.mockResolvedValue(undefined);
+      mockWhatsAppNumber.findOne.mockResolvedValue({ userId: 'user-1', linkedAgentId: 'missing-agent' });
+      mockVoiceAgent.findById.mockResolvedValue(null);
+      const sort = jest.fn().mockResolvedValue({ id: 'fallback-agent', prompt: 'Fallback prompt' });
+      mockVoiceAgent.findOne.mockReturnValue({ sort });
+      setupHistory([{ direction: 'outbound', content: 'Prev assistant' }]);
+      mockWhatsAppMessage.create.mockResolvedValue(undefined);
+      mockGenerateAgentReply.mockResolvedValue({
+        text: 'Fallback reply',
+        fullPrompt: 'prompt',
+        rawResult: null,
+        modelName: 'gemini-2.0-flash',
+      });
+
+      await whatsAppService.processWhatsAppCallback(messageTemplate);
+
+      expect(mockVoiceAgent.findOne).toHaveBeenCalledWith({ userId: 'user-1' });
+      expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(mockGenerateAgentReply).toHaveBeenCalledWith(
+        expect.objectContaining({ systemPrompt: 'Fallback prompt' }),
+      );
+      expect((global as any).fetch).toHaveBeenCalledWith(
+        'https://api.meta.test/messages',
+        expect.objectContaining({
+          body: expect.stringContaining('Fallback reply'),
+        }),
+      );
+    });
+
     it('sends failure message when pipeline throws an error', async () => {
       const messageTemplate = cloneMessageTemplate();
       mockDbConnect.mockResolvedValue(undefined);
