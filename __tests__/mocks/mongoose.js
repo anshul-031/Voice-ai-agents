@@ -41,13 +41,21 @@ const connect = jest.fn(async () => ({
 const Schema = jest.fn(function Schema(definition = {}, options = {}) {
 	this.definition = definition;
 	this.options = options;
+	this._indexes = [];
 });
 
 Schema.Types = {
 	ObjectId: jest.fn(() => 'mock-object-id'),
 };
 
-Schema.prototype.index = jest.fn();
+Schema.prototype.index = jest.fn(function index(fields, options) {
+	this._indexes.push([fields, options]);
+	return this;
+});
+
+Schema.prototype.indexes = jest.fn(function indexes() {
+	return [...this._indexes];
+});
 Schema.prototype.pre = jest.fn();
 Schema.prototype.post = jest.fn();
 Schema.prototype.method = jest.fn();

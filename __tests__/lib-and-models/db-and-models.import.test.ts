@@ -69,12 +69,16 @@ describe('lib and models import (esm-safe)', () => {
       import('@/models/Chat'),
       import('@/models/VoiceAgent'),
       import('@/models/PhoneNumber'),
-    ]).then(([c1, c2, c3, c4, c5]) => {
+      import('@/models/WhatsAppMessage'),
+      import('@/models/WhatsAppNumber'),
+    ]).then(([c1, c2, c3, c4, c5, c6, c7]) => {
       expect(c1.default).toBeTruthy()
       expect(c2.default).toBeTruthy()
       expect(c3.default).toBeTruthy()
       expect(c4.default).toBeTruthy()
       expect(c5.default).toBeTruthy()
+      expect(c6.default).toBeTruthy()
+      expect(c7.default).toBeTruthy()
     })
   })
 
