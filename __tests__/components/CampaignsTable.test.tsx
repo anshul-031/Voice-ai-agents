@@ -37,6 +37,7 @@ describe('CampaignsTable Component', () => {
     onEditCampaign: jest.fn(),
     onAddCampaign: jest.fn(),
     onViewCampaign: jest.fn(),
+    onStartCampaign: jest.fn(),
     onRetriggerCampaign: jest.fn()
   }
 
@@ -48,7 +49,9 @@ describe('CampaignsTable Component', () => {
       onEditCampaign: mockHandlers.onEditCampaign,
       onAddCampaign: mockHandlers.onAddCampaign,
       onViewCampaign: mockHandlers.onViewCampaign,
+      onStartCampaign: mockHandlers.onStartCampaign,
       onRetriggerCampaign: mockHandlers.onRetriggerCampaign,
+      startingId: null,
       retriggeringId: null
     }
 
@@ -264,6 +267,39 @@ describe('CampaignsTable Component', () => {
 
       const titleElement = screen.getByText(longTitleCampaign[0].title)
       expect(titleElement).toHaveClass('truncate')
+    })
+  })
+
+  describe('Start Campaign Button', () => {
+    it('should render Start button for each campaign', () => {
+      renderCampaignsTable()
+
+      const startButtons = screen.getAllByText('Start')
+      expect(startButtons).toHaveLength(mockCampaigns.length)
+    })
+
+    it('should disable Start button for running campaigns', () => {
+      renderCampaignsTable()
+
+      const startButtons = screen.getAllByText('Start')
+      expect(startButtons[0]).toBeDisabled()
+      expect(startButtons[1]).not.toBeDisabled()
+    })
+
+    it('should call onStartCampaign with correct campaign when Start button is clicked', () => {
+      renderCampaignsTable()
+
+      const startButtons = screen.getAllByText('Start')
+      fireEvent.click(startButtons[1])
+
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledTimes(1)
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledWith(mockCampaigns[1])
+    })
+
+    it('should show loading state when campaign is starting', () => {
+      renderCampaignsTable({ startingId: mockCampaigns[1]._id })
+
+      expect(screen.getByText('Starting…')).toBeDisabled()
     })
   })
 
