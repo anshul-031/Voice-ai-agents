@@ -10,6 +10,8 @@ import DashboardSidebar from '@/components/DashboardSidebar';
 import PhoneNumberModal from '@/components/PhoneNumberModal';
 import PhoneNumbersTable from '@/components/PhoneNumbersTable';
 import VoiceAgentsTable from '@/components/VoiceAgentsTable';
+import WhatsAppNumberModal from '@/components/WhatsAppNumberModal';
+import WhatsAppNumbersTable from '@/components/WhatsAppNumbersTable';
 import { useEffect, useState } from 'react';
 
 interface VoiceAgent {
@@ -55,6 +57,23 @@ interface PhoneNumber {
     lastUsed?: string;
 }
 
+interface WhatsAppNumber {
+    id: string;
+    phoneNumber: string;
+    phoneNumberId?: string;
+    displayName?: string;
+    status: 'active' | 'inactive';
+    linkedAgentId?: string;
+    webhookUrl?: string;
+    metaConfig?: {
+        appId?: string;
+        appSecret?: string;
+        businessId?: string;
+        accessToken?: string;
+        graphApiVersion?: string;
+    };
+}
+
 export default function DashboardPage() {
     const [activeView, setActiveView] = useState('voice-agents');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,6 +96,9 @@ export default function DashboardPage() {
     const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false);
     const [editingPhoneNumber, setEditingPhoneNumber] = useState<PhoneNumber | undefined>(undefined);
     const [phoneNumbersRefreshKey, setPhoneNumbersRefreshKey] = useState(0);
+    const [whatsAppNumberModalOpen, setWhatsAppNumberModalOpen] = useState(false);
+    const [editingWhatsAppNumber, setEditingWhatsAppNumber] = useState<WhatsAppNumber | undefined>(undefined);
+    const [whatsAppNumbersRefreshKey, setWhatsAppNumbersRefreshKey] = useState(0);
 
     useEffect(() => {
         if (activeView === 'campaigns') {
@@ -196,6 +218,25 @@ export default function DashboardPage() {
         setPhoneNumbersRefreshKey(prev => prev + 1);
     };
 
+    const handleAddWhatsAppNumber = () => {
+        setEditingWhatsAppNumber(undefined);
+        setWhatsAppNumberModalOpen(true);
+    };
+
+    const handleEditWhatsAppNumber = (number: WhatsAppNumber) => {
+        setEditingWhatsAppNumber(number);
+        setWhatsAppNumberModalOpen(true);
+    };
+
+    const handleWhatsAppNumberModalClose = () => {
+        setWhatsAppNumberModalOpen(false);
+        setEditingWhatsAppNumber(undefined);
+    };
+
+    const handleWhatsAppNumberModalSuccess = () => {
+        setWhatsAppNumbersRefreshKey(prev => prev + 1);
+    };
+
     const renderContent = () => {
         switch (activeView) {
         case 'voice-agents':
@@ -234,6 +275,15 @@ export default function DashboardPage() {
                     key={phoneNumbersRefreshKey}
                     onAddPhone={handleAddPhoneNumber}
                     onEditPhone={handleEditPhoneNumber}
+                />
+            );
+
+        case 'whatsapp-number':
+            return (
+                <WhatsAppNumbersTable
+                    key={whatsAppNumbersRefreshKey}
+                    onAddWhatsApp={handleAddWhatsAppNumber}
+                    onEditWhatsApp={handleEditWhatsAppNumber}
                 />
             );
 
@@ -300,6 +350,13 @@ export default function DashboardPage() {
                 onClose={handlePhoneNumberModalClose}
                 phoneNumber={editingPhoneNumber}
                 onSuccess={handlePhoneNumberModalSuccess}
+            />
+
+            <WhatsAppNumberModal
+                isOpen={whatsAppNumberModalOpen}
+                onClose={handleWhatsAppNumberModalClose}
+                whatsAppNumber={editingWhatsAppNumber}
+                onSuccess={handleWhatsAppNumberModalSuccess}
             />
 
             <ChatHistory

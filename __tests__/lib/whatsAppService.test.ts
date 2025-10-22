@@ -103,6 +103,74 @@ describe('lib/whatsAppService', () => {
       expect(resp).toBeNull();
     });
 
+    it('sendMessage uses custom API URL when provided', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [] }) });
+      (global as any).fetch = fetchMock;
+
+      await whatsAppService.sendMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: '1',
+        type: 'text',
+      }, {
+        apiUrl: 'https://custom-meta.example/messages',
+        accessToken: 'custom-token',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://custom-meta.example/messages',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer custom-token' }),
+        }),
+      );
+    });
+
+    it('sendMessage builds default Meta URL from phone number id', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [] }) });
+      (global as any).fetch = fetchMock;
+
+      await whatsAppService.sendMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: '1',
+        type: 'text',
+      }, {
+        phoneNumberId: 'pn-123',
+        graphApiVersion: 'v88.0',
+        accessToken: 'token-xyz',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.facebook.com/v88.0/pn-123/messages',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer token-xyz' }),
+        }),
+      );
+    });
+
+    it('sendMessage falls back to default graph version when provided value is blank', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [] }) });
+      (global as any).fetch = fetchMock;
+
+      await whatsAppService.sendMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: '1',
+        type: 'text',
+      }, {
+        phoneNumberId: 'pn-blank',
+        graphApiVersion: '   ',
+        accessToken: '  token-default  ',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.facebook.com/v20.0/pn-blank/messages',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer token-default' }),
+        }),
+      );
+    });
+
     it('sendTextMessage delegates to sendMessage', async () => {
       const mockResp = { messaging_product: 'whatsapp', contacts: [], messages: [] };
       (global as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockResp });
@@ -721,6 +789,98 @@ describe('lib/whatsAppService', () => {
 
       expect(consoleError.mock.calls.some((call) => call[0] === 'Error in processWhatsAppCallback:' && call[1] === 'db offline')).toBe(true);
       consoleError.mockRestore();
+    });
+  });
+
+  describe('__testExports helpers', () => {
+    const helpers = whatsAppService.__testExports;
+
+    it('skips whitespace-only numbers when building matchers', async () => {
+      const result = await helpers.findConfiguredWhatsAppNumber({
+        display_phone_number: '   ',
+      }, {
+        to: '   ',
+      });
+
+      expect(result).toBeNull();
+      expect(mockWhatsAppNumber.findOne).not.toHaveBeenCalled();
+    });
+
+    it('deduplicates normalized phone number matchers', async () => {
+      mockWhatsAppNumber.findOne.mockResolvedValue({ _id: 'wa-1' });
+
+      await helpers.findConfiguredWhatsAppNumber({
+        phone_number_id: 'pn-1',
+        display_phone_number: '+1 234 ',
+      }, {
+        to: '+1 234 ',
+      });
+
+      expect(mockWhatsAppNumber.findOne).toHaveBeenCalledWith({
+        $or: [
+          { phoneNumberId: 'pn-1' },
+          { phoneNumber: '+1 234' },
+          { phoneNumber: '+1234' },
+        ],
+      });
+    });
+
+    it('omits send options when meta credentials are incomplete', () => {
+      expect(helpers.buildSendMessageOptions(null)).toBeUndefined();
+      expect(helpers.buildSendMessageOptions({} as any)).toBeUndefined();
+      expect(helpers.buildSendMessageOptions({ metaConfig: { accessToken: 'token' } } as any)).toBeUndefined();
+      expect(helpers.buildSendMessageOptions({ metaConfig: { accessToken: 'token', graphApiVersion: 'v20.0' } } as any)).toBeUndefined();
+    });
+
+    it('returns trimmed send options when credentials exist', () => {
+      const options = helpers.buildSendMessageOptions({
+        phoneNumberId: '  pn-42  ',
+        metaConfig: {
+          accessToken: '  token  ',
+          graphApiVersion: '  v20.0  ',
+        },
+      } as any);
+
+      expect(options).toEqual({
+        accessToken: 'token',
+        phoneNumberId: 'pn-42',
+        graphApiVersion: 'v20.0',
+      });
+    });
+
+    it('normalizes numeric session identifiers but preserves alphanumeric labels', () => {
+      const numericId = helpers.buildSessionId('  +1 234 ', ' 00991 ');
+      const alphaId = helpers.buildSessionId('User ABC', ' Agent-42 ');
+      const blankId = helpers.buildSessionId('   ', '   ');
+
+      expect(numericId).toBe('whatsapp_00991_+1234');
+      expect(alphaId).toBe('whatsapp_Agent-42_User ABC');
+      expect(blankId).toBe('whatsapp__');
+    });
+
+    it('maps stored messages and extracts inbound content for each supported type', () => {
+      const outboundHistory = helpers.mapStoredMessageToHistory({ direction: 'outbound', content: 'Sent reply' });
+      const inboundHistory = helpers.mapStoredMessageToHistory({ direction: 'inbound', content: 'Incoming' });
+
+      expect(outboundHistory).toEqual({ source: 'assistant', text: 'Sent reply' });
+      expect(inboundHistory).toEqual({ source: 'user', text: 'Incoming' });
+
+      expect(helpers.extractInboundContent({ type: 'text', text: { body: ' Hello ' } })).toBe('Hello');
+      expect(helpers.extractInboundContent({ type: 'text', text: { body: '   ' } })).toBeUndefined();
+      expect(helpers.extractInboundContent({ type: 'image', image: { caption: 'Sunset' } })).toBe('[image] Sunset');
+      expect(helpers.extractInboundContent({ type: 'image', image: {} })).toBe('[image]');
+      expect(helpers.extractInboundContent({ type: 'audio' })).toBe('[audio]');
+      expect(helpers.extractInboundContent({ type: 'document', document: { caption: 'Specs' } })).toBe('[document] Specs');
+      expect(helpers.extractInboundContent({ type: 'document', document: {} })).toBe('[document]');
+      expect(helpers.extractInboundContent({ type: 'unknown' })).toBe('[unsupported]');
+    });
+
+    it('classifies message types correctly', () => {
+      expect(helpers.inferMessageType({ type: 'text' })).toBe('text');
+      expect(helpers.inferMessageType({ type: 'image' })).toBe('image');
+      expect(helpers.inferMessageType({ type: 'audio' })).toBe('audio');
+      expect(helpers.inferMessageType({ type: 'document' })).toBe('document');
+      expect(helpers.inferMessageType({ type: 'custom' })).toBe('unsupported');
     });
   });
 });
