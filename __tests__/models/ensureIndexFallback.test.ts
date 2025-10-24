@@ -47,6 +47,7 @@ describe('Schema ensureIndex fallback', () => {
       [{ userId: 1, status: 1 }, undefined],
       [{ linkedAgentId: 1 }, undefined],
       [{ phoneNumber: 1 }, { unique: true, background: true }],
+      [{ webhookIdentifier: 1 }, { unique: true, sparse: true }],
     ]);
   });
 });

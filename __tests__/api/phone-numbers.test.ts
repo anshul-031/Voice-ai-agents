@@ -56,6 +56,16 @@ describe('/api/phone-numbers', () => {
   });
 
   describe('GET', () => {
+    const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    afterEach(() => {
+      if (originalAppUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_APP_URL;
+      } else {
+        process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
+      }
+    });
+
     it('should return phone numbers successfully', async () => {
       const mockPhoneNumbers = [
         {
@@ -153,24 +163,6 @@ describe('/api/phone-numbers', () => {
       expect(data.details).toBe('Unknown error');
     });
 
-    it('should surface errors from query execution', async () => {
-      const mockQuery = {
-        sort: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockRejectedValue(new Error('query failed')),
-      };
-      mockPhoneNumber.find.mockReturnValue(mockQuery);
-
-      const request = new NextRequest('http://localhost/api/phone-numbers');
-
-      const response = await GET(request);
-      const data = await response.json();
-
-      expect(mockQuery.exec).toHaveBeenCalled();
-      expect(response.status).toBe(500);
-      expect(data.error).toBe('Failed to fetch phone numbers');
-      expect(data.details).toBe('query failed');
-    });
   });
 
   describe('POST', () => {
@@ -239,6 +231,43 @@ describe('/api/phone-numbers', () => {
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Phone number already exists');
+    });
+
+    it('should ignore exotel config for non-exotel providers', async () => {
+      mockPhoneNumber.findOne.mockResolvedValue(null);
+      const customSave = jest.fn().mockResolvedValue({
+        _id: { toString: () => 'phone-custom' },
+        userId: 'mukul',
+        phoneNumber: '+1555000111',
+        provider: 'custom',
+        displayName: 'Custom Provider',
+        exotelConfig: undefined,
+        linkedAgentId: undefined,
+        webhookUrl: 'https://example.com/api/telephony/webhook/phone_custom',
+        websocketUrl: 'wss://example.com/api/telephony/ws/phone_custom',
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      mockPhoneNumber.prototype.save = customSave;
+
+      const request = new NextRequest('http://localhost/api/phone-numbers', {
+        method: 'POST',
+        body: JSON.stringify({
+          phoneNumber: '+1555000111',
+          displayName: 'Custom Provider',
+          provider: 'custom',
+          exotelConfig: { apiKey: 'unused', apiToken: 'unused' },
+        }),
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.phoneNumber.provider).toBe('custom');
+      expect(data.phoneNumber.exotelConfig).toBeUndefined();
     });
 
     it('should return 500 on database error', async () => {

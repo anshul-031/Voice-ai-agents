@@ -3,6 +3,54 @@ import PhoneNumber, { type IPhoneNumber } from '@/models/PhoneNumber';
 import type { Types } from 'mongoose';
 import { NextResponse, type NextRequest } from 'next/server';
 
+const PLACEHOLDER_HOST_SNIPPETS = ['your-domain.com'];
+
+const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
+
+const isPlaceholderHost = (value?: string | null) => {
+    if (!value) return false;
+    return PLACEHOLDER_HOST_SNIPPETS.some(snippet => value.includes(snippet));
+};
+
+const buildRequestOrigin = (request: NextRequest) => {
+    const url = new URL(request.url);
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const host = forwardedHost ?? request.headers.get('host') ?? url.host;
+    const proto = forwardedProto ?? url.protocol.replace(':', '');
+    return `${proto}://${host}`;
+};
+
+const resolveOrigins = (request: NextRequest) => {
+    const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const baseHttp = envOrigin && !isPlaceholderHost(envOrigin)
+        ? envOrigin
+        : buildRequestOrigin(request);
+
+    const httpOrigin = stripTrailingSlash(baseHttp);
+    const wsOrigin = httpOrigin.startsWith('https')
+        ? httpOrigin.replace(/^https/, 'wss')
+        : httpOrigin.replace(/^http/, 'ws');
+
+    return {
+        httpOrigin,
+        wsOrigin,
+    };
+};
+
+const extractIdentifier = (phone: Pick<IPhoneNumber, 'webhookIdentifier' | 'webhookUrl' | 'websocketUrl'>) => {
+    if (phone.webhookIdentifier) {
+        return phone.webhookIdentifier;
+    }
+
+    const fromWebhook = phone.webhookUrl?.split('/').filter(Boolean).pop();
+    if (fromWebhook) {
+        return fromWebhook;
+    }
+
+    return phone.websocketUrl?.split('/').filter(Boolean).pop();
+};
+
 // GET - Fetch all phone numbers for a user
 export async function GET(request: NextRequest) {
     console.log('[Phone Numbers API] GET request received');
@@ -19,35 +67,43 @@ export async function GET(request: NextRequest) {
             .lean()
             .exec();
 
+        const { httpOrigin, wsOrigin } = resolveOrigins(request);
+
         console.log('[Phone Numbers API] Found', phoneNumbers.length, 'phone numbers for user:', userId);
 
         return NextResponse.json({
             success: true,
             userId,
-            phoneNumbers: phoneNumbers.map(phone => ({
-                id: (phone._id as Types.ObjectId).toString(),
-                userId: phone.userId,
-                phoneNumber: phone.phoneNumber,
-                provider: phone.provider,
-                displayName: phone.displayName,
-                exotelConfig: phone.exotelConfig ? {
-                    ...phone.exotelConfig,
-                    // Don't expose sensitive data in GET response
-                    apiKey: phone.exotelConfig.apiKey ? `***${phone.exotelConfig.apiKey.slice(-4)}` : undefined,
-                    apiToken: phone.exotelConfig.apiToken ? `***${phone.exotelConfig.apiToken.slice(-4)}` : undefined,
-                    sid: phone.exotelConfig.sid,
-                    appId: phone.exotelConfig.appId,
-                    domain: phone.exotelConfig.domain,
-                    region: phone.exotelConfig.region,
-                } : undefined,
-                linkedAgentId: phone.linkedAgentId,
-                webhookUrl: phone.webhookUrl,
-                websocketUrl: phone.websocketUrl,
-                status: phone.status,
-                lastUsed: phone.lastUsed,
-                createdAt: phone.createdAt,
-                updatedAt: phone.updatedAt,
-            })),
+            phoneNumbers: phoneNumbers.map(phone => {
+                const identifier = extractIdentifier(phone as unknown as Pick<IPhoneNumber, 'webhookIdentifier' | 'webhookUrl' | 'websocketUrl'>);
+                const webhookUrl = identifier ? `${httpOrigin}/api/telephony/webhook/${identifier}` : phone.webhookUrl;
+                const websocketUrl = identifier ? `${wsOrigin}/api/telephony/ws/${identifier}` : phone.websocketUrl;
+
+                return {
+                    id: (phone._id as Types.ObjectId).toString(),
+                    userId: phone.userId,
+                    phoneNumber: phone.phoneNumber,
+                    provider: phone.provider,
+                    displayName: phone.displayName,
+                    exotelConfig: phone.exotelConfig ? {
+                        ...phone.exotelConfig,
+                        // Don't expose sensitive data in GET response
+                        apiKey: phone.exotelConfig.apiKey ? `***${phone.exotelConfig.apiKey.slice(-4)}` : undefined,
+                        apiToken: phone.exotelConfig.apiToken ? `***${phone.exotelConfig.apiToken.slice(-4)}` : undefined,
+                        sid: phone.exotelConfig.sid,
+                        appId: phone.exotelConfig.appId,
+                        domain: phone.exotelConfig.domain,
+                        region: phone.exotelConfig.region,
+                    } : undefined,
+                    linkedAgentId: phone.linkedAgentId,
+                    webhookUrl,
+                    websocketUrl,
+                    status: phone.status,
+                    lastUsed: phone.lastUsed,
+                    createdAt: phone.createdAt,
+                    updatedAt: phone.updatedAt,
+                };
+            }),
             count: phoneNumbers.length,
         });
 
@@ -108,12 +164,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate webhook URLs
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com';
+        const { httpOrigin, wsOrigin } = resolveOrigins(request);
         const phoneId = `phone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        const webhookUrl = `${baseUrl}/api/telephony/webhook/${phoneId}`;
-        const websocketUrl = `${baseUrl.replace('https://', 'wss://').replace('http://', 'ws://')}/api/telephony/ws/${phoneId}`;
+        const webhookUrl = `${httpOrigin}/api/telephony/webhook/${phoneId}`;
+        const websocketUrl = `${wsOrigin}/api/telephony/ws/${phoneId}`;
 
         const phoneNumberDoc = new PhoneNumber({
             userId: userId || 'mukul',
@@ -122,6 +177,7 @@ export async function POST(request: NextRequest) {
             displayName: displayName.trim(),
             exotelConfig: provider === 'exotel' ? exotelConfig : undefined,
             linkedAgentId: linkedAgentId || undefined,
+            webhookIdentifier: phoneId,
             webhookUrl,
             websocketUrl,
             status: 'active',
@@ -142,8 +198,8 @@ export async function POST(request: NextRequest) {
                 displayName: phoneNumberDoc.displayName,
                 exotelConfig: phoneNumberDoc.exotelConfig,
                 linkedAgentId: phoneNumberDoc.linkedAgentId,
-                webhookUrl: phoneNumberDoc.webhookUrl,
-                websocketUrl: phoneNumberDoc.websocketUrl,
+                webhookUrl,
+                websocketUrl,
                 status: phoneNumberDoc.status,
                 createdAt: phoneNumberDoc.createdAt,
                 updatedAt: phoneNumberDoc.updatedAt,

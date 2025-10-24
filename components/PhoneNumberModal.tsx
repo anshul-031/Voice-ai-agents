@@ -127,6 +127,9 @@ export default function PhoneNumberModal({ isOpen, onClose, phoneNumber, onSucce
             });
 
             if (res.ok) {
+                if (phoneNumber) {
+                    alert('Your configurations have been stored and will be updated within 24 hours by Pelocal Team.');
+                }
                 onSuccess();
                 onClose();
             } else {

@@ -13,14 +13,26 @@ export interface Campaign {
 }
 
 interface CampaignsTableProps {
-  onEditCampaign: (campaign: Campaign) => void
-  onAddCampaign: () => void
-  onViewCampaign: (campaign: Campaign) => void
-  onStartCampaign: (campaign: Campaign) => void
-  campaigns: Campaign[]
+    onEditCampaign: (campaign: Campaign) => void
+    onAddCampaign: () => void
+    onViewCampaign: (campaign: Campaign) => void
+    onStartCampaign: (campaign: Campaign) => void
+    onRetriggerCampaign: (campaign: Campaign) => void
+    startingId?: string | null
+    retriggeringId?: string | null
+    campaigns: Campaign[]
 }
 
-export default function CampaignsTable({ onEditCampaign, onAddCampaign, onViewCampaign, onStartCampaign, campaigns }: CampaignsTableProps) {
+export default function CampaignsTable({
+    onEditCampaign,
+    onAddCampaign,
+    onViewCampaign,
+    onStartCampaign,
+    onRetriggerCampaign,
+    startingId,
+    retriggeringId,
+    campaigns,
+}: CampaignsTableProps) {
     return (
         <div className="flex-1 bg-[#0a0e13] flex flex-col">
             <div className="border-b border-gray-800 px-8 py-6 flex items-center justify-between">
@@ -98,11 +110,19 @@ export default function CampaignsTable({ onEditCampaign, onAddCampaign, onViewCa
                                         </button>
                                         <button
                                             onClick={() => onStartCampaign(campaign)}
-                                            disabled={campaign.status === 'running' && !!campaign.started_at}
-                                            className="px-3 py-1.5 text-sm text-purple-400 hover:bg-purple-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={campaign.status === 'running' && campaign.started_at ? 'Campaign is running' : 'Start Campaign'}
+                                            disabled={startingId === campaign._id || campaign.status === 'running'}
+                                            className="px-3 py-1.5 text-sm text-green-400 hover:bg-green-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={campaign.status === 'running' ? 'Campaign already running' : 'Start Campaign'}
                                         >
-                      Start
+                                            {startingId === campaign._id ? 'Starting…' : 'Start'}
+                                        </button>
+                                        <button
+                                            onClick={() => onRetriggerCampaign(campaign)}
+                                            disabled={retriggeringId === campaign._id}
+                                            className="px-3 py-1.5 text-sm text-purple-400 hover:bg-purple-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Retrigger Campaign"
+                                        >
+                                            {retriggeringId === campaign._id ? 'Retriggering…' : 'Retrigger'}
                                         </button>
                                     </div>
                                 </div>

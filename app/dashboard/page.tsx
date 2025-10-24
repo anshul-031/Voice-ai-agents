@@ -90,6 +90,8 @@ export default function DashboardPage() {
     const [campaignsRefreshKey, setCampaignsRefreshKey] = useState(0);
     const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null);
     const [contactsModalOpen, setContactsModalOpen] = useState(false);
+    const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
+    const [retriggeringCampaignId, setRetriggeringCampaignId] = useState<string | null>(null);
 
     // Phone Numbers state
     const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false);
@@ -167,11 +169,22 @@ export default function DashboardPage() {
     };
 
     const handleStartCampaign = async (campaign: Campaign) => {
-        if (!confirm(`Are you sure you want to start campaign "${campaign.title}"? This will trigger calls to all contacts in the campaign.`)) {
+        if (!campaign?._id) {
+            return;
+        }
+
+        if (campaign.status === 'running') {
+            alert('Campaign is already running.');
+            return;
+        }
+
+        const confirmed = window.confirm(`Start campaign "${campaign.title}"?`);
+        if (!confirmed) {
             return;
         }
 
         try {
+            setStartingCampaignId(campaign._id);
             const response = await fetch('/api/campaigns/start', {
                 method: 'POST',
                 headers: {
@@ -181,16 +194,48 @@ export default function DashboardPage() {
             });
 
             const data = await response.json();
-
-            if (response.ok && data.success) {
-                alert(`Campaign started successfully! Calling ${data.data.total_contacts} contacts.`);
-                setCampaignsRefreshKey(prev => prev + 1); // Refresh campaigns list
-            } else {
-                alert(`Failed to start campaign: ${data.error || 'Unknown error'}`);
+            if (!response.ok || !data?.success) {
+                throw new Error(data?.error || 'Failed to start campaign');
             }
-        } catch (error: unknown) {
+
+            alert('Campaign starting. Calls are being placed.');
+            setCampaignsRefreshKey(prev => prev + 1);
+        } catch (error) {
             console.error('Error starting campaign:', error);
-            alert('An error occurred while starting the campaign.');
+            alert(error instanceof Error ? error.message : 'Failed to start campaign');
+        } finally {
+            setStartingCampaignId(null);
+        }
+    };
+
+    const handleRetriggerCampaign = async (campaign: Campaign) => {
+        if (!campaign?._id) {
+            return;
+        }
+
+        const confirmed = window.confirm(`Retrigger campaign "${campaign.title}"?`);
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setRetriggeringCampaignId(campaign._id);
+            const response = await fetch(`/api/campaigns/${campaign._id}/retrigger`, {
+                method: 'POST',
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data?.success) {
+                throw new Error(data?.error || 'Failed to retrigger campaign');
+            }
+
+            alert('Campaign retriggered successfully.');
+            setCampaignsRefreshKey(prev => prev + 1);
+        } catch (error) {
+            console.error('Error retriggering campaign:', error);
+            alert(error instanceof Error ? error.message : 'Failed to retrigger campaign');
+        } finally {
+            setRetriggeringCampaignId(null);
         }
     };
 
@@ -261,6 +306,9 @@ export default function DashboardPage() {
                     onEditCampaign={handleEditCampaign}
                     onViewCampaign={handleViewCampaign}
                     onStartCampaign={handleStartCampaign}
+                    onRetriggerCampaign={handleRetriggerCampaign}
+                    startingId={startingCampaignId}
+                    retriggeringId={retriggeringCampaignId}
                 />
             );
 

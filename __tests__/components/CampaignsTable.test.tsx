@@ -1,5 +1,6 @@
 import CampaignsTable, { Campaign } from '@/components/CampaignsTable'
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 
 describe('CampaignsTable Component', () => {
   const mockCampaigns: Campaign[] = [
@@ -36,7 +37,25 @@ describe('CampaignsTable Component', () => {
     onEditCampaign: jest.fn(),
     onAddCampaign: jest.fn(),
     onViewCampaign: jest.fn(),
-    onStartCampaign: jest.fn()
+    onStartCampaign: jest.fn(),
+    onRetriggerCampaign: jest.fn()
+  }
+
+  type CampaignsTableProps = ComponentProps<typeof CampaignsTable>
+
+  const renderCampaignsTable = (props: Partial<CampaignsTableProps> = {}) => {
+    const defaultProps: CampaignsTableProps = {
+      campaigns: mockCampaigns,
+      onEditCampaign: mockHandlers.onEditCampaign,
+      onAddCampaign: mockHandlers.onAddCampaign,
+      onViewCampaign: mockHandlers.onViewCampaign,
+      onStartCampaign: mockHandlers.onStartCampaign,
+      onRetriggerCampaign: mockHandlers.onRetriggerCampaign,
+      startingId: null,
+      retriggeringId: null
+    }
+
+    return render(<CampaignsTable {...defaultProps} {...props} />)
   }
 
   beforeEach(() => {
@@ -45,57 +64,25 @@ describe('CampaignsTable Component', () => {
 
   describe('Rendering', () => {
     it('should render the component with title', () => {
-      render(
-        <CampaignsTable
-          campaigns={[]}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: [] })
 
       expect(screen.getByText('Campaigns')).toBeInTheDocument()
     })
 
     it('should render Add Campaign button', () => {
-      render(
-        <CampaignsTable
-          campaigns={[]}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: [] })
 
       expect(screen.getByText('+ Add Campaign')).toBeInTheDocument()
     })
 
     it('should display empty state when no campaigns', () => {
-      render(
-        <CampaignsTable
-          campaigns={[]}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: [] })
 
       expect(screen.getByText('No campaigns yet. Click "Add Campaign" to create one.')).toBeInTheDocument()
     })
 
-    it('should render table headers when campaigns exist', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      it('should render table headers when campaigns exist', () => {
+        renderCampaignsTable()
 
       expect(screen.getByText('Campaign Title')).toBeInTheDocument()
       expect(screen.getByText('Status')).toBeInTheDocument()
@@ -105,15 +92,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should render all campaigns in the list', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+        renderCampaignsTable()
 
       expect(screen.getByText('Campaign 1')).toBeInTheDocument()
       expect(screen.getByText('Campaign 2')).toBeInTheDocument()
@@ -121,15 +100,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should display campaign status badges correctly', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+        renderCampaignsTable()
 
       expect(screen.getByText('running')).toBeInTheDocument()
       expect(screen.getByText('stopped')).toBeInTheDocument()
@@ -137,15 +108,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should format dates correctly', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+        renderCampaignsTable()
 
       // Dates should be formatted using toLocaleDateString
       const startDate = new Date('2025-10-01').toLocaleDateString()
@@ -156,15 +119,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should render View and Edit buttons for each campaign', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+        renderCampaignsTable()
 
       const viewButtons = screen.getAllByText('View')
       const editButtons = screen.getAllByText('Edit')
@@ -176,15 +131,7 @@ describe('CampaignsTable Component', () => {
 
   describe('User Interactions', () => {
     it('should call onAddCampaign when Add Campaign button is clicked', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable()
 
       const addButton = screen.getByText('+ Add Campaign')
       fireEvent.click(addButton)
@@ -193,15 +140,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should call onViewCampaign with correct campaign when View button is clicked', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable()
 
       const viewButtons = screen.getAllByText('View')
       fireEvent.click(viewButtons[0])
@@ -211,15 +150,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should call onEditCampaign with correct campaign when Edit button is clicked', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable()
 
       const editButtons = screen.getAllByText('Edit')
       fireEvent.click(editButtons[1])
@@ -229,15 +160,7 @@ describe('CampaignsTable Component', () => {
     })
 
     it('should handle multiple button clicks correctly', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable()
 
       const viewButtons = screen.getAllByText('View')
       const editButtons = screen.getAllByText('Edit')
@@ -263,15 +186,7 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={runningCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: runningCampaign })
 
       const statusBadge = screen.getByText('running').closest('span')
       expect(statusBadge).toHaveClass('bg-emerald-500/10', 'text-emerald-400')
@@ -288,15 +203,7 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={stoppedCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: stoppedCampaign })
 
       const statusBadge = screen.getByText('stopped').closest('span')
       expect(statusBadge).toHaveClass('bg-red-500/10', 'text-red-400')
@@ -313,15 +220,7 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={completedCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: completedCampaign })
 
       const statusBadge = screen.getByText('completed').closest('span')
       expect(statusBadge).toHaveClass('bg-blue-500/10', 'text-blue-400')
@@ -340,30 +239,14 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={campaignNoUpdatedAt}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: campaignNoUpdatedAt })
 
       const placeholderCells = screen.getAllByText('-', { exact: true })
       expect(placeholderCells.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should handle single campaign', () => {
-      render(
-        <CampaignsTable
-          campaigns={[mockCampaigns[0]]}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: [mockCampaigns[0]] })
 
       expect(screen.getByText('Campaign 1')).toBeInTheDocument()
       expect(screen.queryByText('Campaign 2')).not.toBeInTheDocument()
@@ -380,15 +263,7 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={longTitleCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: longTitleCampaign })
 
       const titleElement = screen.getByText(longTitleCampaign[0].title)
       expect(titleElement).toHaveClass('truncate')
@@ -397,87 +272,67 @@ describe('CampaignsTable Component', () => {
 
   describe('Start Campaign Button', () => {
     it('should render Start button for each campaign', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable()
 
       const startButtons = screen.getAllByText('Start')
-      expect(startButtons).toHaveLength(3)
-    })
-
-    it('should call onStartCampaign with correct campaign when Start button is clicked', () => {
-      render(
-        <CampaignsTable
-          campaigns={mockCampaigns}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
-
-      const startButtons = screen.getAllByText('Start')
-      fireEvent.click(startButtons[0])
-
-      expect(mockHandlers.onStartCampaign).toHaveBeenCalledTimes(1)
-      expect(mockHandlers.onStartCampaign).toHaveBeenCalledWith(mockCampaigns[0])
+      expect(startButtons).toHaveLength(mockCampaigns.length)
     })
 
     it('should disable Start button for running campaigns', () => {
-      const runningCampaign: Campaign[] = [{
-        _id: '1',
-        title: 'Running Campaign',
-        status: 'running',
-        start_date: '2025-10-01',
-        updated_at: '2025-10-10',
-        agent_id: 'emi reminder',
-        user_id: 'user1',
-        started_at: '2025-10-10T10:00:00Z'
-      }]
+      renderCampaignsTable()
 
-      render(
-        <CampaignsTable
-          campaigns={runningCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
-
-      const startButton = screen.getByText('Start')
-      expect(startButton).toBeDisabled()
+      const startButtons = screen.getAllByText('Start')
+      expect(startButtons[0]).toBeDisabled()
+      expect(startButtons[1]).not.toBeDisabled()
     })
 
-    it('should enable Start button for stopped campaigns', () => {
-      const stoppedCampaign: Campaign[] = [{
-        _id: '1',
-        title: 'Stopped Campaign',
-        status: 'stopped',
-        start_date: '2025-10-01',
-        updated_at: '2025-10-10',
-        agent_id: 'emi reminder',
-        user_id: 'user1'
-      }]
+    it('should call onStartCampaign with correct campaign when Start button is clicked', () => {
+      renderCampaignsTable()
 
-      render(
-        <CampaignsTable
-          campaigns={stoppedCampaign}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      const startButtons = screen.getAllByText('Start')
+      fireEvent.click(startButtons[1])
 
-      const startButton = screen.getByText('Start')
-      expect(startButton).not.toBeDisabled()
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledTimes(1)
+      expect(mockHandlers.onStartCampaign).toHaveBeenCalledWith(mockCampaigns[1])
+    })
+
+    it('should show loading state when campaign is starting', () => {
+      renderCampaignsTable({ startingId: mockCampaigns[1]._id })
+
+      expect(screen.getByText('Starting…')).toBeDisabled()
+    })
+  })
+
+  describe('Retrigger Campaign Button', () => {
+    it('should render Retrigger button for each campaign', () => {
+      renderCampaignsTable()
+
+      const retriggerButtons = screen.getAllByText('Retrigger')
+      expect(retriggerButtons).toHaveLength(mockCampaigns.length)
+    })
+
+    it('should call onRetriggerCampaign with correct campaign when Retrigger button is clicked', () => {
+      renderCampaignsTable()
+
+      const retriggerButtons = screen.getAllByText('Retrigger')
+      fireEvent.click(retriggerButtons[0])
+
+      expect(mockHandlers.onRetriggerCampaign).toHaveBeenCalledTimes(1)
+      expect(mockHandlers.onRetriggerCampaign).toHaveBeenCalledWith(mockCampaigns[0])
+    })
+
+    it('should disable Retrigger button and show loading state when retriggering', () => {
+      renderCampaignsTable({ retriggeringId: mockCampaigns[0]._id })
+
+      const retriggeringButton = screen.getByText('Retriggering…')
+      expect(retriggeringButton).toBeDisabled()
+    })
+
+    it('should keep Retrigger button enabled when not retriggering', () => {
+      renderCampaignsTable({ retriggeringId: 'different-id' })
+
+      const retriggerButtons = screen.getAllByText('Retrigger')
+      expect(retriggerButtons[0]).not.toBeDisabled()
     })
 
     it('should display campaign progress when available', () => {
@@ -494,15 +349,7 @@ describe('CampaignsTable Component', () => {
         calls_failed: 5
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={campaignWithProgress}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: campaignWithProgress })
 
       expect(screen.getByText('45/100')).toBeInTheDocument()
       expect(screen.getByText('(5 failed)')).toBeInTheDocument()
@@ -519,17 +366,8 @@ describe('CampaignsTable Component', () => {
         user_id: 'user1'
       }]
 
-      render(
-        <CampaignsTable
-          campaigns={campaignNoProgress}
-          onEditCampaign={mockHandlers.onEditCampaign}
-          onAddCampaign={mockHandlers.onAddCampaign}
-          onViewCampaign={mockHandlers.onViewCampaign}
-          onStartCampaign={mockHandlers.onStartCampaign}
-        />
-      )
+      renderCampaignsTable({ campaigns: campaignNoProgress })
 
-      // Check for dash in Progress column
       const progressCells = screen.getAllByText('-')
       expect(progressCells.length).toBeGreaterThan(0)
     })
