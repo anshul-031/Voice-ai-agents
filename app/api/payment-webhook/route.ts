@@ -47,18 +47,66 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('[Payment Webhook] POST request received');
 
-    // Parse request body
-    let payload: PaymentWebhookRequest;
-    try {
-      payload = await request.json();
-      console.log('[Payment Webhook] Request payload:', {
-        phoneNumber: payload.phone_number || payload.phoneNumber,
-        amount: payload.amount,
-        transactionId: payload.transactionId,
-        status: payload.status,
+    // Prepare to parse body with support for both text/plain and JSON
+    const contentType = request.headers.get('content-type') || '';
+    let payload: PaymentWebhookRequest | undefined;
+    if (contentType.includes('text/plain')) {
+      const raw = (await request.text()).trim();
+      if (raw === 'hi') {
+        return new NextResponse(' hello ', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+      // Try to parse text as JSON (common in tests/clients that omit JSON header)
+      try {
+        payload = JSON.parse(raw);
+      } catch (e) {
+        console.error('[Payment Webhook] Failed to parse JSON from text/plain:', e);
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid JSON in request body',
+            error: 'INVALID_JSON',
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Parse request body as JSON
+      try {
+        const parsed: PaymentWebhookRequest = await request.json();
+        payload = parsed;
+        console.log('[Payment Webhook] Request payload:', {
+          phoneNumber: parsed.phone_number || parsed.phoneNumber,
+          amount: parsed.amount,
+          transactionId: parsed.transactionId,
+          status: parsed.status,
+        });
+      } catch (parseError) {
+        console.error('[Payment Webhook] Failed to parse JSON:', parseError);
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid JSON in request body',
+            error: 'INVALID_JSON',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Echo shortcut for JSON payloads
+    const msg = (payload as any)?.message ?? (payload as any)?.msg;
+    if (msg === 'hi') {
+      return new NextResponse(' hello ', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
       });
-    } catch (parseError) {
-      console.error('[Payment Webhook] Failed to parse JSON:', parseError);
+    }
+
+    // Safety: ensure payload exists before proceeding
+    if (!payload) {
       return NextResponse.json(
         {
           success: false,
@@ -70,7 +118,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Extract phone number (support both snake_case and camelCase)
-    const phoneNumber = payload.phone_number || payload.phoneNumber;
+  const phoneNumber = payload.phone_number || payload.phoneNumber;
 
     // Validate phone number
     if (!phoneNumber || typeof phoneNumber !== 'string') {
@@ -105,7 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     console.log('[Payment Webhook] Successfully received payment notification');
     console.log('[Payment Webhook] Phone number received:', phoneNumber);
     console.log('[Payment Webhook] Timestamp:', timestamp);
-    if (payload.transactionId) {
+    if (payload && payload.transactionId) {
       console.log('[Payment Webhook] Transaction ID:', payload.transactionId);
     }
 
@@ -117,7 +165,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       timestamp,
     };
 
-    if (payload.transactionId) {
+    if (payload && payload.transactionId) {
       response.transactionId = payload.transactionId;
     }
 
