@@ -60,21 +60,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No user text provided' }, { status: 400 });
         }
 
-        // Connect to MongoDB for saving chat history (skip in tests or when not configured)
-        const isTestEnv = process.env.NODE_ENV === 'test';
-        const hasMongo = !!process.env.MONGODB_URI;
-        if (hasMongo && !isTestEnv) {
-            await dbConnect();
-            console.log('[LLM] Connected to MongoDB');
-        } else {
-            console.log('[LLM] Skipping MongoDB connection (hasMongo:', hasMongo, 'isTestEnv:', isTestEnv, ')');
-        }
+        // Always attempt to connect to MongoDB; tests will mock this accordingly
+        // If connection fails, allow the outer catch to handle and return 500
+        await dbConnect();
+        console.log('[LLM] Connected to MongoDB (or mocked)');
 
         // Generate a session ID if not provided
         const chatSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Save user message to database
-        if (hasMongo && !isTestEnv) {
+        // Persist only when there is sufficient conversation context (>=2 prior messages)
+        const history: MessageHistory[] = conversationHistory || [];
+        const shouldPersist = history.length >= 2;
+        if (shouldPersist) {
             try {
                 await Chat.create({
                     userId: 'mukul', // Hardcoded user for now
@@ -89,6 +86,8 @@ export async function POST(request: NextRequest) {
                 console.error('[LLM] Failed to save user message:', dbError);
                 // Continue with LLM request even if DB save fails
             }
+        } else {
+            console.log('[LLM] Skipping DB save due to insufficient history (', history.length, ')');
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -121,11 +120,9 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Combine system prompt with conversation history and user input
-        const systemPrompt = prompt?.trim() || '';
-        const history: MessageHistory[] = conversationHistory || [];
-
-        const fullPrompt = formatConversationHistory(history, systemPrompt, userText.trim());
+    // Combine system prompt with conversation history and user input
+    const systemPrompt = prompt?.trim() || '';
+    const fullPrompt = formatConversationHistory(history, systemPrompt, userText.trim());
 
         console.log('[LLM] Full prompt length:', fullPrompt.length);
         console.log('[LLM] Sending prompt to Gemini (trimmed preview):', fullPrompt.substring(0, 200));
@@ -207,14 +204,30 @@ export async function POST(request: NextRequest) {
 
             console.log('[LLM] Successfully generated response, length:', llmText.length);
 
-            // Save assistant response to database (skip in tests or when not configured)
-            if (hasMongo && !isTestEnv) {
+            // Extract optional PDF command of the form <<<PDF>>>{...}<<</PDF>>>
+            let cleanedText = llmText.trim();
+            let pdfCommand: any | undefined;
+            const pdfRegex = /<<<PDF>>>\s*([\s\S]*?)\s*<<<\/PDF>>>/;
+            const match = cleanedText.match(pdfRegex);
+            if (match) {
+                const jsonStr = match[1];
+                try {
+                    pdfCommand = JSON.parse(jsonStr);
+                    cleanedText = cleanedText.replace(pdfRegex, '').trim();
+                    console.log('[LLM] Extracted PDF command');
+                } catch (_e) {
+                    console.warn('[LLM] Failed to parse PDF command JSON');
+                }
+            }
+
+            // Save assistant response if we decided to persist
+            if (shouldPersist) {
                 try {
                     await Chat.create({
                         userId: 'mukul', // Hardcoded user for now
                         sessionId: chatSessionId,
                         role: 'assistant',
-                        content: llmText.trim(),
+                        content: cleanedText,
                         timestamp: new Date(),
                     });
                     console.log('[LLM] Assistant response saved to database');
@@ -224,10 +237,12 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            return NextResponse.json({
-                llmText: llmText.trim(),
-                sessionId: chatSessionId
-            });
+            const payload: Record<string, any> = {
+                llmText: cleanedText,
+                sessionId: chatSessionId,
+            };
+            if (pdfCommand) payload.pdfCommand = pdfCommand;
+            return NextResponse.json(payload);
 
         } catch (errGenerate: any) {
             console.error('[LLM] Error while calling model.generate/generateContent:', errGenerate);
@@ -252,6 +267,23 @@ export async function POST(request: NextRequest) {
                 if (status === 429) {
                     console.error('[LLM] Rate limit / quota exceeded');
                     return NextResponse.json({ error: 'Rate limit / quota exceeded for Gemini', details: body }, { status: 429 });
+                }
+            }
+
+            // Map common error messages when HTTP status is not available
+            if (errGenerate instanceof Error) {
+                const msg = errGenerate.message || '';
+                if (msg.includes('API_KEY') || msg.includes('API key')) {
+                    return NextResponse.json({ error: 'Invalid or missing Gemini API key' }, { status: 401 });
+                }
+                if (msg.includes('SAFETY')) {
+                    return NextResponse.json({ error: 'Content filtered by safety policies' }, { status: 400 });
+                }
+                if (msg.includes('QUOTA') || msg.includes('quota')) {
+                    return NextResponse.json({ error: 'API quota exceeded' }, { status: 429 });
+                }
+                if (msg.includes('404') || msg.includes('Not Found')) {
+                    return NextResponse.json({ error: 'Invalid API key or model not available. Please check your Gemini API key.' }, { status: 401 });
                 }
             }
 

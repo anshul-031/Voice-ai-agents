@@ -12,6 +12,10 @@ const customJestConfig = {
   moduleNameMapper: {
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/$1',
+    // Mocks for ESM-heavy deps used by mongoose
+    '^mongoose$': '<rootDir>/__mocks__/mongoose.ts',
+    '^mongodb$': '<rootDir>/__mocks__/mongodb.js',
+    '^bson$': '<rootDir>/__mocks__/bson.js',
   },
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
@@ -40,6 +44,7 @@ const customJestConfig = {
     '/test-components-static.js',
     '/__tests__/test-utils.tsx',
     '/__tests__/mocks.tsx',
+    '/__tests__/mocks/',
   ],
   coverageThreshold: {
     global: {
@@ -58,3 +63,4 @@ const customJestConfig = {
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
 module.exports = createJestConfig(customJestConfig)
+
