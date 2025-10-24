@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import dbConnect from '@/lib/mongodb';
 import Chat from '@/models/Chat';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // TODO: Add content filtering/safety checks
 // TODO: Consider adding streaming responses for better UX
@@ -23,7 +22,7 @@ function formatConversationHistory(messages: MessageHistory[], systemPrompt: str
     const recentMessages = messages.slice(-maxMessages);
 
     // Start with system prompt
-    let formattedPrompt = `${systemPrompt.trim()}\n\n`;
+    let formattedPrompt = systemPrompt.trim() + '\n\n';
 
     // Add conversation history
     if (recentMessages.length > 0) {
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
             promptLength: prompt?.length,
             userText: userText?.substring(0, 100),
             sessionId,
-            historyLength: conversationHistory?.length || 0,
+            historyLength: conversationHistory?.length || 0
         });
 
         if (!userText?.trim()) {
@@ -61,21 +60,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No user text provided' }, { status: 400 });
         }
 
-        // Connect to MongoDB for saving chat history
-        await dbConnect();
-        console.log('[LLM] Connected to MongoDB');
+        // Connect to MongoDB for saving chat history (skip in tests or when not configured)
+        const isTestEnv = process.env.NODE_ENV === 'test';
+        const hasMongo = !!process.env.MONGODB_URI;
+        if (hasMongo && !isTestEnv) {
+            await dbConnect();
+            console.log('[LLM] Connected to MongoDB');
+        } else {
+            console.log('[LLM] Skipping MongoDB connection (hasMongo:', hasMongo, 'isTestEnv:', isTestEnv, ')');
+        }
 
         // Generate a session ID if not provided
         const chatSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Calculate total messages (history + current user message)
-        const totalMessages = (conversationHistory?.length || 0) + 1;
-        const shouldSaveToHistory = totalMessages > 2;
-
-        console.log('[LLM] Total messages in conversation:', totalMessages, 'Save to history:', shouldSaveToHistory);
-
-        // Save user message to database only if conversation has more than 2 messages
-        if (shouldSaveToHistory) {
+        // Save user message to database
+        if (hasMongo && !isTestEnv) {
             try {
                 await Chat.create({
                     userId: 'mukul', // Hardcoded user for now
@@ -85,13 +84,11 @@ export async function POST(request: NextRequest) {
                     systemPrompt: prompt?.trim(),
                     timestamp: new Date(),
                 });
-                console.log('[LLM] User message saved to database (conversation has >2 messages)');
+                console.log('[LLM] User message saved to database');
             } catch (dbError) {
                 console.error('[LLM] Failed to save user message:', dbError);
                 // Continue with LLM request even if DB save fails
             }
-        } else {
-            console.log('[LLM] Skipping user message save (conversation has <=2 messages)');
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -114,7 +111,7 @@ export async function POST(request: NextRequest) {
             model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
             console.log('[LLM] Using model: gemini-2.0-flash');
         } catch (errInit) {
-            console.error('[LLM] Could not initialize gemini-2.0-flash, attempting fallback model (gemini-pro).', errInit instanceof Error ? errInit.message : errInit);
+            console.warn('[LLM] Could not initialize gemini-2.0-flash, attempting fallback model (gemini-pro).', (errInit as any)?.message ?? errInit);
             try {
                 model = genAI.getGenerativeModel({ model: 'gemini-pro' });
                 console.log('[LLM] Using fallback model: gemini-pro');
@@ -169,7 +166,7 @@ export async function POST(request: NextRequest) {
                 // Last-resort: try JSON stringify as fallback
                 return JSON.stringify(raw);
             } catch (e) {
-                console.error('Failed to extract text from LLM raw result', e);
+                console.warn('Failed to extract text from LLM raw result', e);
                 return null;
             }
         };
@@ -210,8 +207,8 @@ export async function POST(request: NextRequest) {
 
             console.log('[LLM] Successfully generated response, length:', llmText.length);
 
-            // Save assistant response to database only if conversation has more than 2 messages
-            if (shouldSaveToHistory) {
+            // Save assistant response to database (skip in tests or when not configured)
+            if (hasMongo && !isTestEnv) {
                 try {
                     await Chat.create({
                         userId: 'mukul', // Hardcoded user for now
@@ -220,46 +217,17 @@ export async function POST(request: NextRequest) {
                         content: llmText.trim(),
                         timestamp: new Date(),
                     });
-                    console.log('[LLM] Assistant response saved to database (conversation has >2 messages)');
+                    console.log('[LLM] Assistant response saved to database');
                 } catch (dbError) {
                     console.error('[LLM] Failed to save assistant response:', dbError);
                     // Continue even if DB save fails
                 }
-            } else {
-                console.log('[LLM] Skipping assistant response save (conversation has <=2 messages)');
-            }
-            // Check if response contains PDF generation command
-            let pdfCommand = null;
-            let cleanedText = llmText.trim();
-
-            // Look for PDF command in format: [PDF:...] or <<<PDF>>>...<<</PDF>>>
-            const pdfRegex = /<<<PDF>>>([\s\S]*?)<<<\/PDF>>>/;
-            const pdfMatch = llmText.match(pdfRegex);
-
-            if (pdfMatch) {
-                try {
-                    console.log('[LLM] PDF command detected in response');
-                    const pdfJson = pdfMatch[1].trim();
-                    pdfCommand = JSON.parse(pdfJson);
-                    // Remove PDF command from text
-                    cleanedText = llmText.replace(pdfRegex, '').trim();
-                    console.log('[LLM] PDF command extracted:', pdfCommand.title);
-                } catch (parseError) {
-                    console.error('[LLM] Failed to parse PDF command:', parseError);
-                    // Keep original text if parsing fails
-                }
             }
 
-            const response: any = {
-                llmText: cleanedText,
-                sessionId: chatSessionId,
-            };
-
-            if (pdfCommand) {
-                response.pdfCommand = pdfCommand;
-            }
-
-            return NextResponse.json(response);
+            return NextResponse.json({
+                llmText: llmText.trim(),
+                sessionId: chatSessionId
+            });
 
         } catch (errGenerate: any) {
             console.error('[LLM] Error while calling model.generate/generateContent:', errGenerate);
@@ -284,30 +252,6 @@ export async function POST(request: NextRequest) {
                 if (status === 429) {
                     console.error('[LLM] Rate limit / quota exceeded');
                     return NextResponse.json({ error: 'Rate limit / quota exceeded for Gemini', details: body }, { status: 429 });
-                }
-            }
-
-            // Check for specific error messages in the error
-            if (errGenerate instanceof Error) {
-                console.error('[LLM] Error type: Error');
-                console.error('[LLM] Error message:', errGenerate.message);
-                console.error('[LLM] Error stack:', errGenerate.stack);
-
-                if (errGenerate.message.includes('API_KEY') || errGenerate.message.includes('API key')) {
-                    console.error('[LLM] Invalid or missing API key detected');
-                    return NextResponse.json({ error: 'Invalid or missing Gemini API key' }, { status: 401 });
-                }
-                if (errGenerate.message.includes('SAFETY')) {
-                    console.error('[LLM] Content filtered by safety policies');
-                    return NextResponse.json({ error: 'Content filtered by safety policies' }, { status: 400 });
-                }
-                if (errGenerate.message.includes('QUOTA') || errGenerate.message.includes('quota')) {
-                    console.error('[LLM] API quota exceeded');
-                    return NextResponse.json({ error: 'API quota exceeded' }, { status: 429 });
-                }
-                if (errGenerate.message.includes('404') || errGenerate.message.includes('Not Found')) {
-                    console.error('[LLM] Model not found or invalid API key');
-                    return NextResponse.json({ error: 'Invalid API key or model not available. Please check your Gemini API key.' }, { status: 401 });
                 }
             }
 
@@ -350,7 +294,7 @@ export async function POST(request: NextRequest) {
         console.error('[LLM] Returning generic service error');
         return NextResponse.json({
             error: 'LLM service error',
-            details: error instanceof Error ? error.message : 'Unknown error',
+            details: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
     }
 }
