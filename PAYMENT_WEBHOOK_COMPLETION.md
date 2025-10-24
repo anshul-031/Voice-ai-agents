@@ -191,17 +191,17 @@ npm run test:coverage
 ### Manual Testing with cURL
 ```bash
 # Success case
-curl -X POST http://localhost:3000/api/payment-webhook \
+curl -X POST https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook \
   -H "Content-Type: application/json" \
   -d '{"phone_number": "+919876543210", "amount": 500}'
 
 # Using camelCase
-curl -X POST http://localhost:3000/api/payment-webhook \
+curl -X POST https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook \
   -H "Content-Type: application/json" \
   -d '{"phoneNumber": "+919876543210"}'
 
 # Health check
-curl http://localhost:3000/api/payment-webhook
+curl https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook
 ```
 
 ## Files Modified/Created
@@ -264,3 +264,10 @@ The payment webhook has been successfully implemented on the `anshul_webhook` br
 - ✅ Build integration verified
 
 The webhook is ready for deployment and can accept payment notifications with phone numbers, validate them, and send back acknowledgment responses with timestamps.
+
+## Deployment Details
+
+**Vercel Domain**: https://pelocal-voice-ai-agents.vercel.app/
+**Webhook Endpoint**: https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook
+
+The webhook is now deployed and accessible via the Vercel domain. Use this URL for production integrations with payment providers.

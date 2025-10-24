@@ -76,7 +76,7 @@ The payment webhook endpoint (`/api/payment-webhook`) handles incoming payment n
 
 **Successful Request**:
 ```bash
-curl -X POST http://localhost:3000/api/payment-webhook \
+curl -X POST https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "phone_number": "+919876543210",
@@ -88,7 +88,7 @@ curl -X POST http://localhost:3000/api/payment-webhook \
 
 **Using camelCase**:
 ```bash
-curl -X POST http://localhost:3000/api/payment-webhook \
+curl -X POST https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "phoneNumber": "+919876543210",
@@ -98,13 +98,13 @@ curl -X POST http://localhost:3000/api/payment-webhook \
 
 **Health Check**:
 ```bash
-curl http://localhost:3000/api/payment-webhook
+curl https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook
 ```
 
 ### Using JavaScript/Fetch
 
 ```javascript
-const response = await fetch('/api/payment-webhook', {
+const response = await fetch('https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -131,7 +131,7 @@ console.log(data);
 import requests
 import json
 
-url = 'http://localhost:3000/api/payment-webhook'
+url = 'https://pelocal-voice-ai-agents.vercel.app/api/payment-webhook'
 payload = {
     'phone_number': '+919876543210',
     'amount': 500,
