@@ -16,6 +16,14 @@ describe('/api/payment-webhook route', () => {
       expect(data).toHaveProperty('status', 'operational')
       expect(data).toHaveProperty('endpoints')
     })
+
+    it('echoes hello for message=hi via query', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook?message=hi')
+      const res = await GET(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
   })
 
   describe('POST - Payload validation', () => {

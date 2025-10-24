@@ -144,6 +144,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function GET(_request: NextRequest): Promise<NextResponse> {
   console.log('[Payment Webhook] GET request received - Health check');
 
+  // If a message query param is provided and equals 'hi', echo back " hello " as plain text
+  try {
+    const url = new URL(_request.url);
+    const msg = url.searchParams.get('message') || url.searchParams.get('msg');
+    if (msg === 'hi') {
+      return new NextResponse(' hello ', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }
+  } catch {
+    // ignore URL parse errors and fall through to default JSON response
+  }
+
   return NextResponse.json(
     {
       service: 'Payment Webhook Handler',
