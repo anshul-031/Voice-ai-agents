@@ -53,6 +53,30 @@ describe('/api/payment-webhook route', () => {
       expect(text).toBe(' hello ')
     })
 
+    it('echoes hello for urlencoded body with message=hi', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: 'message=hi',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
+
+    it('echoes hello for JSON string body "hi"', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: '"hi"',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
+
     it('returns 400 for invalid JSON body', async () => {
       const req = new NextRequest('http://localhost/api/payment-webhook', {
         method: 'POST',

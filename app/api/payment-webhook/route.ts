@@ -48,8 +48,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     console.log('[Payment Webhook] POST request received');
 
     // Prepare to parse body with support for both text/plain and JSON
-    const contentType = request.headers.get('content-type') || '';
-    let payload: PaymentWebhookRequest | undefined;
+    const contentType = (request.headers.get('content-type') || '').toLowerCase();
+    let payload: PaymentWebhookRequest | string | undefined;
     if (contentType.includes('text/plain')) {
       const raw = (await request.text()).trim();
       if (raw === 'hi') {
@@ -72,16 +72,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           { status: 400 }
         );
       }
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const raw = await request.text();
+      const params = new URLSearchParams(raw);
+      const msgParam = params.get('message') || params.get('msg');
+      if (msgParam === 'hi') {
+        return new NextResponse(' hello ', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+      // Build a payload object from form fields if present
+      payload = {
+        phone_number: params.get('phone_number') || undefined,
+        phoneNumber: params.get('phoneNumber') || undefined,
+        amount: params.get('amount') ? Number(params.get('amount')) : undefined,
+        transactionId: params.get('transactionId') || undefined,
+        status: params.get('status') || undefined,
+        timestamp: params.get('timestamp') || undefined,
+      } as PaymentWebhookRequest;
     } else {
       // Parse request body as JSON
       try {
-        const parsed: PaymentWebhookRequest = await request.json();
+        const parsed = await request.json();
         payload = parsed;
         console.log('[Payment Webhook] Request payload:', {
-          phoneNumber: parsed.phone_number || parsed.phoneNumber,
-          amount: parsed.amount,
-          transactionId: parsed.transactionId,
-          status: parsed.status,
+          phoneNumber: (parsed as any)?.phone_number || (parsed as any)?.phoneNumber,
+          amount: (parsed as any)?.amount,
+          transactionId: (parsed as any)?.transactionId,
+          status: (parsed as any)?.status,
         });
       } catch (parseError) {
         console.error('[Payment Webhook] Failed to parse JSON:', parseError);
@@ -97,6 +116,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Echo shortcut for JSON payloads
+    if (typeof payload === 'string') {
+      if (payload.trim().toLowerCase() === 'hi') {
+        return new NextResponse(' hello ', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+      // if it's a string but not 'hi', treat as invalid JSON shape
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid JSON in request body',
+          error: 'INVALID_JSON',
+        },
+        { status: 400 }
+      );
+    }
+
     const msg = (payload as any)?.message ?? (payload as any)?.msg;
     if (msg === 'hi') {
       return new NextResponse(' hello ', {
