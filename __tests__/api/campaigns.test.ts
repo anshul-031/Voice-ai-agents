@@ -94,6 +94,20 @@ describe('API: /api/campaigns', () => {
       expect(data.success).toBe(false)
       expect(data.error).toBe('Query failed')
     })
+
+    it('should surface unknown error message for non-Error throws', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      const mockSort = jest.fn().mockRejectedValue('totally broken')
+      const mockFind = jest.fn().mockReturnValue({ sort: mockSort })
+      ;(Campaign.find as jest.Mock) = mockFind
+
+      const response = await GET()
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
+    })
   })
 
   describe('POST Request - Create new campaign', () => {
@@ -222,6 +236,23 @@ describe('API: /api/campaigns', () => {
 
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
+    })
+
+    it('should default to unknown error when rejection is not an Error instance', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(Campaign.create as jest.Mock).mockRejectedValue('write failed badly')
+
+      const request = new NextRequest('http://localhost:3000/api/campaigns', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Test', start_date: '2025-10-15', user_id: 'user123' })
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
     })
   })
 
@@ -381,6 +412,23 @@ describe('API: /api/campaigns', () => {
       await PUT(request)
 
       expect(Campaign.findByIdAndUpdate).toHaveBeenCalled()
+    })
+
+    it('should respond with unknown error when rejection is not an Error instance', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(Campaign.findByIdAndUpdate as jest.Mock).mockRejectedValue('unexpected failure')
+
+      const request = new NextRequest('http://localhost:3000/api/campaigns', {
+        method: 'PUT',
+        body: JSON.stringify({ id: 'campaign-789', title: 'Broken Update' })
+      })
+
+      const response = await PUT(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
     })
   })
 })

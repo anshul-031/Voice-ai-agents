@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/node_modules.bak/
 /.pnp
 .pnp.*
 .yarn/*
@@ -24,6 +25,7 @@
 .DS_Store
 *.pem
 vb-exotel-*.zip
+*.node.bak
 
 # debug
 npm-debug.log*
