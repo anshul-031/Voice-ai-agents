@@ -208,10 +208,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Extract phone number (support both snake_case and camelCase)
     // Be permissive: coerce numbers to string and trim whitespace
     const rawPhone: any = (payload as any).phone_number ?? (payload as any).phoneNumber;
-    const phoneNumber: string | undefined =
+    let phoneNumber: string | undefined =
       rawPhone === undefined || rawPhone === null
         ? undefined
         : (typeof rawPhone === 'string' ? rawPhone : String(rawPhone)).trim();
+    // Normalize: remove spaces, dashes, parentheses, collapse leading 00 to +, preserve leading + if present
+    if (phoneNumber) {
+      const hadPlus = phoneNumber.startsWith('+');
+      // Remove spaces, dashes, parentheses, and any '+' signs; we'll re-add a single leading plus if needed
+      let normalized = phoneNumber.replace(/[\s\-\(\)\+]/g, '');
+      if (normalized.startsWith('00')) {
+        normalized = '+' + normalized.slice(2);
+      } else if (hadPlus) {
+        normalized = '+' + normalized;
+      }
+      phoneNumber = normalized;
+    }
 
     // Validate phone number
     if (!phoneNumber || typeof phoneNumber !== 'string') {

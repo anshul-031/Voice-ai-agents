@@ -237,7 +237,7 @@ describe('/api/payment-webhook route', () => {
       expect(typeof data.timestamp).toBe('string')
     })
 
-    it('accepts camelCase phoneNumber and returns success', async () => {
+    it('accepts camelCase phoneNumber and returns success (normalized)', async () => {
       const req = new NextRequest('http://localhost/api/payment-webhook', {
         method: 'POST',
         body: JSON.stringify({ phoneNumber: '+1 (555) 000-1111' }),
@@ -245,7 +245,7 @@ describe('/api/payment-webhook route', () => {
       const res = await POST(req)
       expect(res.status).toBe(200)
       const data = await res.json()
-      expect(data).toMatchObject({ success: true, phoneNumber: '+1 (555) 000-1111' })
+      expect(data).toMatchObject({ success: true, phoneNumber: '+15550001111' })
     })
     
     it('returns 400 for invalid JSON when Content-Type is text/plain', async () => {
