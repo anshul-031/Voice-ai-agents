@@ -227,7 +227,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate phone number
     if (!phoneNumber || typeof phoneNumber !== 'string') {
-      console.warn('[Payment Webhook] Missing or invalid phone_number');
+      console.warn('[Payment Webhook] Missing or invalid phone_number. Raw value:', rawPhone);
       return NextResponse.json(
         {
           success: false,
@@ -252,16 +252,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 400 }
       );
     }
+    console.log('[Payment Webhook] Phone validation passed (digits >= 10)');
 
     // If forwarding is enabled, build the external request and send
-    const forwardEnabled = (getEnv('PAYMENT_WEBHOOK_FORWARD_ENABLED') || getEnv('PL_FORWARD_ENABLED')) === 'true';
+    const forwardFlagPrimaryRaw = getEnv('PAYMENT_WEBHOOK_FORWARD_ENABLED');
+    const forwardFlagSecondaryRaw = getEnv('PL_FORWARD_ENABLED');
+    const forwardFlagEffective = forwardFlagPrimaryRaw ?? forwardFlagSecondaryRaw;
+    const forwardEnabled = forwardFlagEffective === 'true';
+    console.log('[Payment Webhook] Forwarding flags resolved:', {
+      PAYMENT_WEBHOOK_FORWARD_ENABLED: forwardFlagPrimaryRaw ?? null,
+      PL_FORWARD_ENABLED: forwardFlagSecondaryRaw ?? null,
+      forwardEnabled,
+    });
     if (forwardEnabled) {
       try {
         const apiUrl = getEnv('PL_API_URL');
         const aesKey = getEnv('PL_AES_KEY');
         const xBizToken = getEnv('PL_X_BIZ_TOKEN');
+        console.log('[Payment Webhook] Forwarding env presence:', {
+          hasApiUrl: !!apiUrl,
+          hasAesKey: !!aesKey,
+          hasXBizToken: !!xBizToken,
+        });
         if (!apiUrl || !aesKey || !xBizToken) {
-          console.error('[Payment Webhook] Missing forwarding env: PL_API_URL/PL_AES_KEY/PL_X_BIZ_TOKEN');
+          const missingEnvs: string[] = [];
+          if (!apiUrl) missingEnvs.push('PL_API_URL');
+          if (!aesKey) missingEnvs.push('PL_AES_KEY');
+          if (!xBizToken) missingEnvs.push('PL_X_BIZ_TOKEN');
+          console.error('[Payment Webhook] Missing forwarding env:', missingEnvs.join(', ') || 'unknown');
           return NextResponse.json(
             { success: false, error: 'CONFIG_MISSING', message: 'Forwarding configuration missing' },
             { status: 500 }
@@ -290,6 +308,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (useHash) {
           const cid = getEnv('PL_CLIENT_ID');
           const csec = getEnv('PL_CLIENT_SECRET');
+          console.log('[Payment Webhook] Hashing enabled. Credential presence:', {
+            hasClientId: !!cid,
+            hasClientSecret: !!csec,
+          });
           if (!cid || !csec) {
             console.error('[Payment Webhook] Hashing enabled but PL_CLIENT_ID/PL_CLIENT_SECRET missing');
             return NextResponse.json(
@@ -339,6 +361,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         const plaintext = JSON.stringify(requestBody);
         const encrypted = aesEncryptBase64(plaintext, aesKey);
+        console.log('[Payment Webhook] Forwarding payload preview:', {
+          phone_number: requestBody.phone_number,
+          amount: requestBody.amount,
+          due_date: requestBody.due_date,
+          merchant_reference_number: requestBody.merchant_reference_number,
+          send_notification: requestBody.send_notification,
+          useHash,
+        });
 
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -347,6 +377,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             'Content-Type': 'application/json',
           },
           body: encrypted,
+        });
+        console.log('[Payment Webhook] Forward response received:', {
+          status: res.status,
+          ok: res.ok,
         });
 
         // Try to parse JSON, else return text
@@ -369,12 +403,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       } catch (e) {
         console.error('[Payment Webhook] Forwarding error:', e);
+        if (e instanceof Error && e.stack) {
+          console.error('[Payment Webhook] Forwarding error stack:', e.stack);
+        }
         return NextResponse.json(
           { success: false, forwarded: true, error: 'FORWARD_FAILED' },
           { status: 502 }
         );
       }
     }
+    console.log('[Payment Webhook] Forwarding disabled or flag not true. Returning local acknowledgment.');
 
     // Default: local acknowledgment response (tests rely on this)
     const timestamp = new Date().toISOString();
@@ -384,6 +422,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (payload && payload.transactionId) {
       console.log('[Payment Webhook] Transaction ID:', payload.transactionId);
     }
+    console.log('[Payment Webhook] Returning 200 local acknowledgement response');
 
     const response: PaymentWebhookResponse = {
       success: true,
