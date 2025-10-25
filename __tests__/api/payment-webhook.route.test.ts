@@ -3,6 +3,7 @@
  */
 
 import { GET, POST } from '@/app/api/payment-webhook/route'
+import { createDecipheriv } from 'crypto'
 import { NextRequest } from 'next/server'
 
 describe('/api/payment-webhook route', () => {
@@ -247,6 +248,28 @@ describe('/api/payment-webhook route', () => {
       const data = await res.json()
       expect(data).toMatchObject({ success: true, phoneNumber: '+15550001111' })
     })
+
+    it('coerces numeric phoneNumber input to string before validation', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber: 9876543210 }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: true, phoneNumber: '9876543210' })
+    })
+
+    it('normalizes phone numbers starting with 00 to a single + prefix', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: '00919876543210' }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: true, phoneNumber: '+919876543210' })
+    })
     
     it('returns 400 for invalid JSON when Content-Type is text/plain', async () => {
       const req = new NextRequest('http://localhost/api/payment-webhook', {
@@ -294,11 +317,39 @@ describe('/api/payment-webhook route', () => {
       resetForwardEnv()
     })
 
+    const decryptForwardedBody = (ciphertext: string) => {
+      const keyBuffer = Buffer.from(VALID_AES_KEY, 'utf8')
+      const iv = keyBuffer.subarray(0, 16)
+      const padded = ciphertext + '='.repeat((4 - (ciphertext.length % 4)) % 4)
+      const data = Buffer.from(padded, 'base64')
+      const decipher = createDecipheriv('aes-256-cbc', keyBuffer, iv)
+      const decrypted = Buffer.concat([decipher.update(data), decipher.final()])
+      return decrypted.toString('utf8')
+    }
+
     it('returns 500 CONFIG_MISSING when forwarding enabled but required envs absent', async () => {
       setEnv({ PL_FORWARD_ENABLED: 'true' })
       const req = new NextRequest('http://localhost/api/payment-webhook', {
         method: 'POST',
         body: JSON.stringify({ phoneNumber: '+15550001111' }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(500)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: false, error: 'CONFIG_MISSING' })
+    })
+
+    it('treats blank forwarding env vars as missing configuration', async () => {
+      setEnv({
+        PL_FORWARD_ENABLED: 'true',
+        PL_API_URL: '',
+        PL_AES_KEY: VALID_AES_KEY,
+        PL_X_BIZ_TOKEN: '',
+      })
+
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: '+15550001234' }),
       })
       const res = await POST(req)
       expect(res.status).toBe(500)
@@ -463,6 +514,233 @@ describe('/api/payment-webhook route', () => {
       expect(data.data).toMatchObject({ error: 'bad-request' })
     })
 
+    it('fills default forwarding fields when optional values are missing', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2025-01-01T00:00:00Z'))
+
+      try {
+        setEnv({
+          PL_FORWARD_ENABLED: 'true',
+          PL_API_URL: API_URL,
+          PL_AES_KEY: VALID_AES_KEY,
+          PL_X_BIZ_TOKEN: BIZ_TOKEN,
+        })
+
+        ;(global.fetch as jest.Mock).mockResolvedValue({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ ok: true }),
+        })
+
+        const req = new NextRequest('http://localhost/api/payment-webhook', {
+          method: 'POST',
+          body: JSON.stringify({ phoneNumber: '+15550009999' }),
+        })
+        const res = await POST(req)
+        expect(res.status).toBe(200)
+
+        const call = (global.fetch as jest.Mock).mock.calls[0]
+        const encryptedBody = call[1]?.body as string
+        const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+
+        expect(decrypted).toMatchObject({
+          phone_number: '+15550009999',
+          email: 'test_1@pelocal.com',
+          full_name: 'Voice AI Customer',
+          amount: 1,
+          due_date: '2025-01-04',
+          account_id: '321143',
+          send_notification: true,
+          template_name: 'pl_pmt_od_template',
+          merchant_reference_number: '',
+          pref_lang_code: 'en',
+        })
+        expect(decrypted.notification_channel).toMatchObject({
+          whatsapp: 'N',
+          whatsappOD: 'N',
+          sms: 'N',
+          email: 'N',
+          whatsappODPL: 'Y',
+        })
+        expect(decrypted.custom_field).toMatchObject({
+          custom_field1: '',
+          custom_field8: '',
+        })
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('parses numeric string amounts before forwarding', async () => {
+      setEnv({
+        PL_FORWARD_ENABLED: 'true',
+        PL_API_URL: API_URL,
+        PL_AES_KEY: VALID_AES_KEY,
+        PL_X_BIZ_TOKEN: BIZ_TOKEN,
+      })
+
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true }),
+      })
+
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: '+15551112222', amount: '7.5' }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+
+      const call = (global.fetch as jest.Mock).mock.calls[0]
+      const encryptedBody = call[1]?.body as string
+      const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+      expect(decrypted.amount).toBe(7.5)
+    })
+
+    it('honors provided ISO due_date and explicit send_notification boolean', async () => {
+      setEnv({
+        PL_FORWARD_ENABLED: 'true',
+        PL_API_URL: API_URL,
+        PL_AES_KEY: VALID_AES_KEY,
+        PL_X_BIZ_TOKEN: BIZ_TOKEN,
+      })
+
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true }),
+      })
+
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone_number: '+15553334444',
+          due_date: '2025-08-15',
+          send_notification: false,
+          amount: 15,
+        }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+
+      const call = (global.fetch as jest.Mock).mock.calls[0]
+      const encryptedBody = call[1]?.body as string
+      const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+      expect(decrypted.due_date).toBe('2025-08-15')
+      expect(decrypted.send_notification).toBe(false)
+      expect(decrypted.amount).toBe(15)
+    })
+
+    it('falls back to defaults when amount is non-numeric and channel/custom inputs are invalid objects', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2025-03-10T00:00:00Z'))
+
+      try {
+        setEnv({
+          PL_FORWARD_ENABLED: 'true',
+          PL_API_URL: API_URL,
+          PL_AES_KEY: VALID_AES_KEY,
+          PL_X_BIZ_TOKEN: BIZ_TOKEN,
+        })
+
+        ;(global.fetch as jest.Mock).mockResolvedValue({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ ok: true }),
+        })
+
+        const req = new NextRequest('http://localhost/api/payment-webhook', {
+          method: 'POST',
+          body: JSON.stringify({
+            phone_number: '+15556667777',
+            amount: 'abc',
+            notification_channel: ['bad'],
+            custom_field: 'oops',
+          }),
+        })
+        const res = await POST(req)
+        expect(res.status).toBe(200)
+
+        const call = (global.fetch as jest.Mock).mock.calls[0]
+        const encryptedBody = call[1]?.body as string
+        const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+        expect(decrypted.amount).toBe(1)
+        expect(decrypted.due_date).toBe('2025-03-13')
+        expect(decrypted.notification_channel).toMatchObject({
+          whatsapp: 'N',
+          whatsappOD: 'N',
+          sms: 'N',
+          email: 'N',
+          whatsappODPL: 'Y',
+        })
+        expect(decrypted.custom_field).toMatchObject({ custom_field1: '' })
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('falls back to default amount when provided value is blank string', async () => {
+      setEnv({
+        PL_FORWARD_ENABLED: 'true',
+        PL_API_URL: API_URL,
+        PL_AES_KEY: VALID_AES_KEY,
+        PL_X_BIZ_TOKEN: BIZ_TOKEN,
+      })
+
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true }),
+      })
+
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: '+15559998888', amount: '   ' }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+
+      const call = (global.fetch as jest.Mock).mock.calls[0]
+      const encryptedBody = call[1]?.body as string
+      const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+      expect(decrypted.amount).toBe(1)
+    })
+
+    it('uses default due_date when provided value is malformed', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2025-04-01T00:00:00Z'))
+
+      try {
+        setEnv({
+          PL_FORWARD_ENABLED: 'true',
+          PL_API_URL: API_URL,
+          PL_AES_KEY: VALID_AES_KEY,
+          PL_X_BIZ_TOKEN: BIZ_TOKEN,
+        })
+
+        ;(global.fetch as jest.Mock).mockResolvedValue({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ ok: true }),
+        })
+
+        const req = new NextRequest('http://localhost/api/payment-webhook', {
+          method: 'POST',
+          body: JSON.stringify({
+            phone_number: '+15558889999',
+            due_date: '04/20/2025',
+          }),
+        })
+        const res = await POST(req)
+        expect(res.status).toBe(200)
+
+        const call = (global.fetch as jest.Mock).mock.calls[0]
+        const encryptedBody = call[1]?.body as string
+        const decrypted = JSON.parse(decryptForwardedBody(encryptedBody))
+        expect(decrypted.due_date).toBe('2025-04-04')
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     it('returns 502 FORWARD_FAILED if fetch throws', async () => {
       setEnv({
         PL_FORWARD_ENABLED: 'true',
@@ -543,6 +821,30 @@ describe('/api/payment-webhook route', () => {
       expect(data.status).toBe(200)
       expect(data.data).toMatchObject({ ok: true })
     })
+
+    it('handles non-Error exceptions in forwarding with unknown error message', async () => {
+      setEnv({
+        PL_FORWARD_ENABLED: 'true',
+        PL_API_URL: API_URL,
+        PL_AES_KEY: VALID_AES_KEY,
+        PL_X_BIZ_TOKEN: BIZ_TOKEN,
+      })
+
+      ;(global.fetch as jest.Mock).mockImplementation(() => Promise.reject('network failure'))
+
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phone_number: '+15550008888' }),
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(502)
+      const data = await res.json()
+      expect(data).toMatchObject({
+        success: false,
+        forwarded: true,
+        error: 'FORWARD_FAILED'
+      })
+    })
   })
 })
 
@@ -557,5 +859,26 @@ describe('/api/payment-webhook route - additional branches', () => {
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data).toMatchObject({ success: false, error: 'INVALID_JSON' })
+  })
+
+  it.skip('handles non-Error exceptions in request parsing with unknown error message', async () => {
+    const originalJson = Request.prototype.json;
+    Request.prototype.json = jest.fn().mockRejectedValue('json parse failure');
+    try {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber: '+15550009999' }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data).toMatchObject({
+        success: false,
+        message: 'Internal server error',
+        error: 'Unknown error'
+      });
+    } finally {
+      Request.prototype.json = originalJson;
+    }
   })
 })

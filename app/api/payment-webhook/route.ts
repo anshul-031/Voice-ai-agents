@@ -24,6 +24,60 @@ interface PaymentWebhookResponse {
   transactionId?: string;
 }
 
+const DEFAULT_FORWARDING_VALUES = Object.freeze({
+  email: 'test_1@pelocal.com',
+  full_name: 'Voice AI Customer',
+  amount: 1,
+  due_date_offset_days: 3,
+  account_id: '321143',
+  send_notification: true,
+  template_name: 'pl_pmt_od_template',
+  merchant_reference_number: '',
+  pref_lang_code: 'en',
+  notification_channel: Object.freeze({
+    whatsapp: 'N',
+    whatsappOD: 'N',
+    sms: 'N',
+    email: 'N',
+    whatsappODPL: 'Y',
+  }),
+  custom_field: Object.freeze({
+    custom_field1: '',
+    custom_field2: '',
+    custom_field3: '',
+    custom_field4: '',
+    custom_field5: '',
+    custom_field6: '',
+    custom_field7: '',
+    custom_field8: '',
+  }),
+});
+
+function resolvePositiveAmount(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw;
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return DEFAULT_FORWARDING_VALUES.amount;
+}
+
+function resolveDueDate(raw: unknown, offsetDays: number): string {
+  if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+    return raw.trim();
+  }
+  const date = new Date();
+  date.setDate(date.getDate() + Math.max(offsetDays, 0));
+  return date.toISOString().split('T')[0];
+}
+
+function asPlainObject(value: unknown): Record<string, any> | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  return undefined;
+}
+
 // --- External API Forwarding Helpers ---
 function getEnv(name: string): string | undefined {
   const v = process.env[name];
@@ -288,19 +342,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Compose request_body similar to the Python script structure
         // Required at minimum: phone_number; others optional/defaults
+        const payloadObj = payload as Record<string, any>;
+        const notificationChannel = {
+          ...DEFAULT_FORWARDING_VALUES.notification_channel,
+          ...(asPlainObject(payloadObj?.notification_channel) || {}),
+        };
+        const customField = {
+          ...DEFAULT_FORWARDING_VALUES.custom_field,
+          ...(asPlainObject(payloadObj?.custom_field) || {}),
+        };
+
         const requestBody: Record<string, any> = {
           phone_number: phoneNumber,
-          email: (payload as any)?.email || '',
-          full_name: (payload as any)?.full_name || '',
-          amount: (payload as any)?.amount ?? '',
-          due_date: (payload as any)?.due_date || '', // Expect ISO 8601 string
-          account_id: (payload as any)?.account_id || '',
-          send_notification: (payload as any)?.send_notification ?? false,
-          template_name: (payload as any)?.template_name || '',
-          merchant_reference_number: (payload as any)?.merchant_reference_number || '',
-          pref_lang_code: (payload as any)?.pref_lang_code || 'en',
-          notification_channel: (payload as any)?.notification_channel || {},
-          custom_field: (payload as any)?.custom_field || {},
+          email: payloadObj?.email || DEFAULT_FORWARDING_VALUES.email,
+          full_name: payloadObj?.full_name || DEFAULT_FORWARDING_VALUES.full_name,
+          amount: resolvePositiveAmount(payloadObj?.amount),
+          due_date: resolveDueDate(
+            payloadObj?.due_date,
+            DEFAULT_FORWARDING_VALUES.due_date_offset_days
+          ),
+          account_id: payloadObj?.account_id || DEFAULT_FORWARDING_VALUES.account_id,
+          send_notification:
+            typeof payloadObj?.send_notification === 'boolean'
+              ? payloadObj.send_notification
+              : DEFAULT_FORWARDING_VALUES.send_notification,
+          template_name: payloadObj?.template_name || DEFAULT_FORWARDING_VALUES.template_name,
+          merchant_reference_number:
+            payloadObj?.merchant_reference_number ?? DEFAULT_FORWARDING_VALUES.merchant_reference_number,
+          pref_lang_code: payloadObj?.pref_lang_code || DEFAULT_FORWARDING_VALUES.pref_lang_code,
+          notification_channel: notificationChannel,
+          custom_field: customField,
         };
 
         // Optional hashing support (matches Python GenerateHashForAPI)
