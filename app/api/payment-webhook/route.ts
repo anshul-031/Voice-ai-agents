@@ -206,7 +206,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Extract phone number (support both snake_case and camelCase)
-    const phoneNumber = payload.phone_number || payload.phoneNumber;
+    // Be permissive: coerce numbers to string and trim whitespace
+    const rawPhone: any = (payload as any).phone_number ?? (payload as any).phoneNumber;
+    const phoneNumber: string | undefined =
+      rawPhone === undefined || rawPhone === null
+        ? undefined
+        : (typeof rawPhone === 'string' ? rawPhone : String(rawPhone)).trim();
 
     // Validate phone number
     if (!phoneNumber || typeof phoneNumber !== 'string') {
