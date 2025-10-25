@@ -240,6 +240,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate phone number by digits count: accept if 10+ digits after stripping non-digits
     const digitsOnly = phoneNumber.replace(/\D/g, '');
+    console.log('[Payment Webhook] Normalized phone before validation:', phoneNumber, 'digits:', digitsOnly.length);
     if (digitsOnly.length < 10) {
       console.warn('[Payment Webhook] Invalid phone number format (digits < 10):', phoneNumber, '-> digits:', digitsOnly.length);
       return NextResponse.json(
