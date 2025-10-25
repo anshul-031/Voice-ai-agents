@@ -24,6 +24,14 @@ describe('/api/payment-webhook route', () => {
       const text = await res.text()
       expect(text).toBe(' hello ')
     })
+
+    it('echoes hello for msg=Hi (case-insensitive, alt param)', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook?msg=Hi')
+      const res = await GET(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
   })
 
   describe('POST - Payload validation', () => {
@@ -99,6 +107,42 @@ describe('/api/payment-webhook route', () => {
       expect(res.status).toBe(200)
       const text = await res.text()
       expect(text).toBe(' hello ')
+    })
+
+    it('returns INVALID_JSON for JSON string not equal to hi', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: '"hello"',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(400)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: false, error: 'INVALID_JSON' })
+    })
+
+    it('accepts urlencoded phoneNumber and returns success', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: 'phoneNumber=%2B15550001111',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: true, phoneNumber: '+15550001111' })
+    })
+
+    it('parses JSON from text/plain and succeeds when phone present', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: '{"phoneNumber":"+15550002222"}',
+        headers: { 'Content-Type': 'text/plain' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(data).toMatchObject({ success: true, phoneNumber: '+15550002222' })
     })
 
     it('returns 400 for invalid JSON body', async () => {
