@@ -238,10 +238,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Validate phone number format (basic validation)
-    const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      console.warn('[Payment Webhook] Invalid phone number format:', phoneNumber);
+    // Validate phone number by digits count: accept if 10+ digits after stripping non-digits
+    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      console.warn('[Payment Webhook] Invalid phone number format (digits < 10):', phoneNumber, '-> digits:', digitsOnly.length);
       return NextResponse.json(
         {
           success: false,
