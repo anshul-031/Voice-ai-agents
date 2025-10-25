@@ -51,8 +51,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const contentType = (request.headers.get('content-type') || '').toLowerCase();
     let payload: PaymentWebhookRequest | string | undefined;
     if (contentType.includes('text/plain')) {
-      const raw = (await request.text()).trim();
-      if (raw === 'hi') {
+      const raw = (await request.text());
+      const rawNorm = raw.trim().toLowerCase();
+      if (rawNorm === 'hi') {
         return new NextResponse(' hello ', {
           status: 200,
           headers: { 'Content-Type': 'text/plain' },
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const raw = await request.text();
       const params = new URLSearchParams(raw);
       const msgParam = params.get('message') || params.get('msg');
-      if (msgParam === 'hi') {
+      if ((msgParam || '').trim().toLowerCase() === 'hi') {
         return new NextResponse(' hello ', {
           status: 200,
           headers: { 'Content-Type': 'text/plain' },
@@ -134,8 +135,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const msg = (payload as any)?.message ?? (payload as any)?.msg;
-    if (msg === 'hi') {
+    const rawMsg =
+      (payload as any)?.message ??
+      (payload as any)?.msg ??
+      (payload as any)?.text ??
+      (payload as any)?.body;
+    if (typeof rawMsg === 'string' && rawMsg.trim().toLowerCase() === 'hi') {
       return new NextResponse(' hello ', {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
@@ -233,7 +238,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const url = new URL(_request.url);
     const msg = url.searchParams.get('message') || url.searchParams.get('msg');
-    if (msg === 'hi') {
+    if ((msg || '').trim().toLowerCase() === 'hi') {
       return new NextResponse(' hello ', {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },

@@ -53,6 +53,30 @@ describe('/api/payment-webhook route', () => {
       expect(text).toBe(' hello ')
     })
 
+    it('echoes hello for JSON body with message=Hi (case-insensitive)', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ message: 'Hi' }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
+
+    it('echoes hello when Content-Type is missing and body is plain hi', async () => {
+      const req = new NextRequest('http://localhost/api/payment-webhook', {
+        method: 'POST',
+        body: 'hi',
+        // deliberately no Content-Type header
+      } as any)
+      const res = await POST(req)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toBe(' hello ')
+    })
+
     it('echoes hello for urlencoded body with message=hi', async () => {
       const req = new NextRequest('http://localhost/api/payment-webhook', {
         method: 'POST',
