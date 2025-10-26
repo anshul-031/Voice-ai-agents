@@ -1,5 +1,11 @@
 import { Document, Schema, model, models } from 'mongoose';
 
+export interface IEnabledTool {
+    toolName: string;
+    enabled: boolean;
+    config?: Record<string, any>;
+}
+
 export interface IVoiceAgent extends Document {
     userId: string;
     title: string;
@@ -7,6 +13,7 @@ export interface IVoiceAgent extends Document {
     llmModel: string;
     sttModel: string;
     ttsModel: string;
+    enabledTools?: IEnabledTool[];
     lastUpdated: Date;
     createdAt: Date;
 }
@@ -41,6 +48,14 @@ const VoiceAgentSchema = new Schema<IVoiceAgent>({
         type: String,
         required: true,
         default: 'Sarvam Manisha',
+    },
+    enabledTools: {
+        type: [{
+            toolName: { type: String, required: true },
+            enabled: { type: Boolean, default: false },
+            config: { type: Schema.Types.Mixed, default: {} }
+        }],
+        default: [],
     },
     lastUpdated: {
         type: Date,

@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import dbConnect from '@/lib/mongodb';
+import { executeDocumentTool } from '@/lib/tools/documentExecutors';
+import { getGeminiToolDefinitions } from '@/lib/tools/documentTools';
 import Chat from '@/models/Chat';
+import VoiceAgent from '@/models/VoiceAgent';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -47,12 +50,13 @@ export async function POST(request: NextRequest) {
 
     try {
         console.log('[LLM] Parsing request body...');
-        const { prompt, userText, sessionId, conversationHistory } = await request.json();
+        const { prompt, userText, sessionId, conversationHistory, agentId } = await request.json();
         console.log('[LLM] Request data:', {
             hasPrompt: !!prompt,
             promptLength: prompt?.length,
             userText: userText?.substring(0, 100),
             sessionId,
+            agentId,
             historyLength: conversationHistory?.length || 0,
         });
 
@@ -103,6 +107,32 @@ export async function POST(request: NextRequest) {
         console.log('[LLM] Gemini API Key present:', !!geminiApiKey);
         console.log('[LLM] User text:', userText.trim());
 
+        // Get agent and check for enabled tools
+        let enabledTools: any[] = [];
+        let toolDefinitions: any[] = [];
+        
+        if (agentId) {
+            try {
+                const agent = await VoiceAgent.findById(agentId);
+                if (agent && agent.enabledTools) {
+                    enabledTools = agent.enabledTools.filter((t: any) => t.enabled);
+                    console.log('[LLM] Agent has', enabledTools.length, 'enabled tools');
+                    
+                    if (enabledTools.length > 0) {
+                        // Get tool definitions for Gemini function calling
+                        const allToolDefs = getGeminiToolDefinitions();
+                        toolDefinitions = allToolDefs.filter((def: any) => 
+                            enabledTools.some((t: any) => t.toolName === def.name)
+                        );
+                        console.log('[LLM] Tool definitions prepared for function calling:', toolDefinitions.map((t: any) => t.name));
+                    }
+                }
+            } catch (agentError) {
+                console.error('[LLM] Failed to fetch agent tools:', agentError);
+                // Continue without tools if agent fetch fails
+            }
+        }
+
         // Initialize Gemini AI (explicitly use gemini-2.0-flash as requested)
         console.log('[LLM] Initializing GoogleGenerativeAI...');
         const genAI = new GoogleGenerativeAI(geminiApiKey);
@@ -111,7 +141,17 @@ export async function POST(request: NextRequest) {
         let model;
         try {
             console.log('[LLM] Attempting to load gemini-2.0-flash model...');
-            model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+            const modelConfig: any = { model: 'gemini-2.0-flash' };
+            
+            // Add tools if available
+            if (toolDefinitions.length > 0) {
+                modelConfig.tools = [{
+                    functionDeclarations: toolDefinitions
+                }];
+                console.log('[LLM] Model configured with', toolDefinitions.length, 'tools');
+            }
+            
+            model = genAI.getGenerativeModel(modelConfig);
             console.log('[LLM] Using model: gemini-2.0-flash');
         } catch (errInit) {
             console.error('[LLM] Could not initialize gemini-2.0-flash, attempting fallback model (gemini-pro).', errInit instanceof Error ? errInit.message : errInit);
@@ -202,6 +242,88 @@ export async function POST(request: NextRequest) {
 
             console.log('[LLM] Gemini raw result sample:', typeof result === 'object' ? JSON.stringify(Object.keys(result).slice(0, 10)) : String(result).substring(0, 200));
             console.log('[LLM] Extracted LLM text preview:', llmText?.substring(0, 200));
+
+            // Check for function calls in the response
+            let functionCalls: any[] = [];
+            if (result && result.response && result.response.functionCalls) {
+                functionCalls = result.response.functionCalls();
+                console.log('[LLM] Function calls detected:', functionCalls.length);
+            }
+
+            // Execute function calls if present
+            let toolResults: any[] = [];
+            if (functionCalls && functionCalls.length > 0 && agentId) {
+                console.log('[LLM] Processing', functionCalls.length, 'function calls');
+                
+                for (const call of functionCalls) {
+                    const { name: toolName, args: parameters } = call;
+                    console.log('[LLM] Executing tool:', toolName);
+                    
+                    try {
+                        const toolResult = await executeDocumentTool(toolName, parameters);
+                        toolResults.push({
+                            toolName,
+                            success: toolResult.success,
+                            fileUrl: toolResult.fileUrl,
+                            data: toolResult.data,
+                            error: toolResult.error,
+                        });
+                        console.log('[LLM] Tool executed successfully:', toolName);
+                    } catch (toolError) {
+                        console.error('[LLM] Tool execution failed:', toolName, toolError);
+                        toolResults.push({
+                            toolName,
+                            success: false,
+                            error: toolError instanceof Error ? toolError.message : 'Unknown error',
+                        });
+                    }
+                }
+                
+                // If we have tool results, make another LLM call to incorporate them
+                if (toolResults.length > 0) {
+                    console.log('[LLM] Making follow-up call with tool results');
+                    
+                    const toolResultsText = toolResults.map(tr => {
+                        if (tr.success) {
+                            return `Tool ${tr.toolName} executed successfully. File URL: ${tr.fileUrl}`;
+                        } else {
+                            return `Tool ${tr.toolName} failed: ${tr.error}`;
+                        }
+                    }).join('\n');
+                    
+                    const followUpPrompt = `${fullPrompt}\n\nTool Results:\n${toolResultsText}\n\nPlease provide a response that incorporates these tool results.`;
+                    
+                    try {
+                        const followUpResult = await (model as any).generateContent(followUpPrompt);
+                        const followUpText = await extractText(followUpResult);
+                        
+                        if (followUpText) {
+                            console.log('[LLM] Follow-up response generated');
+                            
+                            // Save to history
+                            if (shouldSaveToHistory) {
+                                await Chat.create({
+                                    userId: 'mukul',
+                                    sessionId: chatSessionId,
+                                    role: 'assistant',
+                                    content: followUpText.trim(),
+                                    timestamp: new Date(),
+                                });
+                            }
+                            
+                            return NextResponse.json({
+                                llmText: followUpText.trim(),
+                                sessionId: chatSessionId,
+                                toolResults,
+                                usedTools: true,
+                            });
+                        }
+                    } catch (followUpError) {
+                        console.error('[LLM] Follow-up generation failed:', followUpError);
+                        // Continue with original response
+                    }
+                }
+            }
 
             if (!llmText) {
                 console.error('[LLM] Received empty response from LLM');
