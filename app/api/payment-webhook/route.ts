@@ -353,7 +353,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         };
 
         const requestBody: Record<string, any> = {
-          phone_number: phoneNumber,
+          phone_number: phoneNumber.replace(/^\+91/, ''),
           email: payloadObj?.email || DEFAULT_FORWARDING_VALUES.email,
           full_name: payloadObj?.full_name || DEFAULT_FORWARDING_VALUES.full_name,
           amount: resolvePositiveAmount(payloadObj?.amount),
