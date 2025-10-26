@@ -28,7 +28,7 @@ const DEFAULT_FORWARDING_VALUES = Object.freeze({
   email: 'test_1@pelocal.com',
   full_name: 'Voice AI Customer',
   amount: 1,
-  due_date_offset_days: 3,
+  due_date_offset_days: 30,
   account_id: '321143',
   send_notification: true,
   template_name: 'pl_pmt_od_template',
