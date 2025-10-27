@@ -100,7 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         mer_ref_id: paymentData.mer_ref_id,
         account_id: paymentData.account_id,
         payment_status: paymentData.payment_status,
-        payment_date: paymentData.payment_date.toISOString(),
+        payment_date: new Date(paymentData.payment_date as unknown as string | Date).toISOString(),
         description: paymentData.description,
         amount: paymentData.amount,
       }
