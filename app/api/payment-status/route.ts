@@ -17,8 +17,8 @@ interface PaymentData {
   amount?: number;
 }
 
-// JSON file path for storing payment data
-const PAYMENT_DATA_FILE = path.join(process.cwd(), 'data', 'payments.json');
+// JSON file path for storing payment data (use /tmp for Vercel compatibility)
+const PAYMENT_DATA_FILE = path.join(process.env.NODE_ENV === 'production' ? '/tmp' : process.cwd(), 'data', 'payments.json');
 
 /**
  * GET /api/payment-status?transaction_id=txn_123&mer_ref_id=ref_456&account_id=acc_789
@@ -149,13 +149,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  * }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  console.log('[Payment Status] POST request received at:', new Date().toISOString());
+
   try {
-    console.log('[Payment Status] POST request received');
+    console.log('[Payment Status] Parsing request body...');
 
     const body: PaymentData = await request.json();
+    console.log('[Payment Status] Request body parsed successfully');
 
     // Validate required fields
     if (!body.transaction_id || !body.payment_status || !body.payment_date || !body.description) {
+      console.log('[Payment Status] Validation failed - missing required fields');
       return NextResponse.json(
         {
           status_code: 400,
@@ -168,6 +172,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Validate payment_status
     const validStatuses = ['successful', 'failed', 'pending', 'processing'];
     if (!validStatuses.includes(body.payment_status)) {
+      console.log('[Payment Status] Validation failed - invalid payment_status:', body.payment_status);
       return NextResponse.json(
         {
           status_code: 400,
@@ -177,8 +182,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Connect to database (optional - will use in-memory fallback if not available)
-    // const dbConnection = await dbConnect();
+    console.log('[Payment Status] Validation passed, preparing payment data...');
 
     // Prepare payment data
     const paymentData = {
@@ -191,11 +195,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       amount: body.amount,
     };
 
+    console.log('[Payment Status] Storing payment data...');
     // Store payment data in JSON file
-    console.log('[Payment Status] Storing in JSON file');
     await storePaymentData(paymentData);
 
-    console.log('[Payment Status] Payment data stored:', {
+    console.log('[Payment Status] Payment data stored successfully:', {
       transaction_id: body.transaction_id,
       payment_status: body.payment_status
     });
@@ -208,8 +212,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 201 }
     );
   } catch (error) {
-    console.error('[Payment Status] Unexpected error:', error);
+    console.error('[Payment Status] Unexpected error in POST:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Payment Status] Error details:', errorMessage);
+
     return NextResponse.json(
       {
         status_code: 500,
@@ -265,12 +271,21 @@ async function findPaymentData(transactionId?: string, merRefId?: string, accoun
  */
 async function readPaymentData(): Promise<PaymentData[]> {
   try {
-    // Ensure data directory exists
-    const dataDir = path.dirname(PAYMENT_DATA_FILE);
-    await fs.mkdir(dataDir, { recursive: true });
+    // Use /tmp directory for Vercel production, local data directory for development
+    const filePath = process.env.NODE_ENV === 'production'
+      ? path.join('/tmp', 'payments.json')
+      : PAYMENT_DATA_FILE;
+
+    console.log('[Payment Status] Reading from storage path:', filePath);
+
+    // Ensure data directory exists (only for development)
+    if (process.env.NODE_ENV !== 'production') {
+      const dataDir = path.dirname(PAYMENT_DATA_FILE);
+      await fs.mkdir(dataDir, { recursive: true });
+    }
 
     // Try to read the file
-    const fileContent = await fs.readFile(PAYMENT_DATA_FILE, 'utf-8');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
     const payments = JSON.parse(fileContent);
 
     // Ensure it's an array
@@ -287,6 +302,22 @@ async function readPaymentData(): Promise<PaymentData[]> {
  */
 async function storePaymentData(paymentData: PaymentData): Promise<void> {
   try {
+    // Use /tmp directory for Vercel production, local data directory for development
+    const dataDir = process.env.NODE_ENV === 'production'
+      ? '/tmp'
+      : path.dirname(PAYMENT_DATA_FILE);
+
+    const filePath = process.env.NODE_ENV === 'production'
+      ? path.join('/tmp', 'payments.json')
+      : PAYMENT_DATA_FILE;
+
+    console.log('[Payment Status] Using storage path:', filePath);
+
+    // Ensure data directory exists (only for development)
+    if (process.env.NODE_ENV !== 'production') {
+      await fs.mkdir(dataDir, { recursive: true });
+    }
+
     // Read existing payments
     const payments = await readPaymentData();
 
@@ -296,17 +327,16 @@ async function storePaymentData(paymentData: PaymentData): Promise<void> {
     if (existingIndex >= 0) {
       // Update existing payment
       payments[existingIndex] = paymentData;
+      console.log('[Payment Status] Updated existing payment:', paymentData.transaction_id);
     } else {
       // Add new payment
       payments.push(paymentData);
+      console.log('[Payment Status] Added new payment:', paymentData.transaction_id);
     }
 
-    // Ensure data directory exists
-    const dataDir = path.dirname(PAYMENT_DATA_FILE);
-    await fs.mkdir(dataDir, { recursive: true });
-
     // Write back to file
-    await fs.writeFile(PAYMENT_DATA_FILE, JSON.stringify(payments, null, 2));
+    await fs.writeFile(filePath, JSON.stringify(payments, null, 2));
+    console.log('[Payment Status] Payment data saved to file');
   } catch (error) {
     console.error('[Payment Status] Error storing payment data:', error);
     throw error;
