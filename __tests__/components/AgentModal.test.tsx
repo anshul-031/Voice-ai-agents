@@ -1099,5 +1099,194 @@ describe('AgentModal', () => {
             }
         })
     })
+
+    describe('Tools & Webhooks', () => {
+        const agentWithId = {
+            id: 'agent-1',
+            title: 'Support Bot',
+            prompt: 'Assist with support queries',
+            llmModel: 'Gemini 1.5 Flash',
+            sttModel: 'AssemblyAI Universal',
+            ttsModel: 'Sarvam Manisha',
+            userId: 'mukul',
+            lastUpdated: '2025-10-08T10:00:00Z',
+            createdAt: '2025-10-01T10:00:00Z',
+        }
+
+        it('should prompt user to save agent before adding tools in create mode', () => {
+            render(
+                <AgentModal
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    onSuccess={mockOnSuccess}
+                />
+            )
+
+            expect(screen.getByText(/Save the agent first/i)).toBeInTheDocument()
+            expect(screen.queryByText('Add Tool')).not.toBeInTheDocument()
+        })
+
+        it('should fetch and display existing tools for an agent', async () => {
+            const toolsResponse = {
+                tools: [
+                    {
+                        _id: 'tool-1',
+                        name: 'Sync CRM',
+                        method: 'POST',
+                        webhookUrl: 'https://example.com/sync',
+                        description: 'Pushes conversation summary into CRM',
+                        triggerPhrases: ['update crm'],
+                        runAfterCall: false,
+                    },
+                ],
+            }
+
+            ; (global.fetch as jest.Mock).mockImplementation((input: RequestInfo, init?: RequestInit) => {
+                const url = typeof input === 'string' ? input : input.url
+                if (url.includes('/api/agent-tools')) {
+                    return mockFetchResponse(toolsResponse)
+                }
+                return mockFetchResponse({ success: true })
+            })
+
+            render(
+                <AgentModal
+                    isOpen={true}
+                    agent={agentWithId}
+                    onClose={mockOnClose}
+                    onSuccess={mockOnSuccess}
+                />
+            )
+
+            await waitFor(() => {
+                expect(screen.getByText('Sync CRM')).toBeInTheDocument()
+            })
+
+            const agentToolsCall = (global.fetch as jest.Mock).mock.calls.find(([url]) =>
+                typeof url === 'string' && url.includes('/api/agent-tools?agentId=agent-1')
+            )
+            expect(agentToolsCall).toBeDefined()
+        })
+
+        it('should submit new tool configuration and refresh list', async () => {
+            let storedTool: any = null
+
+            ; (global.fetch as jest.Mock).mockImplementation((input: RequestInfo, init?: RequestInit) => {
+                const url = typeof input === 'string' ? input : input.url
+                const method = init?.method ?? 'GET'
+
+                if (url.includes('/api/agent-tools')) {
+                    if (method === 'POST') {
+                        const parsed = init?.body ? JSON.parse(init.body as string) : {}
+                        storedTool = {
+                            _id: 'tool-123',
+                            ...parsed,
+                        }
+                        return mockFetchResponse({ tool: storedTool })
+                    }
+                    return mockFetchResponse({ tools: storedTool ? [storedTool] : [] })
+                }
+
+                return mockFetchResponse({ success: true })
+            })
+
+            render(
+                <AgentModal
+                    isOpen={true}
+                    agent={agentWithId}
+                    onClose={mockOnClose}
+                    onSuccess={mockOnSuccess}
+                />
+            )
+
+            // Open tool form
+            await waitFor(() => expect(screen.getByText('Add Tool')).toBeInTheDocument())
+            fireEvent.click(screen.getByText('Add Tool'))
+
+            fireEvent.change(screen.getByPlaceholderText('e.g., Create Ticket'), {
+                target: { value: 'Create Ticket' },
+            })
+            fireEvent.change(screen.getByPlaceholderText('https://example.com/api/action'), {
+                target: { value: 'https://example.com/hooks/ticket' },
+            })
+            fireEvent.change(
+                screen.getByPlaceholderText(/Describe what this tool does/i),
+                { target: { value: 'Create support ticket via webhook' } },
+            )
+            fireEvent.change(
+                screen.getByPlaceholderText(/Comma or newline separated phrases/i),
+                { target: { value: 'create ticket, follow up' } },
+            )
+            fireEvent.change(
+                screen.getByPlaceholderText(/What should the agent say when the call succeeds/i),
+                { target: { value: 'Ticket created successfully.' } },
+            )
+            fireEvent.change(
+                screen.getByPlaceholderText(/Fallback message if the webhook fails/i),
+                { target: { value: 'Unable to create ticket.' } },
+            )
+            fireEvent.click(screen.getByLabelText(/Run automatically after the call ends/i))
+
+            fireEvent.click(screen.getByRole('button', { name: 'Create Tool' }))
+
+            await waitFor(() => {
+                expect(screen.getByText('Create Ticket')).toBeInTheDocument()
+            })
+
+            const postCall = (global.fetch as jest.Mock).mock.calls.find(([url, init]) =>
+                typeof url === 'string' && url.includes('/api/agent-tools') && init?.method === 'POST'
+            )
+            expect(postCall).toBeDefined()
+            const postBody = JSON.parse((postCall as any)[1].body)
+            expect(postBody).toMatchObject({
+                agentId: 'agent-1',
+                userId: 'mukul',
+                name: 'Create Ticket',
+                webhookUrl: 'https://example.com/hooks/ticket',
+                method: 'POST',
+                successMessage: 'Ticket created successfully.',
+                failureMessage: 'Unable to create ticket.',
+                runAfterCall: true,
+            })
+            expect(postBody.triggerPhrases).toEqual(['create ticket', 'follow up'])
+            expect(postBody.headers).toEqual([])
+            expect(postBody.parameters).toEqual([])
+        })
+
+        it('should alert when trying to add a tool without required fields', async () => {
+            const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => { })
+
+            ; (global.fetch as jest.Mock).mockImplementation((input: RequestInfo, init?: RequestInit) => {
+                const url = typeof input === 'string' ? input : input.url
+                if (url.includes('/api/agent-tools')) {
+                    return mockFetchResponse({ tools: [] })
+                }
+                return mockFetchResponse({ success: true })
+            })
+
+            render(
+                <AgentModal
+                    isOpen={true}
+                    agent={agentWithId}
+                    onClose={mockOnClose}
+                    onSuccess={mockOnSuccess}
+                />
+            )
+
+            await waitFor(() => expect(screen.getByText('Add Tool')).toBeInTheDocument())
+            fireEvent.click(screen.getByText('Add Tool'))
+
+            fireEvent.click(screen.getByRole('button', { name: 'Create Tool' }))
+
+            expect(alertSpy).toHaveBeenCalledWith('Tool name and webhook URL are required.')
+
+            const postCall = (global.fetch as jest.Mock).mock.calls.find(([url, init]) =>
+                typeof url === 'string' && url.includes('/api/agent-tools') && init?.method === 'POST'
+            )
+            expect(postCall).toBeUndefined()
+
+            alertSpy.mockRestore()
+        })
+    })
 })
 

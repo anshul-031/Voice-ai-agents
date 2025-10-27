@@ -26,6 +26,47 @@ interface VoiceAgent {
     knowledgeItems?: KnowledgeItem[]
 }
 
+interface AgentToolHeader {
+    key: string;
+    value: string;
+}
+
+interface AgentToolParameter {
+    name: string;
+    description?: string;
+    type?: string;
+    required?: boolean;
+}
+
+interface AgentTool {
+    _id: string;
+    userId: string;
+    agentId?: string;
+    name: string;
+    description?: string;
+    webhookUrl: string;
+    method: 'GET' | 'POST';
+    headers?: AgentToolHeader[];
+    parameters?: AgentToolParameter[];
+    triggerPhrases?: string[];
+    successMessage?: string;
+    failureMessage?: string;
+    runAfterCall?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+interface ToolFormState {
+    name: string;
+    description: string;
+    webhookUrl: string;
+    method: 'GET' | 'POST';
+    triggerPhrases: string;
+    successMessage: string;
+    failureMessage: string;
+    runAfterCall: boolean;
+}
+
 interface AgentModalProps {
     isOpen: boolean
     onClose: () => void
@@ -42,12 +83,170 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
     const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
     const [manualKnowledge, setManualKnowledge] = useState('');
     const [loading, setLoading] = useState(false);
+    const [tools, setTools] = useState<AgentTool[]>([]);
+    const [toolsLoading, setToolsLoading] = useState(false);
+    const [toolsError, setToolsError] = useState<string | null>(null);
+    const [toolFormOpen, setToolFormOpen] = useState(false);
+    const [toolSaving, setToolSaving] = useState(false);
+    const [editingTool, setEditingTool] = useState<AgentTool | null>(null);
+    const [toolForm, setToolForm] = useState<ToolFormState>({
+        name: '',
+        description: '',
+        webhookUrl: '',
+        method: 'POST',
+        triggerPhrases: '',
+        successMessage: '',
+        failureMessage: '',
+        runAfterCall: false,
+    });
 
     const fileInputId = useMemo(() => `knowledge-upload-${Math.random().toString(36).slice(2)}`, []);
 
     const createItemId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+    const resetToolForm = () => {
+        setToolForm({
+            name: '',
+            description: '',
+            webhookUrl: '',
+            method: 'POST',
+            triggerPhrases: '',
+            successMessage: '',
+            failureMessage: '',
+            runAfterCall: false,
+        });
+    };
+
+    const fetchAgentTools = async (agentId: string) => {
+        setToolsLoading(true);
+        setToolsError(null);
+        try {
+            const response = await fetch(`/api/agent-tools?agentId=${agentId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load tools');
+            }
+            const data = await response.json();
+            setTools(Array.isArray(data.tools) ? data.tools : []);
+        } catch (error) {
+            console.error('Error fetching agent tools:', error);
+            setToolsError('Unable to load tools for this agent.');
+            setTools([]);
+        } finally {
+            setToolsLoading(false);
+        }
+    };
+
+    const handleOpenToolForm = (tool?: AgentTool) => {
+        if (tool) {
+            setEditingTool(tool);
+            setToolForm({
+                name: tool.name || '',
+                description: tool.description || '',
+                webhookUrl: tool.webhookUrl || '',
+                method: (tool.method as 'GET' | 'POST') || 'POST',
+                triggerPhrases: (tool.triggerPhrases || []).join(', '),
+                successMessage: tool.successMessage || '',
+                failureMessage: tool.failureMessage || '',
+                runAfterCall: Boolean(tool.runAfterCall),
+            });
+        } else {
+            setEditingTool(null);
+            resetToolForm();
+        }
+        setToolFormOpen(true);
+    };
+
+    const handleCancelToolForm = () => {
+        setToolFormOpen(false);
+        setEditingTool(null);
+        resetToolForm();
+    };
+
+    const handleToolSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!agent?.id) {
+            alert('Save the agent before adding tools.');
+            return;
+        }
+
+        if (!toolForm.name.trim() || !toolForm.webhookUrl.trim()) {
+            alert('Tool name and webhook URL are required.');
+            return;
+        }
+
+        setToolSaving(true);
+
+        const payload = {
+            agentId: agent.id,
+            userId: agent.userId || 'mukul',
+            name: toolForm.name.trim(),
+            description: toolForm.description.trim() || undefined,
+            webhookUrl: toolForm.webhookUrl.trim(),
+            method: toolForm.method,
+            headers: [] as AgentToolHeader[],
+            parameters: [] as AgentToolParameter[],
+            triggerPhrases: toolForm.triggerPhrases
+                .split(/[,\n]/)
+                .map(phrase => phrase.trim())
+                .filter(Boolean),
+            successMessage: toolForm.successMessage.trim() || undefined,
+            failureMessage: toolForm.failureMessage.trim() || undefined,
+            runAfterCall: Boolean(toolForm.runAfterCall),
+        };
+
+        try {
+            let response: Response;
+
+            if (editingTool?._id) {
+                response = await fetch(`/api/agent-tools/${editingTool._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+            } else {
+                response = await fetch('/api/agent-tools', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+            }
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data?.error || 'Failed to save tool');
+            }
+
+            await fetchAgentTools(agent.id);
+            handleCancelToolForm();
+        } catch (error) {
+            console.error('Error saving agent tool:', error);
+            alert(error instanceof Error ? error.message : 'Failed to save tool');
+        } finally {
+            setToolSaving(false);
+        }
+    };
+
+    const handleDeleteTool = async (tool: AgentTool) => {
+        if (!agent?.id || !tool?._id) return;
+        const confirmed = window.confirm(`Delete tool "${tool.name}"?`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/agent-tools/${tool._id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data?.error || 'Failed to delete tool');
+            }
+            await fetchAgentTools(agent.id);
+        } catch (error) {
+            console.error('Error deleting agent tool:', error);
+            alert(error instanceof Error ? error.message : 'Failed to delete tool');
+        }
+    };
 
     useEffect(() => {
         if (agent) {
@@ -64,6 +263,15 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 })),
             );
             setManualKnowledge('');
+            setToolFormOpen(false);
+            setEditingTool(null);
+            resetToolForm();
+            if (agent.id) {
+                fetchAgentTools(agent.id);
+            } else {
+                setTools([]);
+                setToolsError(null);
+            }
         } else {
             setTitle('');
             setPrompt('');
@@ -72,6 +280,11 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
             setTtsModel('Sarvam Manisha');
             setKnowledgeItems([]);
             setManualKnowledge('');
+            setTools([]);
+            setToolsError(null);
+            setToolFormOpen(false);
+            setEditingTool(null);
+            resetToolForm();
         }
     }, [agent, isOpen]);
 
@@ -196,7 +409,7 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-[#141b24] border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl">
+            <div className="bg-[#141b24] border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
                     <h2 className="text-xl font-semibold text-white">
@@ -211,7 +424,7 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* Title Field */}
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-2">
@@ -400,6 +613,220 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                             </p>
                         )}
                     </div>
+
+                        {/* Tools & Webhooks */}
+                        <div className="bg-[#0f1419] border border-gray-700/70 rounded-xl p-5 space-y-5">
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-sm font-semibold text-white">Tools &amp; Webhooks</h3>
+                                <p className="text-xs text-gray-400 leading-relaxed">
+                                    Configure outbound webhook tools that the agent can invoke during a conversation. Each tool needs a
+                                    name and an HTTPS endpoint. Trigger phrases help the agent identify when to call the tool.
+                                </p>
+                            </div>
+
+                            {!agent?.id ? (
+                                <p className="text-xs text-gray-500">
+                                    Save the agent first to add tools and webhook configurations.
+                                </p>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                            {tools.length} configured tool{tools.length === 1 ? '' : 's'}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenToolForm()}
+                                                className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+                                            >
+                                                Add Tool
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => fetchAgentTools(agent.id)}
+                                                className="inline-flex items-center rounded-md border border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-colors hover:bg-gray-800"
+                                            >
+                                                Refresh
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {toolsError && (
+                                        <p className="text-xs text-red-400">{toolsError}</p>
+                                    )}
+
+                                    {toolFormOpen && (
+                                        <div className="space-y-4 rounded-lg border border-gray-700 bg-[#0a0e13] p-4">
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div>
+                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Tool Name *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={toolForm.name}
+                                                        onChange={(event) => setToolForm(prev => ({ ...prev, name: event.target.value }))}
+                                                        required
+                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                        placeholder="e.g., Create Ticket"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook Method</label>
+                                                    <select
+                                                        value={toolForm.method}
+                                                        onChange={(event) => setToolForm(prev => ({ ...prev, method: event.target.value as 'GET' | 'POST' }))}
+                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    >
+                                                        <option value="POST">POST</option>
+                                                        <option value="GET">GET</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook URL *</label>
+                                                <input
+                                                    type="url"
+                                                    value={toolForm.webhookUrl}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, webhookUrl: event.target.value }))}
+                                                    required
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    placeholder="https://example.com/api/action"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Description</label>
+                                                <textarea
+                                                    value={toolForm.description}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, description: event.target.value }))}
+                                                    rows={3}
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                                                    placeholder="Describe what this tool does so the agent knows when to use it"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Trigger Phrases</label>
+                                                <textarea
+                                                    value={toolForm.triggerPhrases}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, triggerPhrases: event.target.value }))}
+                                                    rows={2}
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                                                    placeholder="Comma or newline separated phrases that should invoke the tool"
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div>
+                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Success Message</label>
+                                                    <input
+                                                        type="text"
+                                                        value={toolForm.successMessage}
+                                                        onChange={(event) => setToolForm(prev => ({ ...prev, successMessage: event.target.value }))}
+                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                        placeholder="What should the agent say when the call succeeds?"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Failure Message</label>
+                                                    <input
+                                                        type="text"
+                                                        value={toolForm.failureMessage}
+                                                        onChange={(event) => setToolForm(prev => ({ ...prev, failureMessage: event.target.value }))}
+                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                        placeholder="Fallback message if the webhook fails"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={toolForm.runAfterCall}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, runAfterCall: event.target.checked }))}
+                                                    className="h-4 w-4 rounded border-gray-600 bg-[#141b24] text-emerald-500 focus:ring-emerald-500"
+                                                />
+                                                Run automatically after the call ends
+                                            </label>
+
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCancelToolForm}
+                                                    className="px-4 py-2 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleToolSubmit}
+                                                    disabled={toolSaving}
+                                                    className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {toolSaving ? 'Saving...' : editingTool ? 'Update Tool' : 'Create Tool'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {toolsLoading ? (
+                                        <p className="text-xs text-gray-500">Loading tools...</p>
+                                    ) : tools.length === 0 ? (
+                                        <p className="text-xs text-gray-500">
+                                            No tools added yet. Use the Add Tool button to connect webhooks for this agent.
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {tools.map((tool) => (
+                                                <div key={tool._id} className="rounded-lg border border-gray-700 bg-[#0a0e13] p-3 text-sm text-gray-300 shadow-sm">
+                                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-white font-medium truncate">{tool.name}</span>
+                                                                <span className="text-[11px] rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
+                                                                    {tool.method || 'POST'}
+                                                                </span>
+                                                            </div>
+                                                            {tool.description && (
+                                                                <p className="mt-1 text-xs text-gray-400 break-words">{tool.description}</p>
+                                                            )}
+                                                            <code className="mt-2 block break-all text-[11px] text-emerald-300">
+                                                                {tool.webhookUrl}
+                                                            </code>
+                                                            {tool.triggerPhrases?.length ? (
+                                                                <p className="mt-2 text-[11px] text-gray-400">
+                                                                    Triggers: {tool.triggerPhrases.join(', ')}
+                                                                </p>
+                                                            ) : null}
+                                                            {tool.runAfterCall && (
+                                                                <p className="mt-1 text-[11px] text-gray-400">Runs automatically after the call</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenToolForm(tool)}
+                                                                className="px-3 py-1.5 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteTool(tool)}
+                                                                className="px-3 py-1.5 text-xs font-medium text-red-400 rounded-lg border border-red-500/40 hover:bg-red-500/10 transition-colors"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-4">
