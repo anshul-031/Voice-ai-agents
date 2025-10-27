@@ -3,6 +3,8 @@
  * Returns the status of a payment transaction and handles payment gateway callbacks
  */
 
+import dbConnect from '@/lib/mongodb';
+import Payment from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface PaymentData {
@@ -14,9 +16,6 @@ interface PaymentData {
   description: string;
   amount?: number;
 }
-
-// In-memory storage for payment data (in production, use a database)
-const paymentStore: Map<string, PaymentData> = new Map();
 
 /**
  * GET /api/payment-status?transaction_id=txn_123&mer_ref_id=ref_456&account_id=acc_789
@@ -70,8 +69,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Connect to database
+    await dbConnect();
+
     // Find payment data by any of the identifiers
-    const paymentData = findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim());
+    const paymentData = await findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim());
 
     if (!paymentData) {
       return NextResponse.json(
@@ -93,7 +95,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       status_code: 200,
       message: 'Payment status retrieved successfully',
-      data: paymentData
+      data: {
+        transaction_id: paymentData.transaction_id,
+        mer_ref_id: paymentData.mer_ref_id,
+        account_id: paymentData.account_id,
+        payment_status: paymentData.payment_status,
+        payment_date: paymentData.payment_date.toISOString(),
+        description: paymentData.description,
+        amount: paymentData.amount,
+      }
     }, { status: 200 });
   } catch (error) {
     console.error('[Payment Status] Unexpected error:', error);
@@ -159,16 +169,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Store payment data using transaction_id as key
-    paymentStore.set(body.transaction_id, {
+    // Connect to database
+    await dbConnect();
+
+    // Store payment data in MongoDB
+    const paymentData = {
       transaction_id: body.transaction_id,
       mer_ref_id: body.mer_ref_id,
       account_id: body.account_id,
       payment_status: body.payment_status,
-      payment_date: body.payment_date,
+      payment_date: new Date(body.payment_date),
       description: body.description,
       amount: body.amount,
-    });
+    };
+
+    // Use upsert to create or update
+    await Payment.findOneAndUpdate(
+      { transaction_id: body.transaction_id },
+      paymentData,
+      { upsert: true, new: true }
+    );
 
     console.log('[Payment Status] Payment data stored:', {
       transaction_id: body.transaction_id,
@@ -199,28 +219,52 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * Find payment data by any of the identifiers
  */
-function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string): PaymentData | null {
+async function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string): Promise<PaymentData | null> {
   // First try to find by transaction_id (most specific)
   if (transactionId) {
-    const payment = paymentStore.get(transactionId);
-    if (payment) return payment;
+    const payment = await Payment.findOne({ transaction_id: transactionId });
+    if (payment) {
+      return {
+        transaction_id: payment.transaction_id,
+        mer_ref_id: payment.mer_ref_id,
+        account_id: payment.account_id,
+        payment_status: payment.payment_status,
+        payment_date: payment.payment_date,
+        description: payment.description,
+        amount: payment.amount,
+      };
+    }
   }
 
   // Then try to find by mer_ref_id
   if (merRefId) {
-    for (const payment of paymentStore.values()) {
-      if (payment.mer_ref_id === merRefId) {
-        return payment;
-      }
+    const payment = await Payment.findOne({ mer_ref_id: merRefId });
+    if (payment) {
+      return {
+        transaction_id: payment.transaction_id,
+        mer_ref_id: payment.mer_ref_id,
+        account_id: payment.account_id,
+        payment_status: payment.payment_status,
+        payment_date: payment.payment_date,
+        description: payment.description,
+        amount: payment.amount,
+      };
     }
   }
 
   // Finally try to find by account_id
   if (accountId) {
-    for (const payment of paymentStore.values()) {
-      if (payment.account_id === accountId) {
-        return payment;
-      }
+    const payment = await Payment.findOne({ account_id: accountId });
+    if (payment) {
+      return {
+        transaction_id: payment.transaction_id,
+        mer_ref_id: payment.mer_ref_id,
+        account_id: payment.account_id,
+        payment_status: payment.payment_status,
+        payment_date: payment.payment_date,
+        description: payment.description,
+        amount: payment.amount,
+      };
     }
   }
 

@@ -24,6 +24,9 @@ describe('/api/payment-status', () => {
     process.env = { ...originalEnv };
     // Clear the in-memory store before each test
     jest.resetModules();
+    // Clear mongoose mock storage
+    const mongooseMock = require('mongoose');
+    mongooseMock.__clearStorage();
   });
 
   afterEach(() => {
