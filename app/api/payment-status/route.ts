@@ -7,6 +7,9 @@ import dbConnect from '@/lib/mongodb';
 import Payment from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Fallback in-memory storage when MongoDB is not available
+const paymentStore = new Map<string, any>();
+
 interface PaymentData {
   transaction_id: string;
   mer_ref_id?: string;
@@ -69,8 +72,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Connect to database
-    await dbConnect();
+    // Connect to database (optional - will use in-memory fallback if not available)
+    const dbConnection = await dbConnect();
+    if (dbConnection) {
+      console.log('[Payment Status] Connected to MongoDB');
+    } else {
+      console.log('[Payment Status] Using in-memory storage (MongoDB not configured)');
+    }
 
     // Find payment data by any of the identifiers
     const paymentData = await findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim());
@@ -169,10 +177,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Connect to database
-    await dbConnect();
+    // Connect to database (optional - will use in-memory fallback if not available)
+    const dbConnection = await dbConnect();
 
-    // Store payment data in MongoDB
+    // Prepare payment data
     const paymentData = {
       transaction_id: body.transaction_id,
       mer_ref_id: body.mer_ref_id,
@@ -183,12 +191,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       amount: body.amount,
     };
 
-    // Use upsert to create or update
-    await Payment.findOneAndUpdate(
-      { transaction_id: body.transaction_id },
-      paymentData,
-      { upsert: true, new: true }
-    );
+    if (dbConnection) {
+      // Store payment data in MongoDB
+      console.log('[Payment Status] Storing in MongoDB');
+      await Payment.findOneAndUpdate(
+        { transaction_id: body.transaction_id },
+        paymentData,
+        { upsert: true, new: true }
+      );
+    } else {
+      // Store payment data in memory
+      console.log('[Payment Status] Storing in memory (MongoDB not configured)');
+      paymentStore.set(body.transaction_id, {
+        transaction_id: body.transaction_id,
+        mer_ref_id: body.mer_ref_id,
+        account_id: body.account_id,
+        payment_status: body.payment_status,
+        payment_date: new Date(body.payment_date),
+        description: body.description,
+        amount: body.amount,
+      });
+    }
 
     console.log('[Payment Status] Payment data stored:', {
       transaction_id: body.transaction_id,
@@ -220,6 +243,42 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * Find payment data by any of the identifiers
  */
 async function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string): Promise<PaymentData | null> {
+  // Check if MongoDB is available
+  const dbConnection = await dbConnect();
+
+  if (!dbConnection) {
+    // Use in-memory storage as fallback
+    console.log('[Payment Status] Using in-memory storage (MongoDB not available)');
+
+    // First try to find by transaction_id (most specific)
+    if (transactionId && paymentStore.has(transactionId)) {
+      return paymentStore.get(transactionId);
+    }
+
+    // Then try to find by mer_ref_id
+    if (merRefId) {
+      for (const payment of paymentStore.values()) {
+        if (payment.mer_ref_id === merRefId) {
+          return payment;
+        }
+      }
+    }
+
+    // Finally try to find by account_id
+    if (accountId) {
+      for (const payment of paymentStore.values()) {
+        if (payment.account_id === accountId) {
+          return payment;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // Use MongoDB
+  console.log('[Payment Status] Using MongoDB storage');
+
   // First try to find by transaction_id (most specific)
   if (transactionId) {
     const payment = await Payment.findOne({ transaction_id: transactionId });
