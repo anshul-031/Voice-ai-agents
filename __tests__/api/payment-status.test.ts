@@ -449,5 +449,69 @@ describe('/api/payment-status', () => {
       // Restore original
       require('fs').promises.readFile = originalReadFile;
     });
+
+    it('should handle unexpected errors in GET handler', async () => {
+      // Store some data first so we can try to retrieve it
+      const storeRequest = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: {
+          transaction_id: 'test_txn',
+          payment_status: 'successful',
+          payment_date: '2025-01-01T00:00:00.000Z',
+          description: 'Test payment'
+        }
+      });
+      await POST(storeRequest as any);
+
+      // Mock Date.toISOString to throw an error in the success response
+      const originalDate = global.Date;
+      const mockDate = function(this: any, ...args: any[]) {
+        const date = new (originalDate as any)(...args);
+        date.toISOString = jest.fn().mockImplementation(() => {
+          throw new Error('Date serialization error');
+        });
+        return date;
+      };
+      mockDate.prototype = originalDate.prototype;
+      global.Date = mockDate as any;
+
+      // Now try to GET it - this should trigger the error in the success response creation
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=test_txn');
+      const response = await GET(getRequest as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(500); // Should trigger the GET handler catch block
+      expect(data.status_code).toBe(500);
+
+      // Restore original Date
+      global.Date = originalDate;
+    });
+
+    it('should handle unexpected errors in POST handler', async () => {
+      // Mock fs.writeFile to throw an error during storePaymentData
+      const originalWriteFile = require('fs').promises.writeFile;
+      require('fs').promises.writeFile = jest.fn().mockRejectedValue(new Error('File write error'));
+
+      const paymentData = {
+        transaction_id: 'txn_error_test',
+        payment_status: 'successful' as const,
+        payment_date: '2025-10-27T10:30:00.000Z',
+        description: 'Test payment'
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(500); // Should trigger the POST handler catch block
+      expect(data.status_code).toBe(500);
+      expect(data.message).toBe('Internal server error');
+
+      // Restore original
+      require('fs').promises.writeFile = originalWriteFile;
+    });
   });
 });
