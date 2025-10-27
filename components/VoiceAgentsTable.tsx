@@ -14,6 +14,15 @@ interface VoiceAgent {
     userId: string
     lastUpdated: string
     createdAt: string
+    knowledgeItems?: Array<{
+        itemId: string;
+        name: string;
+        type: 'text' | 'csv';
+        size: number;
+        content: string;
+        preview?: string;
+        createdAt: string;
+    }>
 }
 
 interface VoiceAgentsTableProps {

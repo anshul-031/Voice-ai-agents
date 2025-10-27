@@ -203,6 +203,7 @@ describe('AgentModal', () => {
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
                             ttsModel: 'Sarvam Manisha',
+                            knowledgeItems: [],
                         }),
                     })
                 )
@@ -330,6 +331,7 @@ describe('AgentModal', () => {
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
                             ttsModel: 'Sarvam Manisha',
+                            knowledgeItems: [],
                         }),
                     })
                 )
@@ -470,6 +472,7 @@ describe('AgentModal', () => {
                             llmModel: 'Gemini 1.5 Flash',
                             sttModel: 'AssemblyAI Universal',
                             ttsModel: 'Sarvam Manisha',
+                            knowledgeItems: [],
                         }),
                     })
                 )
