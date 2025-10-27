@@ -92,6 +92,20 @@ describe('API: /api/campaign-contacts', () => {
       expect(data.success).toBe(false)
       expect(data.error).toBe('Database query failed')
     })
+
+    it('should fall back to a generic error when thrown value is not an Error', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockRejectedValue('boom')
+
+      const request = new NextRequest('http://localhost:3000/api/campaign-contacts?campaign_id=campaign-123')
+
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
+    })
   })
 
   describe('POST Request - Upload CSV and create contacts', () => {
@@ -279,6 +293,55 @@ describe('API: /api/campaign-contacts', () => {
       expect(data.success).toBe(false)
     })
 
+    it('should handle contacts missing the number field', async () => {
+      const csvContent = `name,description\nJohn Doe,Customer`
+
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
+        { _id: '1', number: '', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
+      ])
+
+      const formData = new FormData()
+      const file = new File([csvContent], 'contacts.csv', { type: 'text/csv' })
+      formData.append('file', file)
+      formData.append('campaign_id', 'campaign-123')
+
+      const request = new NextRequest('http://localhost:3000/api/campaign-contacts', {
+        method: 'POST',
+        body: formData
+      })
+
+      const response = await POST(request)
+
+      expect(CampaignContact.insertMany).toHaveBeenCalledWith([
+        { number: '', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
+      ])
+      expect(response.status).toBe(201)
+    })
+
+    it('should return generic error when insertion rejects with non-error value', async () => {
+      const csvContent = 'number,name\n1234567890,John'
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.insertMany as jest.Mock).mockRejectedValue('failed')
+
+      const formData = new FormData()
+      const file = new File([csvContent], 'contacts.csv', { type: 'text/csv' })
+      formData.append('file', file)
+      formData.append('campaign_id', 'campaign-123')
+
+      const request = new NextRequest('http://localhost:3000/api/campaign-contacts', {
+        method: 'POST',
+        body: formData
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
+    })
+
     it('should handle database insertion errors', async () => {
       const csvContent = 'number,name\n1234567890,John'
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
@@ -430,6 +493,20 @@ describe('API: /api/campaign-contacts', () => {
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
       expect(data.error).toBe('Database deletion failed')
+    })
+
+    it('should return generic error when deletion throws a non-error value', async () => {
+      ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.findByIdAndDelete as jest.Mock).mockRejectedValue('not good')
+
+      const request = new NextRequest('http://localhost:3000/api/campaign-contacts?id=contact-123')
+
+      const response = await DELETE(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.success).toBe(false)
+      expect(data.error).toBe('Unknown error')
     })
 
     it('should handle invalid contact ID format', async () => {

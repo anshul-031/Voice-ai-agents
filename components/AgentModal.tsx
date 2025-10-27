@@ -614,219 +614,219 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                         )}
                     </div>
 
-                        {/* Tools & Webhooks */}
-                        <div className="bg-[#0f1419] border border-gray-700/70 rounded-xl p-5 space-y-5">
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-sm font-semibold text-white">Tools &amp; Webhooks</h3>
-                                <p className="text-xs text-gray-400 leading-relaxed">
-                                    Configure outbound webhook tools that the agent can invoke during a conversation. Each tool needs a
-                                    name and an HTTPS endpoint. Trigger phrases help the agent identify when to call the tool.
-                                </p>
-                            </div>
+                    {/* Tools & Webhooks */}
+                    <div className="bg-[#0f1419] border border-gray-700/70 rounded-xl p-5 space-y-5">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-sm font-semibold text-white">Tools &amp; Webhooks</h3>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Configure outbound webhook tools that the agent can invoke during a conversation. Each tool needs a
+                                name and an HTTPS endpoint. Trigger phrases help the agent identify when to call the tool.
+                            </p>
+                        </div>
 
-                            {!agent?.id ? (
-                                <p className="text-xs text-gray-500">
-                                    Save the agent first to add tools and webhook configurations.
-                                </p>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                                            {tools.length} configured tool{tools.length === 1 ? '' : 's'}
-                                        </span>
-                                        <div className="flex items-center gap-2">
+                        {!agent?.id ? (
+                            <p className="text-xs text-gray-500">
+                                Save the agent first to add tools and webhook configurations.
+                            </p>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                        {tools.length} configured tool{tools.length === 1 ? '' : 's'}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenToolForm()}
+                                            className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+                                        >
+                                            Add Tool
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => fetchAgentTools(agent.id)}
+                                            className="inline-flex items-center rounded-md border border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-colors hover:bg-gray-800"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {toolsError && (
+                                    <p className="text-xs text-red-400">{toolsError}</p>
+                                )}
+
+                                {toolFormOpen && (
+                                    <div className="space-y-4 rounded-lg border border-gray-700 bg-[#0a0e13] p-4">
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Tool Name *</label>
+                                                <input
+                                                    type="text"
+                                                    value={toolForm.name}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, name: event.target.value }))}
+                                                    required
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    placeholder="e.g., Create Ticket"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook Method</label>
+                                                <select
+                                                    value={toolForm.method}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, method: event.target.value as 'GET' | 'POST' }))}
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                >
+                                                    <option value="POST">POST</option>
+                                                    <option value="GET">GET</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook URL *</label>
+                                            <input
+                                                type="url"
+                                                value={toolForm.webhookUrl}
+                                                onChange={(event) => setToolForm(prev => ({ ...prev, webhookUrl: event.target.value }))}
+                                                required
+                                                className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                placeholder="https://example.com/api/action"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-300 mb-2 block">Description</label>
+                                            <textarea
+                                                value={toolForm.description}
+                                                onChange={(event) => setToolForm(prev => ({ ...prev, description: event.target.value }))}
+                                                rows={3}
+                                                className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                                                placeholder="Describe what this tool does so the agent knows when to use it"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-300 mb-2 block">Trigger Phrases</label>
+                                            <textarea
+                                                value={toolForm.triggerPhrases}
+                                                onChange={(event) => setToolForm(prev => ({ ...prev, triggerPhrases: event.target.value }))}
+                                                rows={2}
+                                                className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                                                placeholder="Comma or newline separated phrases that should invoke the tool"
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Success Message</label>
+                                                <input
+                                                    type="text"
+                                                    value={toolForm.successMessage}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, successMessage: event.target.value }))}
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    placeholder="What should the agent say when the call succeeds?"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Failure Message</label>
+                                                <input
+                                                    type="text"
+                                                    value={toolForm.failureMessage}
+                                                    onChange={(event) => setToolForm(prev => ({ ...prev, failureMessage: event.target.value }))}
+                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    placeholder="Fallback message if the webhook fails"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                checked={toolForm.runAfterCall}
+                                                onChange={(event) => setToolForm(prev => ({ ...prev, runAfterCall: event.target.checked }))}
+                                                className="h-4 w-4 rounded border-gray-600 bg-[#141b24] text-emerald-500 focus:ring-emerald-500"
+                                            />
+                                            Run automatically after the call ends
+                                        </label>
+
+                                        <div className="flex items-center justify-end gap-3">
                                             <button
                                                 type="button"
-                                                onClick={() => handleOpenToolForm()}
-                                                className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+                                                onClick={handleCancelToolForm}
+                                                className="px-4 py-2 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
                                             >
-                                                Add Tool
+                                                Cancel
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => fetchAgentTools(agent.id)}
-                                                className="inline-flex items-center rounded-md border border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-colors hover:bg-gray-800"
+                                                onClick={handleToolSubmit}
+                                                disabled={toolSaving}
+                                                className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                Refresh
+                                                {toolSaving ? 'Saving...' : editingTool ? 'Update Tool' : 'Create Tool'}
                                             </button>
                                         </div>
                                     </div>
+                                )}
 
-                                    {toolsError && (
-                                        <p className="text-xs text-red-400">{toolsError}</p>
-                                    )}
-
-                                    {toolFormOpen && (
-                                        <div className="space-y-4 rounded-lg border border-gray-700 bg-[#0a0e13] p-4">
-                                            <div className="grid gap-4 md:grid-cols-2">
-                                                <div>
-                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Tool Name *</label>
-                                                    <input
-                                                        type="text"
-                                                        value={toolForm.name}
-                                                        onChange={(event) => setToolForm(prev => ({ ...prev, name: event.target.value }))}
-                                                        required
-                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                                        placeholder="e.g., Create Ticket"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook Method</label>
-                                                    <select
-                                                        value={toolForm.method}
-                                                        onChange={(event) => setToolForm(prev => ({ ...prev, method: event.target.value as 'GET' | 'POST' }))}
-                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                                    >
-                                                        <option value="POST">POST</option>
-                                                        <option value="GET">GET</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Webhook URL *</label>
-                                                <input
-                                                    type="url"
-                                                    value={toolForm.webhookUrl}
-                                                    onChange={(event) => setToolForm(prev => ({ ...prev, webhookUrl: event.target.value }))}
-                                                    required
-                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                                    placeholder="https://example.com/api/action"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Description</label>
-                                                <textarea
-                                                    value={toolForm.description}
-                                                    onChange={(event) => setToolForm(prev => ({ ...prev, description: event.target.value }))}
-                                                    rows={3}
-                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-                                                    placeholder="Describe what this tool does so the agent knows when to use it"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs font-medium text-gray-300 mb-2 block">Trigger Phrases</label>
-                                                <textarea
-                                                    value={toolForm.triggerPhrases}
-                                                    onChange={(event) => setToolForm(prev => ({ ...prev, triggerPhrases: event.target.value }))}
-                                                    rows={2}
-                                                    className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-                                                    placeholder="Comma or newline separated phrases that should invoke the tool"
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-4 md:grid-cols-2">
-                                                <div>
-                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Success Message</label>
-                                                    <input
-                                                        type="text"
-                                                        value={toolForm.successMessage}
-                                                        onChange={(event) => setToolForm(prev => ({ ...prev, successMessage: event.target.value }))}
-                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                                        placeholder="What should the agent say when the call succeeds?"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-medium text-gray-300 mb-2 block">Failure Message</label>
-                                                    <input
-                                                        type="text"
-                                                        value={toolForm.failureMessage}
-                                                        onChange={(event) => setToolForm(prev => ({ ...prev, failureMessage: event.target.value }))}
-                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                                        placeholder="Fallback message if the webhook fails"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <label className="inline-flex items-center gap-2 text-xs text-gray-300">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={toolForm.runAfterCall}
-                                                    onChange={(event) => setToolForm(prev => ({ ...prev, runAfterCall: event.target.checked }))}
-                                                    className="h-4 w-4 rounded border-gray-600 bg-[#141b24] text-emerald-500 focus:ring-emerald-500"
-                                                />
-                                                Run automatically after the call ends
-                                            </label>
-
-                                            <div className="flex items-center justify-end gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCancelToolForm}
-                                                    className="px-4 py-2 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleToolSubmit}
-                                                    disabled={toolSaving}
-                                                    className="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    {toolSaving ? 'Saving...' : editingTool ? 'Update Tool' : 'Create Tool'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {toolsLoading ? (
-                                        <p className="text-xs text-gray-500">Loading tools...</p>
-                                    ) : tools.length === 0 ? (
-                                        <p className="text-xs text-gray-500">
-                                            No tools added yet. Use the Add Tool button to connect webhooks for this agent.
-                                        </p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {tools.map((tool) => (
-                                                <div key={tool._id} className="rounded-lg border border-gray-700 bg-[#0a0e13] p-3 text-sm text-gray-300 shadow-sm">
-                                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-white font-medium truncate">{tool.name}</span>
-                                                                <span className="text-[11px] rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
-                                                                    {tool.method || 'POST'}
-                                                                </span>
-                                                            </div>
-                                                            {tool.description && (
-                                                                <p className="mt-1 text-xs text-gray-400 break-words">{tool.description}</p>
-                                                            )}
-                                                            <code className="mt-2 block break-all text-[11px] text-emerald-300">
-                                                                {tool.webhookUrl}
-                                                            </code>
-                                                            {tool.triggerPhrases?.length ? (
-                                                                <p className="mt-2 text-[11px] text-gray-400">
-                                                                    Triggers: {tool.triggerPhrases.join(', ')}
-                                                                </p>
-                                                            ) : null}
-                                                            {tool.runAfterCall && (
-                                                                <p className="mt-1 text-[11px] text-gray-400">Runs automatically after the call</p>
-                                                            )}
-                                                        </div>
+                                {toolsLoading ? (
+                                    <p className="text-xs text-gray-500">Loading tools...</p>
+                                ) : tools.length === 0 ? (
+                                    <p className="text-xs text-gray-500">
+                                        No tools added yet. Use the Add Tool button to connect webhooks for this agent.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {tools.map((tool) => (
+                                            <div key={tool._id} className="rounded-lg border border-gray-700 bg-[#0a0e13] p-3 text-sm text-gray-300 shadow-sm">
+                                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleOpenToolForm(tool)}
-                                                                className="px-3 py-1.5 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteTool(tool)}
-                                                                className="px-3 py-1.5 text-xs font-medium text-red-400 rounded-lg border border-red-500/40 hover:bg-red-500/10 transition-colors"
-                                                            >
-                                                                Delete
-                                                            </button>
+                                                            <span className="text-white font-medium truncate">{tool.name}</span>
+                                                            <span className="text-[11px] rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
+                                                                {tool.method || 'POST'}
+                                                            </span>
                                                         </div>
+                                                        {tool.description && (
+                                                            <p className="mt-1 text-xs text-gray-400 break-words">{tool.description}</p>
+                                                        )}
+                                                        <code className="mt-2 block break-all text-[11px] text-emerald-300">
+                                                            {tool.webhookUrl}
+                                                        </code>
+                                                        {tool.triggerPhrases?.length ? (
+                                                            <p className="mt-2 text-[11px] text-gray-400">
+                                                                Triggers: {tool.triggerPhrases.join(', ')}
+                                                            </p>
+                                                        ) : null}
+                                                        {tool.runAfterCall && (
+                                                            <p className="mt-1 text-[11px] text-gray-400">Runs automatically after the call</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenToolForm(tool)}
+                                                            className="px-3 py-1.5 text-xs font-medium text-gray-300 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteTool(tool)}
+                                                            className="px-3 py-1.5 text-xs font-medium text-red-400 rounded-lg border border-red-500/40 hover:bg-red-500/10 transition-colors"
+                                                        >
+                                                            Delete
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-4">
