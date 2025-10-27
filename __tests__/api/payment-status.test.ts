@@ -266,6 +266,102 @@ describe('/api/payment-status', () => {
 
       expect(response.status).toBe(200);
     });
+
+    it('should handle errors in GET request', async () => {
+      // Mock fs.readFile to throw an error
+      const originalReadFile = jest.requireActual('fs').promises.readFile;
+      const mockReadFile = jest.fn().mockRejectedValue(new Error('File read error'));
+      require('fs').promises.readFile = mockReadFile;
+
+      try {
+        const request = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=test');
+        const response = await GET(request as any);
+        const data = await response.json();
+
+        expect(response.status).toBe(404); // findPaymentData returns null on error, so 404
+        expect(data.status_code).toBe(404);
+        expect(data.message).toBe('Payment data not found');
+      } finally {
+        // Restore original
+        require('fs').promises.readFile = originalReadFile;
+      }
+    });
+
+    it('should handle errors in POST request', async () => {
+      // Mock fs.writeFile to throw an error
+      const originalWriteFile = jest.requireActual('fs').promises.writeFile;
+      const mockWriteFile = jest.fn().mockRejectedValue(new Error('File write error'));
+      require('fs').promises.writeFile = mockWriteFile;
+
+      try {
+        const paymentData = {
+          transaction_id: 'txn_error_test',
+          payment_status: 'successful' as const,
+          payment_date: '2025-10-27T10:30:00.000Z',
+          description: 'Test payment'
+        };
+
+        const request = createMockRequest('http://localhost:3000/api/payment-status', {
+          method: 'POST',
+          body: paymentData
+        });
+        const response = await POST(request as any);
+        const data = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(data.status_code).toBe(500);
+        expect(data.message).toBe('Internal server error');
+      } finally {
+        // Restore original
+        require('fs').promises.writeFile = originalWriteFile;
+      }
+    });
+
+    it('should update existing payment data when transaction_id already exists', async () => {
+      const paymentData = {
+        transaction_id: 'txn_update_test',
+        mer_ref_id: 'ref_original',
+        account_id: 'acc_original',
+        payment_status: 'pending' as const,
+        payment_date: '2025-10-27T10:30:00.000Z',
+        description: 'Original payment',
+        amount: 100
+      };
+
+      // Store initial payment
+      const postRequest1 = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+      await POST(postRequest1 as any);
+
+      // Update the same transaction with different data
+      const updatedPaymentData = {
+        transaction_id: 'txn_update_test',
+        mer_ref_id: 'ref_updated',
+        account_id: 'acc_updated',
+        payment_status: 'successful' as const,
+        payment_date: '2025-10-27T11:30:00.000Z',
+        description: 'Updated payment',
+        amount: 200
+      };
+
+      const postRequest2 = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: updatedPaymentData
+      });
+      await POST(postRequest2 as any);
+
+      // Retrieve and verify it's updated
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=txn_update_test');
+      const response = await GET(getRequest as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data.payment_status).toBe('successful');
+      expect(data.data.description).toBe('Updated payment');
+      expect(data.data.amount).toBe(200);
+    });
   });
 
   describe('JSON file storage', () => {
@@ -305,6 +401,53 @@ describe('/api/payment-status', () => {
       expect(getData.data.payment_status).toBe('successful');
       expect(getData.data.description).toBe('Payment stored in JSON file');
       expect(getData.data.amount).toBe(150);
+    });
+  });
+
+  describe('JSON file storage edge cases', () => {
+    it('should handle corrupted JSON file gracefully', async () => {
+      // Mock fs.readFile to return invalid JSON (non-array)
+      const originalReadFile = require('fs').promises.readFile;
+      require('fs').promises.readFile = jest.fn().mockResolvedValue('{"not": "an array"}');
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=test');
+      const response = await GET(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(404); // Should return 404 since no payment found
+
+      // Restore original
+      require('fs').promises.readFile = originalReadFile;
+    });
+
+    it('should handle file read errors in findPaymentData', async () => {
+      // Mock fs.readFile to throw an error
+      const originalReadFile = require('fs').promises.readFile;
+      require('fs').promises.readFile = jest.fn().mockRejectedValue(new Error('Read error'));
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=test');
+      const response = await GET(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(404); // Should return 404 since findPaymentData returns null on error
+
+      // Restore original
+      require('fs').promises.readFile = originalReadFile;
+    });
+
+    it('should handle JSON parse errors in readPaymentData', async () => {
+      // Mock fs.readFile to return invalid JSON
+      const originalReadFile = require('fs').promises.readFile;
+      require('fs').promises.readFile = jest.fn().mockResolvedValue('invalid json content');
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=test');
+      const response = await GET(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(404); // Should return 404 since readPaymentData returns null on error
+
+      // Restore original
+      require('fs').promises.readFile = originalReadFile;
     });
   });
 });
