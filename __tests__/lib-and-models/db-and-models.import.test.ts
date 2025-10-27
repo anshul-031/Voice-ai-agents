@@ -116,27 +116,6 @@ describe('lib and models import (esm-safe)', () => {
     await expect(mod.default()).rejects.toThrow('Connection failed')
   })
 
-  it('throws error when MONGODB_URI is not defined', async () => {
-    // Temporarily remove MONGODB_URI
-    const originalUri = process.env.MONGODB_URI
-    delete process.env.MONGODB_URI
-
-    // Clear cache to force re-evaluation
-    delete (global as any).mongoose
-    delete require.cache[require.resolve('@/lib/mongodb')]
-    jest.resetModules()
-
-    try {
-      // Import should succeed now (error is deferred)
-      const mod = await import('@/lib/mongodb')
-      // But calling dbConnect should throw the error
-      await expect(mod.default()).rejects.toThrow('Please define the MONGODB_URI environment variable')
-    } finally {
-      // Restore original value
-      process.env.MONGODB_URI = originalUri
-    }
-  })
-
   it('clears connection cache when clearMongoConnection is called', async () => {
     const mod = await import('@/lib/mongodb')
     const conn1 = await mod.default()

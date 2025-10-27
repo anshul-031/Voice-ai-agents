@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 import { NextRequest } from 'next/server';
-import { GET, POST } from '../../app/api/payment-status/route';
 
 // Create proper NextRequest instances for testing
 const createMockRequest = (url: string, options?: { method?: string; body?: any }) => {
@@ -16,17 +15,16 @@ const createMockRequest = (url: string, options?: { method?: string; body?: any 
   return request;
 };
 
+import { GET, POST } from '../../app/api/payment-status/route';
+
 describe('/api/payment-status', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     // Reset environment variables before each test
     process.env = { ...originalEnv };
-    // Clear the in-memory store before each test
+    // Clear modules to ensure clean state
     jest.resetModules();
-    // Clear mongoose mock storage
-    const mongooseMock = require('mongoose');
-    mongooseMock.__clearStorage();
   });
 
   afterEach(() => {
@@ -270,126 +268,43 @@ describe('/api/payment-status', () => {
     });
   });
 
-  describe('Fallback to in-memory storage (when MongoDB is not configured)', () => {
-    beforeEach(() => {
-      // Ensure MONGODB_URI is not set to trigger fallback
-      delete process.env.MONGODB_URI;
-    });
-
-    it('should store payment data in memory when MongoDB is not available', async () => {
+  describe('JSON file storage', () => {
+    it('should store and retrieve payment data from JSON file', async () => {
       const paymentData = {
-        transaction_id: 'txn_memory_123',
-        mer_ref_id: 'ref_memory_456',
-        account_id: 'acc_memory_789',
+        transaction_id: 'txn_json_123',
+        mer_ref_id: 'ref_json_456',
+        account_id: 'acc_json_789',
         payment_status: 'successful' as const,
         payment_date: '2025-10-27T10:30:00.000Z',
-        description: 'Payment stored in memory',
+        description: 'Payment stored in JSON file',
         amount: 150
       };
 
-      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+      // Store the payment data
+      const postRequest = createMockRequest('http://localhost:3000/api/payment-status', {
         method: 'POST',
         body: paymentData
       });
-      const response = await POST(request as any);
-      const data = await response.json();
+      const postResponse = await POST(postRequest as any);
+      const postData = await postResponse.json();
 
-      expect(response.status).toBe(201);
-      expect(data.status_code).toBe(201);
-      expect(data.message).toBe('Payment data stored successfully');
-    });
+      expect(postResponse.status).toBe(201);
+      expect(postData.status_code).toBe(201);
+      expect(postData.message).toBe('Payment data stored successfully');
 
-    it('should retrieve payment data from memory when MongoDB is not available', async () => {
-      // First store the data
-      const paymentData = {
-        transaction_id: 'txn_memory_get_123',
-        mer_ref_id: 'ref_memory_get_456',
-        account_id: 'acc_memory_get_789',
-        payment_status: 'successful' as const,
-        payment_date: '2025-10-27T10:30:00.000Z',
-        description: 'Payment for memory retrieval test',
-        amount: 250
-      };
+      // Retrieve the payment data
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=txn_json_123');
+      const getResponse = await GET(getRequest as any);
+      const getData = await getResponse.json();
 
-      await POST(createMockRequest('http://localhost:3000/api/payment-status', {
-        method: 'POST',
-        body: paymentData
-      }) as any);
-
-      // Now retrieve it
-      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=txn_memory_get_123');
-      const response = await GET(getRequest as any);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.status_code).toBe(200);
-      expect(data.data.transaction_id).toBe('txn_memory_get_123');
-      expect(data.data.mer_ref_id).toBe('ref_memory_get_456');
-      expect(data.data.account_id).toBe('acc_memory_get_789');
-      expect(data.data.payment_status).toBe('successful');
-      expect(data.data.description).toBe('Payment for memory retrieval test');
-      expect(data.data.amount).toBe(250);
-      expect(data.data.payment_date).toBe('2025-10-27T10:30:00.000Z');
-    });
-
-    it('should find payment by mer_ref_id from memory when MongoDB is not available', async () => {
-      const paymentData = {
-        transaction_id: 'txn_memory_mer_123',
-        mer_ref_id: 'ref_memory_mer_456',
-        account_id: 'acc_memory_mer_789',
-        payment_status: 'pending' as const,
-        payment_date: '2025-10-27T11:00:00.000Z',
-        description: 'Payment for mer_ref_id test',
-        amount: 300
-      };
-
-      await POST(createMockRequest('http://localhost:3000/api/payment-status', {
-        method: 'POST',
-        body: paymentData
-      }) as any);
-
-      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?mer_ref_id=ref_memory_mer_456');
-      const response = await GET(getRequest as any);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.data.transaction_id).toBe('txn_memory_mer_123');
-      expect(data.data.payment_status).toBe('pending');
-    });
-
-    it('should find payment by account_id from memory when MongoDB is not available', async () => {
-      const paymentData = {
-        transaction_id: 'txn_memory_acc_123',
-        mer_ref_id: 'ref_memory_acc_456',
-        account_id: 'acc_memory_acc_789',
-        payment_status: 'failed' as const,
-        payment_date: '2025-10-27T12:00:00.000Z',
-        description: 'Payment for account_id test',
-        amount: 400
-      };
-
-      await POST(createMockRequest('http://localhost:3000/api/payment-status', {
-        method: 'POST',
-        body: paymentData
-      }) as any);
-
-      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?account_id=acc_memory_acc_789');
-      const response = await GET(getRequest as any);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.data.transaction_id).toBe('txn_memory_acc_123');
-      expect(data.data.payment_status).toBe('failed');
-    });
-
-    it('should return 404 when payment not found in memory', async () => {
-      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=nonexistent');
-      const response = await GET(getRequest as any);
-      const data = await response.json();
-
-      expect(response.status).toBe(404);
-      expect(data.status_code).toBe(404);
-      expect(data.message).toBe('Payment data not found');
+      expect(getResponse.status).toBe(200);
+      expect(getData.status_code).toBe(200);
+      expect(getData.data.transaction_id).toBe('txn_json_123');
+      expect(getData.data.mer_ref_id).toBe('ref_json_456');
+      expect(getData.data.account_id).toBe('acc_json_789');
+      expect(getData.data.payment_status).toBe('successful');
+      expect(getData.data.description).toBe('Payment stored in JSON file');
+      expect(getData.data.amount).toBe(150);
     });
   });
 });

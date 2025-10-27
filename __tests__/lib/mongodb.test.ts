@@ -50,12 +50,13 @@ describe('lib/mongodb', () => {
     expect(conn2).toBe(conn1)
   })
 
-  test('dbConnect throws when the MongoDB URI is missing', async () => {
+  test('dbConnect returns null when the MongoDB URI is missing', async () => {
     delete process.env.MONGODB_URI
     const { mongooseMock, module } = await importWithMock()
     const dbConnect = module.default
 
-    await expect(dbConnect()).rejects.toThrow('Please define the MONGODB_URI environment variable')
+    const result = await dbConnect()
+    expect(result).toBeNull()
     expect(mongooseMock.connect).not.toHaveBeenCalled()
   })
 

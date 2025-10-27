@@ -3,12 +3,9 @@
  * Returns the status of a payment transaction and handles payment gateway callbacks
  */
 
-import dbConnect from '@/lib/mongodb';
-import Payment from '@/models/Payment';
+import { promises as fs } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Fallback in-memory storage when MongoDB is not available
-const paymentStore = new Map<string, any>();
+import path from 'path';
 
 interface PaymentData {
   transaction_id: string;
@@ -19,6 +16,9 @@ interface PaymentData {
   description: string;
   amount?: number;
 }
+
+// JSON file path for storing payment data
+const PAYMENT_DATA_FILE = path.join(process.cwd(), 'data', 'payments.json');
 
 /**
  * GET /api/payment-status?transaction_id=txn_123&mer_ref_id=ref_456&account_id=acc_789
@@ -73,12 +73,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Connect to database (optional - will use in-memory fallback if not available)
-    const dbConnection = await dbConnect();
-    if (dbConnection) {
-      console.log('[Payment Status] Connected to MongoDB');
-    } else {
-      console.log('[Payment Status] Using in-memory storage (MongoDB not configured)');
-    }
+    // const dbConnection = await dbConnect();
+    // if (dbConnection) {
+    //   console.log('[Payment Status] Connected to MongoDB');
+    // } else {
+    //   console.log('[Payment Status] Using in-memory storage (MongoDB not configured)');
+    // }
 
     // Find payment data by any of the identifiers
     const paymentData = await findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim());
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Connect to database (optional - will use in-memory fallback if not available)
-    const dbConnection = await dbConnect();
+    // const dbConnection = await dbConnect();
 
     // Prepare payment data
     const paymentData = {
@@ -186,32 +186,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       mer_ref_id: body.mer_ref_id,
       account_id: body.account_id,
       payment_status: body.payment_status,
-      payment_date: new Date(body.payment_date),
+      payment_date: body.payment_date, // Keep as string from request
       description: body.description,
       amount: body.amount,
     };
 
-    if (dbConnection) {
-      // Store payment data in MongoDB
-      console.log('[Payment Status] Storing in MongoDB');
-      await Payment.findOneAndUpdate(
-        { transaction_id: body.transaction_id },
-        paymentData,
-        { upsert: true, new: true }
-      );
-    } else {
-      // Store payment data in memory
-      console.log('[Payment Status] Storing in memory (MongoDB not configured)');
-      paymentStore.set(body.transaction_id, {
-        transaction_id: body.transaction_id,
-        mer_ref_id: body.mer_ref_id,
-        account_id: body.account_id,
-        payment_status: body.payment_status,
-        payment_date: new Date(body.payment_date),
-        description: body.description,
-        amount: body.amount,
-      });
-    }
+    // Store payment data in JSON file
+    console.log('[Payment Status] Storing in JSON file');
+    await storePaymentData(paymentData);
 
     console.log('[Payment Status] Payment data stored:', {
       transaction_id: body.transaction_id,
@@ -243,89 +225,90 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * Find payment data by any of the identifiers
  */
 async function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string): Promise<PaymentData | null> {
-  // Check if MongoDB is available
-  const dbConnection = await dbConnect();
-
-  if (!dbConnection) {
-    // Use in-memory storage as fallback
-    console.log('[Payment Status] Using in-memory storage (MongoDB not available)');
+  try {
+    // Read payment data from JSON file
+    const payments = await readPaymentData();
 
     // First try to find by transaction_id (most specific)
-    if (transactionId && paymentStore.has(transactionId)) {
-      return paymentStore.get(transactionId);
+    if (transactionId) {
+      const payment = payments.find(p => p.transaction_id === transactionId);
+      if (payment) {
+        return payment;
+      }
     }
 
     // Then try to find by mer_ref_id
     if (merRefId) {
-      for (const payment of paymentStore.values()) {
-        if (payment.mer_ref_id === merRefId) {
-          return payment;
-        }
+      const payment = payments.find(p => p.mer_ref_id === merRefId);
+      if (payment) {
+        return payment;
       }
     }
 
     // Finally try to find by account_id
     if (accountId) {
-      for (const payment of paymentStore.values()) {
-        if (payment.account_id === accountId) {
-          return payment;
-        }
+      const payment = payments.find(p => p.account_id === accountId);
+      if (payment) {
+        return payment;
       }
     }
 
     return null;
+  } catch (error) {
+    console.error('[Payment Status] Error reading payment data:', error);
+    return null;
   }
+}
 
-  // Use MongoDB
-  console.log('[Payment Status] Using MongoDB storage');
+/**
+ * Read payment data from JSON file
+ */
+async function readPaymentData(): Promise<PaymentData[]> {
+  try {
+    // Ensure data directory exists
+    const dataDir = path.dirname(PAYMENT_DATA_FILE);
+    await fs.mkdir(dataDir, { recursive: true });
 
-  // First try to find by transaction_id (most specific)
-  if (transactionId) {
-    const payment = await Payment.findOne({ transaction_id: transactionId });
-    if (payment) {
-      return {
-        transaction_id: payment.transaction_id,
-        mer_ref_id: payment.mer_ref_id,
-        account_id: payment.account_id,
-        payment_status: payment.payment_status,
-        payment_date: payment.payment_date,
-        description: payment.description,
-        amount: payment.amount,
-      };
+    // Try to read the file
+    const fileContent = await fs.readFile(PAYMENT_DATA_FILE, 'utf-8');
+    const payments = JSON.parse(fileContent);
+
+    // Ensure it's an array
+    return Array.isArray(payments) ? payments : [];
+  } catch (_error) {
+    // If file doesn't exist or is corrupted, return empty array
+    console.log('[Payment Status] Payment data file not found or corrupted, starting fresh');
+    return [];
+  }
+}
+
+/**
+ * Store payment data in JSON file
+ */
+async function storePaymentData(paymentData: PaymentData): Promise<void> {
+  try {
+    // Read existing payments
+    const payments = await readPaymentData();
+
+    // Find existing payment by transaction_id and update it, or add new one
+    const existingIndex = payments.findIndex(p => p.transaction_id === paymentData.transaction_id);
+
+    if (existingIndex >= 0) {
+      // Update existing payment
+      payments[existingIndex] = paymentData;
+    } else {
+      // Add new payment
+      payments.push(paymentData);
     }
-  }
 
-  // Then try to find by mer_ref_id
-  if (merRefId) {
-    const payment = await Payment.findOne({ mer_ref_id: merRefId });
-    if (payment) {
-      return {
-        transaction_id: payment.transaction_id,
-        mer_ref_id: payment.mer_ref_id,
-        account_id: payment.account_id,
-        payment_status: payment.payment_status,
-        payment_date: payment.payment_date,
-        description: payment.description,
-        amount: payment.amount,
-      };
-    }
-  }
+    // Ensure data directory exists
+    const dataDir = path.dirname(PAYMENT_DATA_FILE);
+    await fs.mkdir(dataDir, { recursive: true });
 
-  // Finally try to find by account_id
-  if (accountId) {
-    const payment = await Payment.findOne({ account_id: accountId });
-    if (payment) {
-      return {
-        transaction_id: payment.transaction_id,
-        mer_ref_id: payment.mer_ref_id,
-        account_id: payment.account_id,
-        payment_status: payment.payment_status,
-        payment_date: payment.payment_date,
-        description: payment.description,
-        amount: payment.amount,
-      };
-    }
+    // Write back to file
+    await fs.writeFile(PAYMENT_DATA_FILE, JSON.stringify(payments, null, 2));
+  } catch (error) {
+    console.error('[Payment Status] Error storing payment data:', error);
+    throw error;
   }
-
-  return null;
 }

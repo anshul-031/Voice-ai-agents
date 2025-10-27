@@ -1,0 +1,74 @@
+[
+  {
+    "transaction_id": "test_txn_123",
+    "mer_ref_id": "test_ref_456",
+    "account_id": "test_acc_789",
+    "payment_status": "successful",
+    "payment_date": "2025-10-27T10:30:00.000Z",
+    "description": "Test payment for JSON storage",
+    "amount": 100
+  },
+  {
+    "transaction_id": "txn_123",
+    "mer_ref_id": "ref_456",
+    "account_id": "acc_789",
+    "payment_status": "successful",
+    "payment_date": "2025-10-27T10:30:00.000Z",
+    "description": "Payment processed successfully",
+    "amount": 100
+  },
+  {
+    "transaction_id": "txn_success_123",
+    "mer_ref_id": "ref_456",
+    "account_id": "acc_789",
+    "payment_status": "successful",
+    "payment_date": "2025-10-27T10:30:00.000Z",
+    "description": "Payment processed successfully",
+    "amount": 100
+  },
+  {
+    "transaction_id": "txn_456",
+    "mer_ref_id": "ref_pending_789",
+    "account_id": "acc_101",
+    "payment_status": "pending",
+    "payment_date": "2025-10-27T11:00:00.000Z",
+    "description": "Payment is being processed",
+    "amount": 75
+  },
+  {
+    "transaction_id": "txn_789",
+    "mer_ref_id": "ref_101",
+    "account_id": "acc_fail_202",
+    "payment_status": "failed",
+    "payment_date": "2025-10-27T12:00:00.000Z",
+    "description": "Payment failed",
+    "amount": 50
+  },
+  {
+    "transaction_id": "txn_priority_1",
+    "mer_ref_id": "ref_shared",
+    "account_id": "acc_shared",
+    "payment_status": "successful",
+    "payment_date": "2025-10-27T13:00:00.000Z",
+    "description": "First payment",
+    "amount": 100
+  },
+  {
+    "transaction_id": "txn_priority_2",
+    "mer_ref_id": "ref_shared",
+    "account_id": "acc_shared",
+    "payment_status": "failed",
+    "payment_date": "2025-10-27T14:00:00.000Z",
+    "description": "Second payment",
+    "amount": 200
+  },
+  {
+    "transaction_id": "txn_json_123",
+    "mer_ref_id": "ref_json_456",
+    "account_id": "acc_json_789",
+    "payment_status": "successful",
+    "payment_date": "2025-10-27T10:30:00.000Z",
+    "description": "Payment stored in JSON file",
+    "amount": 150
+  }
+]
