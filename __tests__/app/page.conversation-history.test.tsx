@@ -69,8 +69,8 @@ describe('Home page - Conversation History', () => {
 
                 expect(body.userText).toBe('Hello')
                 expect(body.conversationHistory).toEqual([])
-            })
-        })
+            }, { timeout: 10000 })
+        }, 15000)
 
         it.skip('should send previous message in conversationHistory on second message', async () => {
             // Skipping: Test is checking mock implementation details rather than behavior

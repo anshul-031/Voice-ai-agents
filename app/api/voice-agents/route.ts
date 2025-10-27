@@ -1,3 +1,4 @@
+import { sanitizeKnowledgeItems } from '@/lib/knowledge';
 import dbConnect, { clearMongoConnection } from '@/lib/mongodb';
 import VoiceAgent, { type IVoiceAgent } from '@/models/VoiceAgent';
 import type { Types } from 'mongoose';
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                knowledgeItems: agent.knowledgeItems || [],
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             })),
@@ -65,8 +67,16 @@ export async function POST(request: NextRequest) {
         await dbConnect();
         console.log('[Voice Agents API] Connected to MongoDB');
 
-        const { userId, title, prompt, llmModel, sttModel, ttsModel } = await request.json();
-        console.log('[Voice Agents API] Request data:', { userId, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel });
+        const { userId, title, prompt, llmModel, sttModel, ttsModel, knowledgeItems } = await request.json();
+        console.log('[Voice Agents API] Request data:', {
+            userId,
+            title,
+            promptLength: prompt?.length,
+            llmModel,
+            sttModel,
+            ttsModel,
+            knowledgeCount: Array.isArray(knowledgeItems) ? knowledgeItems.length : 0,
+        });
 
         if (!title || !prompt) {
             console.error('[Voice Agents API] Missing required fields');
@@ -76,6 +86,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const sanitizedKnowledge = sanitizeKnowledgeItems(knowledgeItems);
+
         const agent = new VoiceAgent({
             userId: userId || 'mukul',
             title: title.trim(),
@@ -83,6 +95,7 @@ export async function POST(request: NextRequest) {
             llmModel: llmModel || 'Gemini 1.5 Flash',
             sttModel: sttModel || 'AssemblyAI Universal',
             ttsModel: ttsModel || 'Sarvam Manisha',
+            knowledgeItems: sanitizedKnowledge,
             lastUpdated: new Date(),
             createdAt: new Date(),
         });
@@ -100,6 +113,7 @@ export async function POST(request: NextRequest) {
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                knowledgeItems: agent.knowledgeItems || [],
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             },
@@ -124,10 +138,18 @@ export async function PUT(request: NextRequest) {
     try {
         await dbConnect();
 
-        const { id, title, prompt, llmModel, sttModel, ttsModel } = await request.json();
-        console.log('[Voice Agents API] Update request:', { id, title, promptLength: prompt?.length, llmModel, sttModel, ttsModel });
+        const { id, title, prompt, llmModel, sttModel, ttsModel, knowledgeItems } = await request.json();
+        console.log('[Voice Agents API] Update request:', {
+            id,
+            title,
+            promptLength: prompt?.length,
+            llmModel,
+            sttModel,
+            ttsModel,
+            knowledgeCount: Array.isArray(knowledgeItems) ? knowledgeItems.length : 'unchanged',
+        });
 
-        if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel)) {
+        if (!id || (!title && !prompt && !llmModel && !sttModel && !ttsModel && !Array.isArray(knowledgeItems))) {
             return NextResponse.json(
                 { error: 'Missing required fields: id and at least one of (title, prompt, llmModel, sttModel, ttsModel)' },
                 { status: 400 },
@@ -140,6 +162,9 @@ export async function PUT(request: NextRequest) {
         if (llmModel) updateData.llmModel = llmModel;
         if (sttModel) updateData.sttModel = sttModel;
         if (ttsModel) updateData.ttsModel = ttsModel;
+        if (Array.isArray(knowledgeItems)) {
+            updateData.knowledgeItems = sanitizeKnowledgeItems(knowledgeItems);
+        }
 
         const agent = await VoiceAgent.findByIdAndUpdate(
             id,
@@ -166,6 +191,7 @@ export async function PUT(request: NextRequest) {
                 llmModel: agent.llmModel,
                 sttModel: agent.sttModel,
                 ttsModel: agent.ttsModel,
+                knowledgeItems: agent.knowledgeItems || [],
                 lastUpdated: agent.lastUpdated,
                 createdAt: agent.createdAt,
             },
