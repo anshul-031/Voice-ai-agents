@@ -13,7 +13,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --detectOpenHandles --no-cache",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
-    "check:coverage": "node scripts/check-coverage.js 90",
+    "check:coverage": "node scripts/check-coverage.js 90 90 90",
     "test:api": "node run-tests.js --api-only",
     "test:e2e": "node run-tests.js --e2e-only",
     "test:ui": "node run-tests.js --ui-only",
