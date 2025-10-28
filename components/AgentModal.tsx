@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { parseTriggerPhrases, sanitizeHeaders, sanitizeParameters } from '@/lib/agentToolsForm';
 
 interface KnowledgeItem {
     itemId: string;
@@ -65,6 +66,8 @@ interface ToolFormState {
     successMessage: string;
     failureMessage: string;
     runAfterCall: boolean;
+    headers: AgentToolHeader[];
+    parameters: AgentToolParameter[];
 }
 
 interface AgentModalProps {
@@ -98,6 +101,8 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
         successMessage: '',
         failureMessage: '',
         runAfterCall: false,
+        headers: [],
+        parameters: [],
     });
 
     const fileInputId = useMemo(() => `knowledge-upload-${Math.random().toString(36).slice(2)}`, []);
@@ -116,6 +121,8 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
             successMessage: '',
             failureMessage: '',
             runAfterCall: false,
+            headers: [],
+            parameters: [],
         });
     };
 
@@ -150,6 +157,16 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                 successMessage: tool.successMessage || '',
                 failureMessage: tool.failureMessage || '',
                 runAfterCall: Boolean(tool.runAfterCall),
+                headers: (tool.headers || []).map((header) => ({
+                    key: header?.key?.toString?.() || '',
+                    value: header?.value?.toString?.() || '',
+                })),
+                parameters: (tool.parameters || []).map((parameter) => ({
+                    name: parameter?.name?.toString?.() || '',
+                    description: parameter?.description?.toString?.() || '',
+                    type: parameter?.type?.toString?.().toLowerCase() || 'string',
+                    required: Boolean(parameter?.required),
+                })),
             });
         } else {
             setEditingTool(null);
@@ -162,6 +179,64 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
         setToolFormOpen(false);
         setEditingTool(null);
         resetToolForm();
+    };
+
+    const addHeaderRow = () => {
+        setToolForm(prev => ({
+            ...prev,
+            headers: [...prev.headers, { key: '', value: '' }],
+        }));
+    };
+
+    const updateHeaderRow = (index: number, field: 'key' | 'value', value: string) => {
+        setToolForm(prev => ({
+            ...prev,
+            headers: prev.headers.map((header, headerIndex) =>
+                headerIndex === index ? { ...header, [field]: value } : header,
+            ),
+        }));
+    };
+
+    const removeHeaderRow = (index: number) => {
+        setToolForm(prev => ({
+            ...prev,
+            headers: prev.headers.filter((_, headerIndex) => headerIndex !== index),
+        }));
+    };
+
+    const addParameterRow = () => {
+        setToolForm(prev => ({
+            ...prev,
+            parameters: [
+                ...prev.parameters,
+                { name: '', description: '', type: 'string', required: false },
+            ],
+        }));
+    };
+
+    const updateParameterTextField = (index: number, field: 'name' | 'description' | 'type', value: string) => {
+        setToolForm(prev => ({
+            ...prev,
+            parameters: prev.parameters.map((parameter, parameterIndex) =>
+                parameterIndex === index ? { ...parameter, [field]: value } : parameter,
+            ),
+        }));
+    };
+
+    const updateParameterRequired = (index: number, required: boolean) => {
+        setToolForm(prev => ({
+            ...prev,
+            parameters: prev.parameters.map((parameter, parameterIndex) =>
+                parameterIndex === index ? { ...parameter, required } : parameter,
+            ),
+        }));
+    };
+
+    const removeParameterRow = (index: number) => {
+        setToolForm(prev => ({
+            ...prev,
+            parameters: prev.parameters.filter((_, parameterIndex) => parameterIndex !== index),
+        }));
     };
 
     const handleToolSubmit = async (event: React.FormEvent) => {
@@ -185,12 +260,9 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
             description: toolForm.description.trim() || undefined,
             webhookUrl: toolForm.webhookUrl.trim(),
             method: toolForm.method,
-            headers: [] as AgentToolHeader[],
-            parameters: [] as AgentToolParameter[],
-            triggerPhrases: toolForm.triggerPhrases
-                .split(/[,\n]/)
-                .map(phrase => phrase.trim())
-                .filter(Boolean),
+            headers: sanitizeHeaders(toolForm.headers),
+            parameters: sanitizeParameters(toolForm.parameters),
+            triggerPhrases: parseTriggerPhrases(toolForm.triggerPhrases),
             successMessage: toolForm.successMessage.trim() || undefined,
             failureMessage: toolForm.failureMessage.trim() || undefined,
             runAfterCall: Boolean(toolForm.runAfterCall),
@@ -740,6 +812,129 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                                             </div>
                                         </div>
 
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-medium text-gray-300">HTTP Headers</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={addHeaderRow}
+                                                    className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
+                                                >
+                                                    Add Header
+                                                </button>
+                                            </div>
+                                            {toolForm.headers.length === 0 ? (
+                                                <p className="text-xs text-gray-500">
+                                                    No headers added yet. Include Authorization or custom keys if your webhook requires them.
+                                                </p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {toolForm.headers.map((header, index) => (
+                                                        <div key={`header-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                                                            <input
+                                                                type="text"
+                                                                value={header.key}
+                                                                onChange={(event) => updateHeaderRow(index, 'key', event.target.value)}
+                                                                placeholder="Header name (e.g., Authorization)"
+                                                                className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={header.value}
+                                                                onChange={(event) => updateHeaderRow(index, 'value', event.target.value)}
+                                                                placeholder="Header value"
+                                                                className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeHeaderRow(index)}
+                                                                className="self-center rounded-md border border-red-500/40 px-3 py-2 text-[11px] font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-medium text-gray-300">Parameters</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={addParameterRow}
+                                                    className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
+                                                >
+                                                    Add Parameter
+                                                </button>
+                                            </div>
+                                            {toolForm.parameters.length === 0 ? (
+                                                <p className="text-xs text-gray-500">
+                                                    No parameters defined. Add inputs the agent should collect before invoking this webhook.
+                                                </p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {toolForm.parameters.map((parameter, index) => (
+                                                        <div key={`parameter-${index}`} className="space-y-2 rounded-lg border border-gray-700 bg-[#111924] p-3">
+                                                            <div className="grid gap-2 md:grid-cols-[1fr_160px_auto]">
+                                                                <div>
+                                                                    <label className="text-[11px] font-medium text-gray-300 mb-1 block">Name *</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={parameter.name}
+                                                                        onChange={(event) => updateParameterTextField(index, 'name', event.target.value)}
+                                                                        placeholder="e.g., ticketId"
+                                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[11px] font-medium text-gray-300 mb-1 block">Type</label>
+                                                                    <select
+                                                                        value={(parameter.type || 'string').toString()}
+                                                                        onChange={(event) => updateParameterTextField(index, 'type', event.target.value)}
+                                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                                    >
+                                                                        <option value="string">Text</option>
+                                                                        <option value="number">Number</option>
+                                                                        <option value="boolean">Boolean</option>
+                                                                    </select>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeParameterRow(index)}
+                                                                    className="self-center rounded-md border border-red-500/40 px-3 py-2 text-[11px] font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                                                                <div>
+                                                                    <label className="text-[11px] font-medium text-gray-300 mb-1 block">Description</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={parameter.description || ''}
+                                                                        onChange={(event) => updateParameterTextField(index, 'description', event.target.value)}
+                                                                        placeholder="Explain what value the agent should capture"
+                                                                        className="w-full rounded-lg border border-gray-700 bg-[#141b24] px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                                    />
+                                                                </div>
+                                                                <label className="flex items-center justify-end gap-2 text-xs text-gray-300">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={Boolean(parameter.required)}
+                                                                        onChange={(event) => updateParameterRequired(index, event.target.checked)}
+                                                                        className="h-4 w-4 rounded border-gray-600 bg-[#141b24] text-emerald-500 focus:ring-emerald-500"
+                                                                    />
+                                                                    Required
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <label className="inline-flex items-center gap-2 text-xs text-gray-300">
                                             <input
                                                 type="checkbox"
@@ -802,6 +997,29 @@ export default function AgentModal({ isOpen, onClose, agent, onSuccess }: AgentM
                                                         {tool.runAfterCall && (
                                                             <p className="mt-1 text-[11px] text-gray-400">Runs automatically after the call</p>
                                                         )}
+                                                        {tool.headers?.length ? (
+                                                            <div className="mt-2 space-y-1">
+                                                                <p className="text-[11px] font-medium text-gray-300">Headers</p>
+                                                                {tool.headers.map((header, headerIndex) => (
+                                                                    <p key={`${tool._id}-header-${headerIndex}`} className="text-[11px] text-gray-400">
+                                                                        <span className="text-gray-500">{header.key}:</span> {header.value}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        ) : null}
+                                                        {tool.parameters?.length ? (
+                                                            <div className="mt-2 space-y-1">
+                                                                <p className="text-[11px] font-medium text-gray-300">Parameters</p>
+                                                                {tool.parameters.map((parameter, parameterIndex) => (
+                                                                    <p key={`${tool._id}-parameter-${parameterIndex}`} className="text-[11px] text-gray-400">
+                                                                        <span className="text-gray-300 font-medium">{parameter.name}</span>
+                                                                        {parameter.type ? ` (${parameter.type.charAt(0).toUpperCase()}${parameter.type.slice(1)})` : ' (String)'}
+                                                                        {parameter.required ? ' · Required' : ' · Optional'}
+                                                                        {parameter.description ? ` — ${parameter.description}` : ''}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <button
