@@ -134,9 +134,14 @@ export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, o
                 graphApiVersion: formData.graphApiVersion.trim() || DEFAULT_GRAPH_VERSION,
             };
 
-            if (!isEditMode || metaFieldsProvided) {
+            // For create mode, always include metaConfig
+            // For edit mode, only include metaConfig if user provided new values
+            if (!isEditMode) {
+                payload.metaConfig = metaConfig;
+            } else if (metaFieldsProvided) {
                 payload.metaConfig = metaConfig;
             }
+            // Note: In edit mode, if metaConfig is not provided, the backend will preserve existing values
 
             const url = '/api/whatsapp-numbers';
             const method = isEditMode ? 'PUT' : 'POST';
