@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Edit2, ExternalLink, MessageCircle, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
+import { Copy, Edit2, MessageCircle, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface WhatsAppMetaConfig {
@@ -17,6 +17,7 @@ interface WhatsAppNumber {
     phoneNumberId?: string;
     displayName?: string;
     linkedAgentId?: string;
+    linkedAgentTitle?: string;
     webhookUrl?: string;
     status: 'active' | 'inactive';
     lastInteractionAt?: string;
@@ -33,12 +34,14 @@ interface WhatsAppNumbersTableProps {
 
 export default function WhatsAppNumbersTable({ onAddWhatsApp, onEditWhatsApp }: WhatsAppNumbersTableProps) {
     const [whatsAppNumbers, setWhatsAppNumbers] = useState<WhatsAppNumber[]>([]);
+    const [agents, setAgents] = useState<Array<{ id: string; title: string }>>([]);
     const [loading, setLoading] = useState(true);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const [deploymentOrigin, setDeploymentOrigin] = useState('');
 
     useEffect(() => {
         fetchWhatsAppNumbers();
+        fetchAgents();
     }, []);
 
     useEffect(() => {
@@ -46,6 +49,18 @@ export default function WhatsAppNumbersTable({ onAddWhatsApp, onEditWhatsApp }: 
             setDeploymentOrigin(window.location.origin);
         }
     }, []);
+
+    const fetchAgents = async () => {
+        try {
+            const res = await fetch('/api/voice-agents?userId=mukul');
+            if (res.ok) {
+                const data = await res.json();
+                setAgents(data.agents || []);
+            }
+        } catch (error) {
+            console.error('Error fetching agents:', error);
+        }
+    };
 
     const fetchWhatsAppNumbers = async () => {
         setLoading(true);
@@ -62,6 +77,12 @@ export default function WhatsAppNumbersTable({ onAddWhatsApp, onEditWhatsApp }: 
         } finally {
             setLoading(false);
         }
+    };
+
+    const getAgentTitle = (agentId?: string) => {
+        if (!agentId) return 'Not linked';
+        const agent = agents.find(a => a.id === agentId);
+        return agent?.title || `Agent ${agentId.slice(0, 8)}...`;
     };
 
     const handleDelete = async (id: string) => {
@@ -258,15 +279,33 @@ export default function WhatsAppNumbersTable({ onAddWhatsApp, onEditWhatsApp }: 
                                             </div>
                                         )}
 
-                                        {item.linkedAgentId && (
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-gray-400">Linked Agent</span>
-                                                <span className="text-emerald-400 flex items-center gap-1">
-                                                    <ExternalLink className="w-3 h-3" />
-                                                    Agent
-                                                </span>
-                                            </div>
-                                        )}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-400">Linked Agent</span>
+                                            <span className={`text-xs font-medium ${item.linkedAgentId ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                                {getAgentTitle(item.linkedAgentId)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-400">Connection Status</span>
+                                            <span className={`text-xs font-medium flex items-center gap-1.5 ${
+                                                item.linkedAgentId && item.status === 'active'
+                                                    ? 'text-emerald-400'
+                                                    : 'text-yellow-400'
+                                            }`}>
+                                                <span className={`w-2 h-2 rounded-full ${
+                                                    item.linkedAgentId && item.status === 'active'
+                                                        ? 'bg-emerald-400 animate-pulse'
+                                                        : 'bg-yellow-400'
+                                                }`} />
+                                                {item.linkedAgentId && item.status === 'active'
+                                                    ? 'Connected & Ready'
+                                                    : item.linkedAgentId
+                                                        ? 'Agent Linked (Inactive)'
+                                                        : 'No Agent Linked'
+                                                }
+                                            </span>
+                                        </div>
 
                                         {item.lastInteractionAt && (
                                             <div className="flex items-center justify-between">
