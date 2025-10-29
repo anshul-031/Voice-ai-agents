@@ -1,8 +1,7 @@
 import dbConnect from '@/lib/dbConnect';
-import { triggerExotelCall } from '@/lib/exotel';
+import { triggerCampaignCalls } from '@/lib/campaignCalls';
 import Campaign from '@/models/Campaign';
-import CampaignContact, { type ICampaignContact } from '@/models/CampaignContact';
-import type { Types } from 'mongoose';
+import CampaignContact from '@/models/CampaignContact';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
 
         // Start calling contacts asynchronously
         // This runs in the background without blocking the response
-        triggerCampaignCalls(campaign_id, contacts).catch(error => {
+        triggerCampaignCalls(campaign_id, contacts).catch((error: unknown) => {
             console.error('Error in background call processing:', error);
         });
 
@@ -84,79 +83,4 @@ export async function POST(request: NextRequest) {
             { status: 500 },
         );
     }
-}
-
-/**
- * Background process to trigger calls for all contacts
- */
-export async function triggerCampaignCalls(campaignId: string, contacts: ICampaignContact[]) {
-    await dbConnect();
-
-    let completedCount = 0;
-    let failedCount = 0;
-
-    for (const contact of contacts) {
-        try {
-            // Update contact status to initiated
-            contact.call_status = 'initiated';
-            contact.call_started_at = new Date();
-            await contact.save();
-
-            // Trigger Exotel call
-            const result = await triggerExotelCall({
-                phoneNumber: contact.number,
-                contactName: contact.name,
-                contactId: (contact._id as Types.ObjectId).toString(),
-            });
-
-            // Update contact based on result
-            if (result.success) {
-                contact.call_status = 'completed';
-                contact.call_done = 'yes';
-                contact.call_sid = result.callSid;
-                contact.call_ended_at = new Date();
-                completedCount++;
-            } else {
-                contact.call_status = 'failed';
-                contact.call_error = result.error;
-                contact.call_ended_at = new Date();
-                failedCount++;
-            }
-            await contact.save();
-
-            // Update campaign progress
-            await Campaign.findByIdAndUpdate(campaignId, {
-                calls_completed: completedCount,
-                calls_failed: failedCount,
-                updated_at: new Date(),
-            });
-
-            // Add delay between calls (2 seconds)
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`Error calling contact ${contact.number}:`, error);
-
-            // Mark contact as failed
-            contact.call_status = 'failed';
-            contact.call_error = errorMessage;
-            contact.call_ended_at = new Date();
-            failedCount++;
-            await contact.save();
-
-            // Update campaign progress
-            await Campaign.findByIdAndUpdate(campaignId, {
-                calls_failed: failedCount,
-                updated_at: new Date(),
-            });
-        }
-    }
-
-    // Mark campaign as completed
-    await Campaign.findByIdAndUpdate(campaignId, {
-        status: 'completed',
-        updated_at: new Date(),
-    });
-
-    console.log(`Campaign ${campaignId} completed. Success: ${completedCount}, Failed: ${failedCount}`);
 }

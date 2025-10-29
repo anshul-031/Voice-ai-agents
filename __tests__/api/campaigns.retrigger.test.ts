@@ -13,7 +13,7 @@ jest.mock('@/models/CampaignContact', () => ({
   find: jest.fn(),
   updateMany: jest.fn()
 }))
-jest.mock('@/app/api/campaigns/start/route', () => ({
+jest.mock('@/lib/campaignCalls', () => ({
   triggerCampaignCalls: jest.fn().mockResolvedValue(undefined)
 }))
 
@@ -25,7 +25,7 @@ const mockCampaignContact = require('@/models/CampaignContact') as {
   find: jest.Mock
   updateMany: jest.Mock
 }
-const mockTriggerCampaignCalls = require('@/app/api/campaigns/start/route').triggerCampaignCalls as jest.Mock
+const mockTriggerCampaignCalls = require('@/lib/campaignCalls').triggerCampaignCalls as jest.Mock
 
 describe('POST /api/campaigns/[campaignId]/retrigger', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
-import { triggerCampaignCalls } from '@/app/api/campaigns/start/route';
 import dbConnect from '@/lib/dbConnect';
+import { triggerCampaignCalls } from '@/lib/campaignCalls';
 import Campaign from '@/models/Campaign';
 import CampaignContact from '@/models/CampaignContact';
 import { NextResponse, type NextRequest } from 'next/server';
@@ -68,12 +68,12 @@ export async function POST(_request: NextRequest, context: { params: Promise<Rou
         campaign.calls_failed = 0;
         await campaign.save();
 
-        triggerCampaignCalls(campaignId, refreshedContacts).catch(error => {
+        triggerCampaignCalls(campaignId, refreshedContacts).catch((error: unknown) => {
             console.error('Error retriggering campaign in background:', error);
         });
 
         return successResponse(campaignId, refreshedContacts.length);
-    } catch (error) {
+    } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to retrigger campaign';
         console.error('Error retriggering campaign:', error);
         return errorResponse(message, 500);
