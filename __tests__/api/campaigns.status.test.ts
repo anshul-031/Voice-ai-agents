@@ -2,10 +2,10 @@
  * @jest-environment node
  */
 
-import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/campaigns/[campaignId]/status/route';
 import dbConnect from '@/lib/dbConnect';
 import Campaign from '@/models/Campaign';
+import { NextRequest } from 'next/server';
 
 // Mock dependencies
 jest.mock('@/lib/dbConnect');
@@ -17,7 +17,7 @@ const mockCampaign = Campaign as jest.Mocked<typeof Campaign>;
 describe('GET /api/campaigns/[campaignId]/status', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockDbConnect.mockResolvedValue(undefined);
+        mockDbConnect.mockResolvedValue(undefined as any);
     });
 
     it('should return 400 if campaignId is missing', async () => {
