@@ -12,6 +12,7 @@ import PhoneNumbersTable from '@/components/PhoneNumbersTable';
 import VoiceAgentsTable from '@/components/VoiceAgentsTable';
 import WhatsAppNumberModal from '@/components/WhatsAppNumberModal';
 import WhatsAppNumbersTable from '@/components/WhatsAppNumbersTable';
+import { useCampaignPolling } from '@/hooks/useCampaignPolling';
 import { useEffect, useState } from 'react';
 
 interface VoiceAgent {
@@ -101,6 +102,7 @@ export default function DashboardPage() {
     const [contactsModalOpen, setContactsModalOpen] = useState(false);
     const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
     const [retriggeringCampaignId, setRetriggeringCampaignId] = useState<string | null>(null);
+    const [pollingCampaignId, setPollingCampaignId] = useState<string | null>(null);
 
     // Phone Numbers state
     const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false);
@@ -109,6 +111,30 @@ export default function DashboardPage() {
     const [whatsAppNumberModalOpen, setWhatsAppNumberModalOpen] = useState(false);
     const [editingWhatsAppNumber, setEditingWhatsAppNumber] = useState<WhatsAppNumber | undefined>(undefined);
     const [whatsAppNumbersRefreshKey, setWhatsAppNumbersRefreshKey] = useState(0);
+
+    // Set up campaign polling for real-time progress updates
+    useCampaignPolling({
+        campaignId: pollingCampaignId,
+        enabled: pollingCampaignId !== null,
+        onUpdate: (updatedCampaign) => {
+            setCampaigns(prevCampaigns =>
+                prevCampaigns.map(campaign =>
+                    campaign._id === updatedCampaign._id
+                        ? { ...campaign, ...updatedCampaign }
+                        : campaign,
+                ),
+            );
+        },
+        onComplete: () => {
+            // Stop polling when campaign is completed
+            setPollingCampaignId(null);
+            setStartingCampaignId(null);
+            setRetriggeringCampaignId(null);
+        },
+        onError: (error) => {
+            console.error('Polling error:', error);
+        },
+    });
 
     useEffect(() => {
         if (activeView === 'campaigns') {
@@ -208,11 +234,14 @@ export default function DashboardPage() {
             }
 
             alert('Campaign starting. Calls are being placed.');
+
+            // Start polling for this campaign
+            setPollingCampaignId(campaign._id);
+
             setCampaignsRefreshKey(prev => prev + 1);
         } catch (error) {
             console.error('Error starting campaign:', error);
             alert(error instanceof Error ? error.message : 'Failed to start campaign');
-        } finally {
             setStartingCampaignId(null);
         }
     };
@@ -239,11 +268,14 @@ export default function DashboardPage() {
             }
 
             alert('Campaign retriggered successfully.');
+
+            // Start polling for this campaign
+            setPollingCampaignId(campaign._id);
+
             setCampaignsRefreshKey(prev => prev + 1);
         } catch (error) {
             console.error('Error retriggering campaign:', error);
             alert(error instanceof Error ? error.message : 'Failed to retrigger campaign');
-        } finally {
             setRetriggeringCampaignId(null);
         }
     };
