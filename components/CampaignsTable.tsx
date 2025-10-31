@@ -18,8 +18,10 @@ interface CampaignsTableProps {
     onViewCampaign: (campaign: Campaign) => void
     onStartCampaign: (campaign: Campaign) => void
     onRetriggerCampaign: (campaign: Campaign) => void
+    onDeleteCampaign: (campaign: Campaign) => void
     startingId?: string | null
     retriggeringId?: string | null
+    deletingId?: string | null
     campaigns: Campaign[]
 }
 
@@ -29,8 +31,10 @@ export default function CampaignsTable({
     onViewCampaign,
     onStartCampaign,
     onRetriggerCampaign,
+    onDeleteCampaign,
     startingId,
     retriggeringId,
+    deletingId,
     campaigns,
 }: CampaignsTableProps) {
     return (
@@ -123,6 +127,14 @@ export default function CampaignsTable({
                                             title="Retrigger Campaign"
                                         >
                                             {retriggeringId === campaign._id ? 'Retriggering…' : 'Retrigger'}
+                                        </button>
+                                        <button
+                                            onClick={() => onDeleteCampaign(campaign)}
+                                            disabled={deletingId === campaign._id}
+                                            className="px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Delete Campaign"
+                                        >
+                                            {deletingId === campaign._id ? 'Deleting…' : 'Delete'}
                                         </button>
                                     </div>
                                 </div>

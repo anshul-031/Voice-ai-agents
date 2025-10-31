@@ -122,6 +122,7 @@ describe('API: /api/campaign-contacts', () => {
       ]
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue(mockCreatedContacts)
 
       const formData = new FormData()
@@ -154,6 +155,7 @@ describe('API: /api/campaign-contacts', () => {
 1234567890,John Doe,Customer`
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
       ])
@@ -183,6 +185,7 @@ describe('API: /api/campaign-contacts', () => {
 1234567890,John Doe`
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '1234567890', name: 'John Doe', description: '', campaign_id: 'campaign-123', call_done: 'no' }
       ])
@@ -214,6 +217,7 @@ describe('API: /api/campaign-contacts', () => {
 0987654321,Jane Smith,Lead`
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' },
         { _id: '2', number: '0987654321', name: 'Jane Smith', description: 'Lead', campaign_id: 'campaign-123', call_done: 'no' }
@@ -297,6 +301,7 @@ describe('API: /api/campaign-contacts', () => {
       const csvContent = `name,description\nJohn Doe,Customer`
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
       ])
@@ -322,6 +327,7 @@ describe('API: /api/campaign-contacts', () => {
     it('should return generic error when insertion rejects with non-error value', async () => {
       const csvContent = 'number,name\n1234567890,John'
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockRejectedValue('failed')
 
       const formData = new FormData()
@@ -345,6 +351,7 @@ describe('API: /api/campaign-contacts', () => {
     it('should handle database insertion errors', async () => {
       const csvContent = 'number,name\n1234567890,John'
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockRejectedValue(new Error('Database insertion failed'))
 
       const formData = new FormData()
@@ -370,6 +377,7 @@ describe('API: /api/campaign-contacts', () => {
   1234567890  ,  John Doe  ,  Customer  `
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
       ])
@@ -399,6 +407,7 @@ describe('API: /api/campaign-contacts', () => {
 5555555555,Bob Johnson,`
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
+      ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
       ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
         { _id: '1', number: '1234567890', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' },
         { _id: '2', number: '0987654321', name: '', description: 'Lead', campaign_id: 'campaign-123', call_done: 'no' },

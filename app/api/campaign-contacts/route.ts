@@ -61,22 +61,42 @@ export async function POST(request: NextRequest) {
             trim: true,
         }) as Array<Record<string, string>>;
 
-        // Create contacts from CSV records
-        const contacts = records.map((record) => ({
-            number: record.number || record.Number || '',
-            name: record.name || record.Name || '',
-            description: record.description || record.Description || '',
-            campaign_id: campaignId,
-            call_done: 'no',
-        }));
+        // Get existing contacts for this campaign to check for duplicates
+        const existingContacts = await CampaignContact.find({ campaign_id: campaignId });
+        const existingNumbers = new Set(existingContacts.map(c => c.number));
 
-        // Insert all contacts
-        const createdContacts = await CampaignContact.insertMany(contacts);
+        // Create contacts from CSV records, filtering out duplicates
+        const uniqueContacts = records
+            .filter((record) => {
+                const number = record.number || record.Number || '';
+                return number && !existingNumbers.has(number);
+            })
+            .map((record) => ({
+                number: record.number || record.Number || '',
+                name: record.name || record.Name || '',
+                description: record.description || record.Description || '',
+                campaign_id: campaignId,
+                call_done: 'no',
+            }));
+
+        // If no unique contacts to add, return early
+        if (uniqueContacts.length === 0) {
+            return NextResponse.json({
+                success: true,
+                data: [],
+                count: 0,
+                message: 'No new contacts to add. All numbers already exist in this campaign.',
+            }, { status: 200 });
+        }
+
+        // Insert all unique contacts
+        const createdContacts = await CampaignContact.insertMany(uniqueContacts);
 
         return NextResponse.json({
             success: true,
             data: createdContacts,
             count: createdContacts.length,
+            duplicatesSkipped: records.length - uniqueContacts.length,
         }, { status: 201 });
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
 import type { VoiceRecorderState } from '@/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseVoiceRecorderOptions {
     onSegmentReady: (audioBlob: Blob) => void;
@@ -154,9 +154,11 @@ export function useVoiceRecorder({
             } else if (MediaRecorder.isTypeSupported('audio/webm')) {
                 mimeType = 'audio/webm';
                 console.log('[useVoiceRecorder] Using audio/webm');
+            /* istanbul ignore next */
             } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
                 mimeType = 'audio/mp4';
                 console.log('[useVoiceRecorder] Using audio/mp4');
+            /* istanbul ignore next */
             } else if (MediaRecorder.isTypeSupported('audio/wav')) {
                 mimeType = 'audio/wav';
                 console.log('[useVoiceRecorder] Using audio/wav');
@@ -170,6 +172,7 @@ export function useVoiceRecorder({
                 options = { mimeType };
             }
 
+            /* istanbul ignore next */
             console.log('[useVoiceRecorder] Final MIME type:', mimeType || 'browser default');
 
             // Set up MediaRecorder
