@@ -302,9 +302,7 @@ describe('API: /api/campaign-contacts', () => {
 
       ;(dbConnect as jest.Mock).mockResolvedValue(undefined)
       ;(CampaignContact.find as jest.Mock).mockResolvedValue([])
-      ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([
-        { _id: '1', number: '', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
-      ])
+      ;(CampaignContact.insertMany as jest.Mock).mockResolvedValue([])
 
       const formData = new FormData()
       const file = new File([csvContent], 'contacts.csv', { type: 'text/csv' })
@@ -317,11 +315,14 @@ describe('API: /api/campaign-contacts', () => {
       })
 
       const response = await POST(request)
+      const data = await response.json()
 
-      expect(CampaignContact.insertMany).toHaveBeenCalledWith([
-        { number: '', name: 'John Doe', description: 'Customer', campaign_id: 'campaign-123', call_done: 'no' }
-      ])
-      expect(response.status).toBe(201)
+      // Empty numbers are filtered out, so insertMany should not be called
+      expect(CampaignContact.insertMany).not.toHaveBeenCalled()
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+      expect(data.count).toBe(0)
+      expect(data.message).toContain('No new contacts to add')
     })
 
     it('should return generic error when insertion rejects with non-error value', async () => {
