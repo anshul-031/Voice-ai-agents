@@ -38,7 +38,8 @@ describe('CampaignsTable Component', () => {
     onAddCampaign: jest.fn(),
     onViewCampaign: jest.fn(),
     onStartCampaign: jest.fn(),
-    onRetriggerCampaign: jest.fn()
+    onRetriggerCampaign: jest.fn(),
+    onDeleteCampaign: jest.fn()
   }
 
   type CampaignsTableProps = ComponentProps<typeof CampaignsTable>
@@ -51,8 +52,10 @@ describe('CampaignsTable Component', () => {
       onViewCampaign: mockHandlers.onViewCampaign,
       onStartCampaign: mockHandlers.onStartCampaign,
       onRetriggerCampaign: mockHandlers.onRetriggerCampaign,
+      onDeleteCampaign: mockHandlers.onDeleteCampaign,
       startingId: null,
-      retriggeringId: null
+      retriggeringId: null,
+      deletingId: null
     }
 
     return render(<CampaignsTable {...defaultProps} {...props} />)
@@ -370,6 +373,60 @@ describe('CampaignsTable Component', () => {
 
       const progressCells = screen.getAllByText('-')
       expect(progressCells.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Delete Campaign Button', () => {
+    it('should render Delete button for each campaign', () => {
+      renderCampaignsTable()
+
+      const deleteButtons = screen.getAllByText('Delete')
+      expect(deleteButtons).toHaveLength(mockCampaigns.length)
+    })
+
+    it('should call onDeleteCampaign with correct campaign when Delete button is clicked', () => {
+      renderCampaignsTable()
+
+      const deleteButtons = screen.getAllByText('Delete')
+      fireEvent.click(deleteButtons[0])
+
+      expect(mockHandlers.onDeleteCampaign).toHaveBeenCalledTimes(1)
+      expect(mockHandlers.onDeleteCampaign).toHaveBeenCalledWith(mockCampaigns[0])
+    })
+
+    it('should disable Delete button and show loading state when deleting', () => {
+      renderCampaignsTable({ deletingId: mockCampaigns[1]._id })
+
+      const deletingButton = screen.getByText('Deleting…')
+      expect(deletingButton).toBeDisabled()
+    })
+
+    it('should keep Delete button enabled when not deleting', () => {
+      renderCampaignsTable({ deletingId: 'different-id' })
+
+      const deleteButtons = screen.getAllByText('Delete')
+      deleteButtons.forEach(button => {
+        expect(button).not.toBeDisabled()
+      })
+    })
+
+    it('should apply correct styling to Delete button', () => {
+      renderCampaignsTable()
+
+      const deleteButtons = screen.getAllByText('Delete')
+      expect(deleteButtons[0]).toHaveClass('text-red-400')
+    })
+
+    it('should handle multiple delete operations correctly', () => {
+      renderCampaignsTable()
+
+      const deleteButtons = screen.getAllByText('Delete')
+      fireEvent.click(deleteButtons[0])
+      fireEvent.click(deleteButtons[2])
+
+      expect(mockHandlers.onDeleteCampaign).toHaveBeenCalledTimes(2)
+      expect(mockHandlers.onDeleteCampaign).toHaveBeenNthCalledWith(1, mockCampaigns[0])
+      expect(mockHandlers.onDeleteCampaign).toHaveBeenNthCalledWith(2, mockCampaigns[2])
     })
   })
 })

@@ -81,3 +81,36 @@ export async function PUT(request: NextRequest) {
         );
     }
 }
+
+// DELETE campaign
+export async function DELETE(request: NextRequest) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(request.url);
+        const campaignId = searchParams.get('id');
+
+        if (!campaignId) {
+            return NextResponse.json(
+                { success: false, error: 'Campaign ID is required' },
+                { status: 400 },
+            );
+        }
+
+        const campaign = await Campaign.findByIdAndDelete(campaignId);
+
+        if (!campaign) {
+            return NextResponse.json(
+                { success: false, error: 'Campaign not found' },
+                { status: 404 },
+            );
+        }
+
+        return NextResponse.json({ success: true, data: campaign });
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return NextResponse.json(
+            { success: false, error: errorMessage },
+            { status: 400 },
+        );
+    }
+}
