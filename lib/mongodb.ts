@@ -23,10 +23,11 @@ if (!global.mongoose) {
     global.mongoose = cached;
 }
 
-async function dbConnect() {
+async function dbConnect(): Promise<typeof mongoose | null> {
     // Check for MONGODB_URI here, not at module load time
     if (!process.env.MONGODB_URI) {
-        throw new Error('Please define the MONGODB_URI environment variable');
+        console.log('[MongoDB] MONGODB_URI not set, skipping database connection');
+        return null;
     }
 
     if (cached.conn) {

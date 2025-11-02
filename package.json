@@ -4,14 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint app components hooks types",
+    "lint": "eslint app components hooks types --max-warnings 100",
     "lint:fix": "eslint app components hooks types --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --detectOpenHandles --no-cache",
+    "test:coverage": "jest --coverage --detectOpenHandles",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "check:coverage": "node scripts/check-coverage.js 90 90 90",
     "test:api": "node run-tests.js --api-only",
@@ -22,16 +22,18 @@
     "test:unit:components": "jest --testPathPattern=__tests__/components",
     "test:unit:hooks": "jest --testPathPattern=__tests__/hooks",
     "test:unit:api": "jest --testPathPattern=__tests__/api",
-    "pr":"npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage"
+    "pr": "npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "csv-parse": "^6.1.0",
+    "csv-parse": "^5.6.0",
     "framer-motion": "^12.23.22",
-    "jspdf": "^3.0.3",
+    "jspdf": "^2.5.1",
     "lucide-react": "^0.544.0",
     "mongoose": "^8.19.1",
     "next": "15.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-icons": "^5.5.0"
   },
   "devDependencies": {
@@ -52,6 +54,6 @@
     "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }

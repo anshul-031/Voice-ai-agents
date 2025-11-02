@@ -281,6 +281,35 @@ describe('AgentModal', () => {
 
             consoleSpy.mockRestore()
         })
+
+        it('should handle server error response gracefully', async () => {
+            ; (global.fetch as jest.Mock).mockResolvedValue({
+                ok: false,
+                status: 400,
+                json: jest.fn().mockResolvedValue({ error: 'Validation failed' })
+            })
+
+            render(
+                <AgentModal
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    onSuccess={mockOnSuccess}
+                />
+            )
+
+            const titleInput = screen.getByPlaceholderText('e.g., EMI Reminder, Customer Support')
+            const promptTextarea = screen.getByPlaceholderText(/Enter the system prompt that defines the agent's behavior/i)
+
+            fireEvent.change(titleInput, { target: { value: 'Test Agent' } })
+            fireEvent.change(promptTextarea, { target: { value: 'Test prompt' } })
+
+            fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }))
+
+            await waitFor(() => {
+                expect(mockOnSuccess).not.toHaveBeenCalled()
+                expect(mockOnClose).not.toHaveBeenCalled()
+            })
+        })
     })
 
     describe('Update Agent Submission', () => {

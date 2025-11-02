@@ -4,7 +4,7 @@
 		{
 			"label": "Run Tests",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test"
@@ -31,7 +31,7 @@
 		{
 			"label": "Run Tests with Coverage",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test:coverage"
@@ -51,7 +51,7 @@
 		{
 			"label": "Watch Tests",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test:watch"
@@ -71,7 +71,7 @@
 		{
 			"label": "Build Project",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"build"
@@ -94,7 +94,7 @@
 		{
 			"label": "Start Development Server",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"dev"
@@ -126,7 +126,7 @@
 		{
 			"label": "Lint Code",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"lint"
@@ -145,7 +145,7 @@
 		{
 			"label": "Fix Lint Issues",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"lint:fix"
@@ -164,7 +164,7 @@
 		{
 			"label": "Type Check",
 			"type": "shell",
-			"command": "npx",
+			"command": "npx.cmd",
 			"args": [
 				"tsc",
 				"--noEmit"
@@ -183,7 +183,7 @@
 		{
 			"label": "Install Dependencies",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"install"
 			],
@@ -198,7 +198,7 @@
 		{
 			"label": "Clean Install",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"ci"
 			],
@@ -213,7 +213,7 @@
 		{
 			"label": "Run All Quality Checks",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"lint"
@@ -235,7 +235,7 @@
 		{
 			"label": "Install zod",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"install"
 			],
@@ -244,7 +244,7 @@
 		{
 			"label": "Type Check",
 			"type": "shell",
-			"command": "npx",
+			"command": "npx.cmd",
 			"args": [
 				"tsc",
 				"--noEmit"
@@ -254,7 +254,7 @@
 		{
 			"label": "Run Tests with Coverage",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test:coverage"
@@ -264,7 +264,7 @@
 		{
 			"label": "Run Tests with Coverage",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test:coverage"
@@ -274,7 +274,7 @@
 		{
 			"label": "Run Tests with Coverage",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"test:coverage"
@@ -284,7 +284,7 @@
 		{
 			"label": "List Failing Tests",
 			"type": "shell",
-			"command": "npx",
+			"command": "npx.cmd",
 			"args": [
 				"jest",
 				"--onlyFailures",
@@ -305,7 +305,7 @@
 		{
 			"label": "Type Check",
 			"type": "shell",
-			"command": "npx",
+			"command": "npx.cmd",
 			"args": [
 				"tsc",
 				"--noEmit"
@@ -315,7 +315,7 @@
 		{
 			"label": "Lint Code",
 			"type": "shell",
-			"command": "npm",
+			"command": "npm.cmd",
 			"args": [
 				"run",
 				"lint"

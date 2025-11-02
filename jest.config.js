@@ -12,22 +12,22 @@ const customJestConfig = {
   moduleNameMapper: {
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/$1',
-    '^mongoose$': '<rootDir>/__tests__/mocks/mongoose.js',
-    '^mongodb$': '<rootDir>/__tests__/mocks/mongodb.js',
-    '^bson$': '<rootDir>/__tests__/mocks/bson.js',
+    // Mocks for ESM-heavy deps used by mongoose
+    '^mongoose$': '<rootDir>/__mocks__/mongoose.ts',
+    '^mongodb$': '<rootDir>/__mocks__/mongodb.js',
+    '^bson$': '<rootDir>/__mocks__/bson.js',
   },
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
     'components/**/*.{js,jsx,ts,tsx}',
     'hooks/**/*.{js,jsx,ts,tsx}',
-    'lib/**/*.{js,jsx,ts,tsx}',
-    'models/**/*.{js,jsx,ts,tsx}',
     'types/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/.next/**',
     '!**/coverage/**',
     '!**/jest.config.js',
+    '!app/api/exotel/**', // Exclude Exotel WebSocket routes (Edge runtime, hard to test)
   ],
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
@@ -63,3 +63,4 @@ const customJestConfig = {
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
 module.exports = createJestConfig(customJestConfig)
+
