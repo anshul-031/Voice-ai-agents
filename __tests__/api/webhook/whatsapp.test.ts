@@ -61,6 +61,39 @@ describe('/api/webhook/whatsapp', () => {
             );
         });
 
+        it('should successfully send WhatsApp message with phone number containing + prefix', async () => {
+            process.env.WHATSAPP_TOKEN = 'test-token-123';
+            
+            const mockResponse = {
+                messaging_product: 'whatsapp',
+                contacts: [{ input: '919953969666', wa_id: '919953969666' }],
+                messages: [{ id: 'wamid.test456' }],
+            };
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => mockResponse,
+            });
+
+            const request = new NextRequest('http://localhost:3000/api/webhook/whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({ phoneNumber: '+919953969666' }),
+            });
+
+            const response = await POST(request);
+            const data = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.message).toBe('WhatsApp message sent successfully');
+
+            // Verify the fetch was called with cleaned phone number (without +)
+            const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
+            const requestBody = JSON.parse(fetchCall[1].body);
+            expect(requestBody.to).toBe('919953969666'); // Should strip the +
+        });
+
         it('should return error when phone number is missing', async () => {
             process.env.WHATSAPP_TOKEN = 'test-token-123';
             

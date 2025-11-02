@@ -56,14 +56,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
             );
         }
 
-        // Basic phone number validation (should start with country code)
+        // Remove '+' prefix if present and validate
+        const cleanPhoneNumber = phoneNumber.replace(/^\+/, '');
+        
+        // Basic phone number validation (should be 10-15 digits with country code)
         const phoneRegex = /^\d{10,15}$/;
-        if (!phoneRegex.test(phoneNumber)) {
+        if (!phoneRegex.test(cleanPhoneNumber)) {
             return NextResponse.json(
                 {
                     success: false,
                     message: 'Invalid phone number format',
-                    error: 'Phone number should be 10-15 digits with country code',
+                    error: 'Phone number should be 10-15 digits with country code (e.g., 919953969666 or +919953969666)',
                 },
                 { status: 400 },
             );
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
         const whatsappPayload = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
-            to: phoneNumber,
+            to: cleanPhoneNumber,
             type: 'template',
             template: {
                 name: 'pl_across_assist_demo_3',
