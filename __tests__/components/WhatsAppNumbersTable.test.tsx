@@ -15,7 +15,7 @@ describe('WhatsAppNumbersTable', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.spyOn(global, 'fetch' as any).mockImplementation(() => mockFetch({ whatsappNumbers: [] }));
+    jest.spyOn(global, 'fetch' as any).mockImplementation(() => mockFetch({ whatsappNumbers: [], agents: [] }));
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -40,7 +40,7 @@ describe('WhatsAppNumbersTable', () => {
   });
 
   it('renders empty state when no WhatsApp numbers exist', async () => {
-    (global.fetch as jest.Mock).mockImplementation(() => mockFetch({ whatsappNumbers: [] }));
+    (global.fetch as jest.Mock).mockImplementation(() => mockFetch({ whatsappNumbers: [], agents: [] }));
 
     render(<WhatsAppNumbersTable onAddWhatsApp={jest.fn()} onEditWhatsApp={jest.fn()} />);
 
@@ -87,10 +87,12 @@ describe('WhatsAppNumbersTable', () => {
 
     const secondDataset = {
       whatsappNumbers: [],
+      agents: [],
     };
 
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockImplementationOnce(() => mockFetch(firstDataset));
+    fetchMock.mockImplementationOnce(() => mockFetch({ agents: [] }));
     fetchMock.mockImplementationOnce(() => mockFetch(secondDataset));
 
     const onAddWhatsApp = jest.fn();
@@ -166,6 +168,7 @@ describe('WhatsAppNumbersTable', () => {
 
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockImplementationOnce(() => mockFetch(dataset));
+    fetchMock.mockImplementationOnce(() => mockFetch({ agents: [] }));
 
     render(<WhatsAppNumbersTable onAddWhatsApp={jest.fn()} onEditWhatsApp={jest.fn()} />);
 
@@ -195,7 +198,11 @@ describe('WhatsAppNumbersTable', () => {
     };
 
     const fetchMock = global.fetch as jest.Mock;
+    // First call: fetch whatsapp numbers (initial load)
     fetchMock.mockImplementationOnce(() => mockFetch(dataset));
+    // Second call: fetch agents (initial load)
+    fetchMock.mockImplementationOnce(() => mockFetch({ agents: [] }));
+    // Third call: DELETE request (fails)
     fetchMock.mockImplementationOnce(() =>
       Promise.resolve({ ok: false, json: async () => ({}) } as Response),
     );
@@ -228,8 +235,10 @@ describe('WhatsAppNumbersTable', () => {
 
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockImplementationOnce(() => mockFetch(initialDataset));
+    fetchMock.mockImplementationOnce(() => mockFetch({ agents: [] }));
     fetchMock.mockImplementationOnce(() => Promise.resolve({ ok: true } as Response));
     fetchMock.mockImplementationOnce(() => mockFetch({ whatsappNumbers: [] }));
+    fetchMock.mockImplementationOnce(() => mockFetch({ agents: [] }));
 
     render(<WhatsAppNumbersTable onAddWhatsApp={jest.fn()} onEditWhatsApp={jest.fn()} />);
 

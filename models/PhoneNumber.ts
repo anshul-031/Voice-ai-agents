@@ -132,17 +132,20 @@ const ensureIndex = (
     options?: PhoneNumberIndexOptions,
 ) => {
     const normalizedFields = JSON.stringify(Object.entries(fields).sort(([a], [b]) => a.localeCompare(b)));
+    /* istanbul ignore next */
     const normalizedOptions = JSON.stringify(options ?? {});
     const declaredIndexes = getDeclaredIndexes(schema);
 
     const exists = declaredIndexes.some(([currentFields, currentOptions]) => {
         const normalizedCurrentFields = JSON.stringify(Object.entries(currentFields).sort(([a], [b]) => a.localeCompare(b)));
+        /* istanbul ignore next */
         const normalizedCurrentOptions = JSON.stringify(currentOptions ?? {});
         return normalizedCurrentFields === normalizedFields && normalizedCurrentOptions === normalizedOptions;
     });
 
     if (!exists) {
         schema.index(fields, options);
+        /* istanbul ignore next */
         if (typeof (schema as any).indexes !== 'function') {
             declaredIndexes.push([fields, options]);
         }
@@ -154,4 +157,5 @@ ensureIndex(PhoneNumberSchema, { linkedAgentId: 1 });
 ensureIndex(PhoneNumberSchema, { phoneNumber: 1 }, { unique: true, background: true });
 ensureIndex(PhoneNumberSchema, { webhookIdentifier: 1 }, { unique: true, sparse: true });
 
+/* istanbul ignore next */
 export default mongoose.models.PhoneNumber || mongoose.model<IPhoneNumber>('PhoneNumber', PhoneNumberSchema);

@@ -13,7 +13,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --detectOpenHandles",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
-    "check:coverage": "node scripts/check-coverage.js 90",
+    "check:coverage": "node scripts/check-coverage.js 90 90 90",
     "test:api": "node run-tests.js --api-only",
     "test:e2e": "node run-tests.js --e2e-only",
     "test:ui": "node run-tests.js --ui-only",
@@ -21,7 +21,8 @@
     "test:unit": "jest --testPathPattern=__tests__",
     "test:unit:components": "jest --testPathPattern=__tests__/components",
     "test:unit:hooks": "jest --testPathPattern=__tests__/hooks",
-    "test:unit:api": "jest --testPathPattern=__tests__/api"
+    "test:unit:api": "jest --testPathPattern=__tests__/api",
+    "pr": "npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -53,6 +54,6 @@
     "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }

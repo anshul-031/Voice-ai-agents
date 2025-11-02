@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   lint:
@@ -82,7 +83,65 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage
       - name: Enforce minimum coverage 90%
-        run: node scripts/check-coverage.js 90 80 85
+        run: node scripts/check-coverage.js 95 90 90
+      - name: Post coverage comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { promisify } = require('util');
+            const execAsync = promisify(exec.exec);
+
+            try {
+              let stdout = '';
+              let stderr = '';
+              
+              await exec.exec('node', ['scripts/post-coverage-comment.js'], {
+                listeners: {
+                  stdout: (data) => {
+                    stdout += data.toString();
+                  },
+                  stderr: (data) => {
+                    stderr += data.toString();
+                  }
+                }
+              });
+
+              const baseComment = stdout.trim();
+
+              const comment = baseComment + `\n\n[View full coverage report](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+
+              // Delete existing coverage comments
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+
+              const coverageComments = comments.filter(comment =>
+                comment.body.includes('## 📊 Code Coverage Report')
+              );
+
+              for (const comment of coverageComments) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+
+              // Post new coverage comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+
+            } catch (error) {
+              console.error('Failed to post coverage comment:', error);
+              process.exit(1);
+            }
       - name: Upload coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4

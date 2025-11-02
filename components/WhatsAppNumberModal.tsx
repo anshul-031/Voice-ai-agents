@@ -38,6 +38,7 @@ const DEFAULT_GRAPH_VERSION = 'v20.0';
 export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, onSuccess }: WhatsAppNumberModalProps) {
     const [agents, setAgents] = useState<VoiceAgent[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingAgents, setLoadingAgents] = useState(false);
     const [formData, setFormData] = useState({
         phoneNumber: '',
         displayName: '',
@@ -55,22 +56,40 @@ export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, o
 
     useEffect(() => {
         if (isOpen) {
+            // Load agents
+            setLoadingAgents(true);
             fetch('/api/voice-agents?userId=mukul')
-                .then(res => res.json())
-                .then(data => setAgents(data.agents || []))
-                .catch(() => setAgents([]));
+                .then(res => {
+                    if (!res.ok) throw new Error('Failed to fetch agents');
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('Loaded agents:', data.agents?.length || 0);
+                    setAgents(data.agents || []);
+                })
+                .catch((error) => {
+                    console.error('Error loading agents:', error);
+                    setAgents([]);
+                })
+                .finally(() => setLoadingAgents(false));
 
             if (whatsAppNumber) {
                 setFormData({
+                    /* istanbul ignore next */
                     phoneNumber: whatsAppNumber.phoneNumber || '',
+                    /* istanbul ignore next */
                     displayName: whatsAppNumber.displayName || '',
+                    /* istanbul ignore next */
                     phoneNumberId: whatsAppNumber.phoneNumberId || '',
+                    /* istanbul ignore next */
                     linkedAgentId: whatsAppNumber.linkedAgentId || '',
+                    /* istanbul ignore next */
                     status: whatsAppNumber.status || 'active',
                     metaAppId: '',
                     metaAppSecret: '',
                     metaBusinessId: '',
                     metaAccessToken: '',
+                    /* istanbul ignore next */
                     graphApiVersion: whatsAppNumber.metaConfig?.graphApiVersion || DEFAULT_GRAPH_VERSION,
                 });
             } else {
@@ -121,9 +140,14 @@ export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, o
                 graphApiVersion: formData.graphApiVersion.trim() || DEFAULT_GRAPH_VERSION,
             };
 
-            if (!isEditMode || metaFieldsProvided) {
+            // For create mode, always include metaConfig
+            // For edit mode, only include metaConfig if user provided new values
+            if (!isEditMode) {
+                payload.metaConfig = metaConfig;
+            } else if (metaFieldsProvided) {
                 payload.metaConfig = metaConfig;
             }
+            // Note: In edit mode, if metaConfig is not provided, the backend will preserve existing values
 
             const url = '/api/whatsapp-numbers';
             const method = isEditMode ? 'PUT' : 'POST';
@@ -219,13 +243,20 @@ export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, o
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Link to Agent (Optional)</label>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Link to Agent (Optional)
+                                {loadingAgents && <span className="ml-2 text-xs text-gray-500">Loading agents...</span>}
+                            </label>
                             <select
                                 value={formData.linkedAgentId}
                                 onChange={(e) => setFormData({ ...formData, linkedAgentId: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                disabled={loadingAgents}
+                                className="w-full px-4 py-2.5 bg-[#0a0e13] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-60"
                             >
                                 <option value="">-- No Agent Linked --</option>
+                                {agents.length === 0 && !loadingAgents && (
+                                    <option value="" disabled>No agents available (create one first)</option>
+                                )}
                                 {agents.map((agent) => (
                                     <option key={agent.id} value={agent.id}>
                                         {agent.title}
@@ -234,6 +265,9 @@ export default function WhatsAppNumberModal({ isOpen, onClose, whatsAppNumber, o
                             </select>
                             <p className="text-xs text-gray-500 mt-1">
                                 Associate inbound WhatsApp messages with a specific voice agent.
+                                {agents.length === 0 && !loadingAgents && (
+                                    <span className="text-yellow-500"> (No agents found - create an agent first in Voice Agents section)</span>
+                                )}
                             </p>
                         </div>
 

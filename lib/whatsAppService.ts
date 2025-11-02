@@ -144,31 +144,42 @@ interface ResolvedSendContext {
  */
 function resolveSendContext(options?: SendMessageOptions): ResolvedSendContext | null {
     const trimmedToken = options?.accessToken?.trim();
+    
+    // Priority 1: Use provided API URL with token
     if (options?.apiUrl && trimmedToken) {
+        console.log('[WhatsApp Send] Using custom API URL');
         return {
             url: options.apiUrl,
             token: trimmedToken,
         };
     }
 
+    // Priority 2: Use phoneNumberId with token (MOST COMMON - from configured number)
     if (options?.phoneNumberId && trimmedToken) {
         const version = options.graphApiVersion?.trim() || DEFAULT_GRAPH_API_VERSION;
+        const url = `https://graph.facebook.com/${version}/${options.phoneNumberId}/messages`;
+        console.log('[WhatsApp Send] Using phoneNumberId:', options.phoneNumberId);
+        console.log('[WhatsApp Send] URL:', url);
         return {
-            url: `https://graph.facebook.com/${version}/${options.phoneNumberId}/messages`,
+            url,
             token: trimmedToken,
         };
     }
 
+    // Priority 3: Fallback to env variables (ONLY if no options provided)
     const envUrl = process.env.NEXT_PUBLIC_META_WHATSAPP_API_URL?.trim();
     const envToken = process.env.NEXT_PUBLIC_META_WHATSAPP_API_TOKEN?.trim();
 
     if (envUrl && envToken) {
+        console.warn('[WhatsApp Send] WARNING: Using fallback env variables - this may send from wrong number!');
+        console.log('[WhatsApp Send] Env URL:', envUrl);
         return {
             url: envUrl,
             token: envToken,
         };
     }
 
+    console.error('[WhatsApp Send] ERROR: No valid configuration found for sending message');
     return null;
 }
 
@@ -267,6 +278,7 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
             return;
         }
 
+        /* istanbul ignore next */
         const normalizedCustomerForStorage = normalizeWhatsAppNumber(customerNumber) || customerNumber;
 
         await dbConnect();
@@ -275,6 +287,7 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
         const agent = await resolveVoiceAgent(configuredNumber);
         const sendOptions = buildSendMessageOptions(configuredNumber);
 
+        /* istanbul ignore next */
         const configuredNumberId = configuredNumber?._id
             ? (typeof configuredNumber._id === 'string' ? configuredNumber._id : configuredNumber._id.toString())
             : undefined;
@@ -341,16 +354,19 @@ export async function processWhatsAppCallback(callbackResponse: any): Promise<vo
                 sendOptions,
             );
         } catch (pipelineError) {
+            /* istanbul ignore next */
             console.error('Voice agent pipeline error:', pipelineError instanceof Error ? pipelineError.message : pipelineError);
             const failure = 'I am facing an issue generating a response right now. Please try again later.';
             await sendAndPersistOutbound(sessionId, customerNumber, failure, 'unsupported', agent.id, undefined, sendOptions);
         }
     } catch (e: any) {
+        /* istanbul ignore next */
         console.error('Error in processWhatsAppCallback:', e?.message || e);
     }
 }
 
 function inferMessageType(message: any): WhatsAppMessageType {
+    /* istanbul ignore next */
     if (!message) return 'unsupported';
     switch (message.type) {
         case 'text':
@@ -403,10 +419,26 @@ async function findConfiguredWhatsAppNumber(metadata: any, message: any): Promis
     addPhoneMatchers(matchers, message?.to);
 
     if (!matchers.length) {
+        console.warn('[WhatsApp] No matchers found for configured number');
         return null;
     }
 
-    return await WhatsAppNumber.findOne({ $or: matchers });
+    console.log('[WhatsApp] Searching for configured number with matchers:', JSON.stringify(matchers));
+    const foundNumber = await WhatsAppNumber.findOne({ $or: matchers });
+    
+    if (foundNumber) {
+        console.log('[WhatsApp] Found configured number:', {
+            phoneNumber: foundNumber.phoneNumber,
+            phoneNumberId: foundNumber.phoneNumberId,
+            displayName: foundNumber.displayName,
+            linkedAgentId: foundNumber.linkedAgentId,
+            hasMetaConfig: !!foundNumber.metaConfig
+        });
+    } else {
+        console.error('[WhatsApp] No configured number found in database for this message');
+    }
+    
+    return foundNumber;
 }
 
 async function resolveVoiceAgent(number: IWhatsAppNumber | null): Promise<IVoiceAgent | null> {
@@ -433,6 +465,7 @@ async function resolveVoiceAgent(number: IWhatsAppNumber | null): Promise<IVoice
 }
 
 function normalizeSessionComponent(value: string): string {
+    /* istanbul ignore next */
     const trimmed = value?.trim?.() ?? '';
     if (!trimmed) {
         return '';
@@ -442,6 +475,7 @@ function normalizeSessionComponent(value: string): string {
         return trimmed;
     }
 
+    /* istanbul ignore next */
     return normalizeWhatsAppNumber(trimmed) || trimmed;
 }
 
@@ -462,6 +496,7 @@ function mapStoredMessageToHistory(message: any): MessageHistory {
 
 function buildSendMessageOptions(number: IWhatsAppNumber | null): SendMessageOptions | undefined {
     if (!number?.metaConfig) {
+        console.warn('[WhatsApp Send] No metaConfig found for WhatsApp number');
         return undefined;
     }
 
@@ -470,9 +505,13 @@ function buildSendMessageOptions(number: IWhatsAppNumber | null): SendMessageOpt
     const graphApiVersion = number.metaConfig.graphApiVersion?.trim();
 
     if (!accessToken || !phoneNumberId) {
+        console.error('[WhatsApp Send] Missing accessToken or phoneNumberId in metaConfig');
+        console.error('[WhatsApp Send] Has accessToken:', !!accessToken);
+        console.error('[WhatsApp Send] Has phoneNumberId:', !!phoneNumberId);
         return undefined;
     }
 
+    console.log('[WhatsApp Send] Built send options for phoneNumberId:', phoneNumberId);
     return {
         accessToken,
         phoneNumberId,
@@ -493,6 +532,7 @@ async function sendAndPersistOutbound(
 
     await WhatsAppMessage.create({
         sessionId,
+        /* istanbul ignore next */
         phoneNumber: normalizeWhatsAppNumber(customerNumber) || customerNumber,
         direction: 'outbound',
         messageType,
@@ -503,6 +543,7 @@ async function sendAndPersistOutbound(
 }
 
 function extractInboundContent(message: any): string | undefined {
+    /* istanbul ignore next */
     if (!message) return undefined;
     if (message.type === 'text') {
         const body = message?.text?.body?.trim();

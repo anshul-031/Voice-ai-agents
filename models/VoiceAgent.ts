@@ -1,5 +1,15 @@
 import { Document, Schema, model, models } from 'mongoose';
 
+export interface IAgentKnowledgeItem {
+    itemId: string;
+    name: string;
+    type: 'text' | 'csv';
+    size: number;
+    content: string;
+    preview?: string;
+    createdAt: Date;
+}
+
 export interface IVoiceAgent extends Document {
     userId: string;
     title: string;
@@ -7,6 +17,7 @@ export interface IVoiceAgent extends Document {
     llmModel: string;
     sttModel: string;
     ttsModel: string;
+    knowledgeItems: IAgentKnowledgeItem[];
     lastUpdated: Date;
     createdAt: Date;
 }
@@ -41,6 +52,43 @@ const VoiceAgentSchema = new Schema<IVoiceAgent>({
         type: String,
         required: true,
         default: 'Sarvam Manisha',
+    },
+    knowledgeItems: {
+        type: [
+            {
+                itemId: {
+                    type: String,
+                    required: true,
+                },
+                name: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                type: {
+                    type: String,
+                    enum: ['text', 'csv'],
+                    required: true,
+                },
+                size: {
+                    type: Number,
+                    required: true,
+                    default: 0,
+                },
+                content: {
+                    type: String,
+                    required: true,
+                },
+                preview: {
+                    type: String,
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
+        default: [],
     },
     lastUpdated: {
         type: Date,

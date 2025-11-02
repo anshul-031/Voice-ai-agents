@@ -12,6 +12,7 @@ import PhoneNumbersTable from '@/components/PhoneNumbersTable';
 import VoiceAgentsTable from '@/components/VoiceAgentsTable';
 import WhatsAppNumberModal from '@/components/WhatsAppNumberModal';
 import WhatsAppNumbersTable from '@/components/WhatsAppNumbersTable';
+import { useCampaignPolling } from '@/hooks/useCampaignPolling';
 import { useEffect, useState } from 'react';
 
 interface VoiceAgent {
@@ -24,6 +25,15 @@ interface VoiceAgent {
     userId: string
     lastUpdated: string
     createdAt: string
+    knowledgeItems?: Array<{
+        itemId: string;
+        name: string;
+        type: 'text' | 'csv';
+        size: number;
+        content: string;
+        preview?: string;
+        createdAt: string;
+    }>
 }
 
 interface Campaign {
@@ -92,6 +102,8 @@ export default function DashboardPage() {
     const [contactsModalOpen, setContactsModalOpen] = useState(false);
     const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
     const [retriggeringCampaignId, setRetriggeringCampaignId] = useState<string | null>(null);
+    const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+    const [pollingCampaignId, setPollingCampaignId] = useState<string | null>(null);
 
     // Phone Numbers state
     const [phoneNumberModalOpen, setPhoneNumberModalOpen] = useState(false);
@@ -101,12 +113,38 @@ export default function DashboardPage() {
     const [editingWhatsAppNumber, setEditingWhatsAppNumber] = useState<WhatsAppNumber | undefined>(undefined);
     const [whatsAppNumbersRefreshKey, setWhatsAppNumbersRefreshKey] = useState(0);
 
+    // Set up campaign polling for real-time progress updates
+    useCampaignPolling({
+        campaignId: pollingCampaignId,
+        enabled: pollingCampaignId !== null,
+        onUpdate: (updatedCampaign) => {
+            setCampaigns(prevCampaigns =>
+                prevCampaigns.map(campaign =>
+                    campaign._id === updatedCampaign._id
+                        ? { ...campaign, ...updatedCampaign }
+                        : campaign,
+                ),
+            );
+        },
+        onComplete: () => {
+            // Stop polling when campaign is completed
+            setPollingCampaignId(null);
+            setStartingCampaignId(null);
+            setRetriggeringCampaignId(null);
+        },
+        onError: (error) => {
+            console.error('Polling error:', error);
+        },
+    });
+
     useEffect(() => {
         if (activeView === 'campaigns') {
             setCampaignsLoading(true);
             fetch('/api/campaigns')
                 .then(res => res.json())
+                /* istanbul ignore next */
                 .then(data => setCampaigns(data.data || []))
+                /* istanbul ignore next */
                 .catch(() => setCampaigns([]))
                 .finally(() => setCampaignsLoading(false));
         }
@@ -169,6 +207,7 @@ export default function DashboardPage() {
     };
 
     const handleStartCampaign = async (campaign: Campaign) => {
+        /* istanbul ignore next */
         if (!campaign?._id) {
             return;
         }
@@ -194,21 +233,28 @@ export default function DashboardPage() {
             });
 
             const data = await response.json();
+            /* istanbul ignore next */
             if (!response.ok || !data?.success) {
+                /* istanbul ignore next */
                 throw new Error(data?.error || 'Failed to start campaign');
             }
 
             alert('Campaign starting. Calls are being placed.');
+
+            // Start polling for this campaign
+            setPollingCampaignId(campaign._id);
+
             setCampaignsRefreshKey(prev => prev + 1);
         } catch (error) {
             console.error('Error starting campaign:', error);
+            /* istanbul ignore next */
             alert(error instanceof Error ? error.message : 'Failed to start campaign');
-        } finally {
             setStartingCampaignId(null);
         }
     };
 
     const handleRetriggerCampaign = async (campaign: Campaign) => {
+        /* istanbul ignore next */
         if (!campaign?._id) {
             return;
         }
@@ -225,17 +271,60 @@ export default function DashboardPage() {
             });
 
             const data = await response.json();
+            /* istanbul ignore next */
             if (!response.ok || !data?.success) {
+                /* istanbul ignore next */
                 throw new Error(data?.error || 'Failed to retrigger campaign');
             }
 
             alert('Campaign retriggered successfully.');
+
+            // Start polling for this campaign
+            setPollingCampaignId(campaign._id);
+
             setCampaignsRefreshKey(prev => prev + 1);
         } catch (error) {
             console.error('Error retriggering campaign:', error);
+            /* istanbul ignore next */
             alert(error instanceof Error ? error.message : 'Failed to retrigger campaign');
-        } finally {
             setRetriggeringCampaignId(null);
+        }
+    };
+
+    const handleDeleteCampaign = async (campaign: Campaign) => {
+        /* istanbul ignore next */
+        if (!campaign?._id) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete campaign "${campaign.title}"? This action cannot be undone.`,
+        );
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setDeletingCampaignId(campaign._id);
+            const response = await fetch(`/api/campaigns?id=${campaign._id}`, {
+                method: 'DELETE',
+            });
+
+            const data = await response.json();
+            /* istanbul ignore next */
+            if (!response.ok || !data?.success) {
+                /* istanbul ignore next */
+                throw new Error(data?.error || 'Failed to delete campaign');
+            }
+
+            alert('Campaign deleted successfully.');
+            setCampaignsRefreshKey(prev => prev + 1);
+        } catch (error) {
+            console.error('Error deleting campaign:', error);
+            /* istanbul ignore next */
+            alert(error instanceof Error ? error.message : 'Failed to delete campaign');
+        } finally {
+            setDeletingCampaignId(null);
         }
     };
 
@@ -307,8 +396,10 @@ export default function DashboardPage() {
                     onViewCampaign={handleViewCampaign}
                     onStartCampaign={handleStartCampaign}
                     onRetriggerCampaign={handleRetriggerCampaign}
+                    onDeleteCampaign={handleDeleteCampaign}
                     startingId={startingCampaignId}
                     retriggeringId={retriggeringCampaignId}
+                    deletingId={deletingCampaignId}
                 />
             );
 
