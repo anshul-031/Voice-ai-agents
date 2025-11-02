@@ -58,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
 
         // Remove '+' prefix if present and validate
         const cleanPhoneNumber = phoneNumber.replace(/^\+/, '');
-        
+
         // Basic phone number validation (should be 10-15 digits with country code)
         const phoneRegex = /^\d{10,15}$/;
         if (!phoneRegex.test(cleanPhoneNumber)) {
