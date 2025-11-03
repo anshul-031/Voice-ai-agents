@@ -117,11 +117,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
                             },
                             {
                                 type: 'text',
-                                text: '25 minutes',
+                                text: '+91 9808494950',
                             },
                             {
                                 type: 'text',
-                                text: '+91 9808494950',
+                                text: '25 minutes',
                             },
                             {
                                 type: 'text',
