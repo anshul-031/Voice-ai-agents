@@ -93,6 +93,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
                             },
                             {
                                 type: 'text',
+                                text: '2447',
+                            },
+                            {
+                                type: 'text',
                                 text: 'Engine Failure',
                             },
                             {
@@ -122,10 +126,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
                             {
                                 type: 'text',
                                 text: '25 minutes',
-                            },
-                            {
-                                type: 'text',
-                                text: 'test',
                             },
                         ],
                     },
