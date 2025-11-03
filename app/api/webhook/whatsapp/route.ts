@@ -86,10 +86,48 @@ export async function POST(request: NextRequest): Promise<NextResponse<WhatsAppR
                 components: [
                     {
                         type: 'body',
-                        parameters: Array(10).fill({
-                            type: 'text',
-                            text: 'test',
-                        }),
+                        parameters: [
+                            {
+                                type: 'text',
+                                text: '2447',
+                            },
+                            {
+                                type: 'text',
+                                text: 'Engine Failure',
+                            },
+                            {
+                                type: 'text',
+                                text: 'Hyundai Creta',
+                            },
+                            {
+                                type: 'text',
+                                text: 'Towing',
+                            },
+                            {
+                                type: 'text',
+                                text: 'Sector 45, Gurgaon',
+                            },
+                            {
+                                type: 'text',
+                                text: 'Hyundai Service Center, MG Road',
+                            },
+                            {
+                                type: 'text',
+                                text: '18 km',
+                            },
+                            {
+                                type: 'text',
+                                text: '25 minutes',
+                            },
+                            {
+                                type: 'text',
+                                text: '+91 9808494950',
+                            },
+                            {
+                                type: 'text',
+                                text: 'test',
+                            },
+                        ],
                     },
                 ],
             },
