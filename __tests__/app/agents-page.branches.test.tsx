@@ -210,11 +210,11 @@ describe('AgentPage deeper branches', () => {
     // Loading message first
     expect(screen.getByText(/Loading agent/i)).toBeInTheDocument()
     // Then not found UI
-    await screen.findByText('Agent not found')
+    await screen.findByText('Agent Not Found')
 
-    // Click Go Back
-    await userEvent.click(screen.getByText('Go Back'))
-    expect(mockPush).toHaveBeenCalledWith('/')
+    // Click Back to Dashboard
+    await userEvent.click(screen.getByText('Back to Dashboard'))
+    expect(mockPush).toHaveBeenCalledWith('/dashboard')
   })
 
   it.skip('STT onFinal flow pauses and resumes around TTS failure', async () => {

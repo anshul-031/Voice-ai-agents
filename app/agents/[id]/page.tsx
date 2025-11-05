@@ -1,5 +1,6 @@
-﻿'use client';
+'use client';
 
+import DashboardSidebar from '@/components/DashboardSidebar';
 import VoiceAIAgent from '@/components/VoiceAIAgent';
 import type { ModelConfig } from '@/types';
 import { useParams, useRouter } from 'next/navigation';
@@ -91,12 +92,29 @@ export default function AgentPage() {
         }
     };
 
+    const handleNavigate = (view: string) => {
+        if (view === 'voice-agents') {
+            router.push('/dashboard');
+        } else {
+            router.push(`/dashboard?view=${view}`);
+        }
+    };
+
     if (loading) {
         return (
-            <div className='min-h-screen bg-slate-900 text-white flex items-center justify-center'>
-                <div className='text-center'>
-                    <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4'></div>
-                    <p className='text-gray-400'>Loading agent...</p>
+            <div className="flex h-screen bg-[#0a0e13] overflow-hidden">
+                <DashboardSidebar activeView="voice-agents" onNavigate={handleNavigate} />
+                <div className='flex-1 bg-[#0a0e13] text-white flex items-center justify-center'>
+                    <div className='text-center space-y-4'>
+                        <div className='relative'>
+                            <div className='animate-spin rounded-full h-16 w-16 border-4 border-white/10 border-t-emerald-500 mx-auto'></div>
+                            <div className='absolute inset-0 rounded-full h-16 w-16 border-4 border-emerald-500/20 blur-lg mx-auto'></div>
+                        </div>
+                        <div className='space-y-1'>
+                            <p className='text-lg font-medium text-white/90'>Loading agent...</p>
+                            <p className='text-sm text-white/50'>Please wait while we fetch your agent</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -104,31 +122,50 @@ export default function AgentPage() {
 
     if (!agent) {
         return (
-            <div className='min-h-screen bg-slate-900 text-white flex items-center justify-center'>
-                <div className='text-center'>
-                    <p className='text-red-400 mb-4'>Agent not found</p>
-                    <button
-                        onClick={() => router.push('/')}
-                        className='px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors'
-                    >
-                        Go Back
-                    </button>
+            <div className="flex h-screen bg-[#0a0e13] overflow-hidden">
+                <DashboardSidebar activeView="voice-agents" onNavigate={handleNavigate} />
+                <div className='flex-1 bg-[#0a0e13] text-white flex items-center justify-center'>
+                    <div className='text-center space-y-6 max-w-md mx-auto px-6'>
+                        <div className='inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/10 border border-red-500/30 mb-2'>
+                            <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div className='space-y-2'>
+                            <h2 className='text-2xl font-semibold text-white/90'>Agent Not Found</h2>
+                            <p className='text-white/60'>The agent you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
+                        </div>
+                        <button
+                            onClick={() => router.push('/dashboard')}
+                            className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-400/30'
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>Back to Dashboard</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <VoiceAIAgent
-            agentId={agent.id}
-            agentTitle={agent.title}
-            defaultPrompt={agent.prompt}
-            defaultModelConfig={modelConfig}
-            showHeader={true}
-            headerTitle={agent.title}
-            onBack={() => router.push('/dashboard')}
-            onDelete={handleDelete}
-            isDeleting={deleting}
-        />
+        <div className="flex h-screen bg-[#0a0e13] overflow-hidden">
+            <DashboardSidebar activeView="voice-agents" onNavigate={handleNavigate} />
+            <div className="flex-1 overflow-auto bg-[#0a0e13]">
+                <VoiceAIAgent
+                    agentId={agent.id}
+                    agentTitle={agent.title}
+                    defaultPrompt={agent.prompt}
+                    defaultModelConfig={modelConfig}
+                    showHeader={true}
+                    headerTitle={agent.title}
+                    onBack={() => router.push('/dashboard')}
+                    onDelete={handleDelete}
+                    isDeleting={deleting}
+                />
+            </div>
+        </div>
     );
 }
