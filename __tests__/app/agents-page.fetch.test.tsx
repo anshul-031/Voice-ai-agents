@@ -165,8 +165,8 @@ describe('AgentPage fetch scenarios', () => {
     render(<AgentPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Agent not found')).toBeInTheDocument()
-      expect(screen.getByText('Go Back')).toBeInTheDocument()
+      expect(screen.getByText('Agent Not Found')).toBeInTheDocument()
+      expect(screen.getByText('Back to Dashboard')).toBeInTheDocument()
     })
   })
 

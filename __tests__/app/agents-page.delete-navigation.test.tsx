@@ -343,15 +343,16 @@ describe('AgentPage delete functionality and navigation', () => {
 
     render(<AgentPage />)
 
+    
     // Should show agent not found UI (redirect is mocked so component stays)
     await waitFor(() => {
-      expect(screen.getByText('Agent not found')).toBeInTheDocument()
+      expect(screen.getByText('Agent Not Found')).toBeInTheDocument()
     })
 
-    // Click Go Back button
-    await user.click(screen.getByText('Go Back'))
+    // Click Back to Dashboard button
+    await user.click(screen.getByText('Back to Dashboard'))
 
-    // Should navigate to home page (this will be the last call)
-    expect(mockPush).toHaveBeenLastCalledWith('/')
+    // Should navigate to dashboard page (this will be the last call)
+    expect(mockPush).toHaveBeenLastCalledWith('/dashboard')
   })
 })
