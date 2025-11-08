@@ -33,13 +33,18 @@ jest.mock('@/components/CallLogsTable', () => ({
 
 jest.mock('@/components/CampaignsTable', () => ({
   __esModule: true,
-  default: ({ campaigns, onStartCampaign, onRetriggerCampaign }: any) => (
-    <div>
-      <div data-testid="CampaignsTable">CampaignsTable</div>
-      <button data-testid="start-campaign" onClick={() => onStartCampaign && onStartCampaign(campaigns?.[0])}>Start</button>
-      <button data-testid="retrigger-campaign" onClick={() => onRetriggerCampaign && onRetriggerCampaign(campaigns?.[0])}>Retrigger</button>
-    </div>
-  ),
+  default: ({ campaigns, onStartCampaign, onRetriggerCampaign, onEditCampaign, onViewCampaign }: any) => {
+    const mockCampaign = campaigns?.[0] || { _id: 'test-campaign-id', name: 'Test Campaign' };
+    return (
+      <div>
+        <div data-testid="CampaignsTable">CampaignsTable</div>
+        <button data-testid="start-campaign" onClick={() => onStartCampaign && onStartCampaign(mockCampaign)}>Start</button>
+        <button data-testid="retrigger-campaign" onClick={() => onRetriggerCampaign && onRetriggerCampaign(mockCampaign)}>Retrigger</button>
+        <button data-testid="edit-campaign" onClick={() => onEditCampaign && onEditCampaign(mockCampaign)}>Edit</button>
+        <button data-testid="view-campaign" onClick={() => onViewCampaign && onViewCampaign(mockCampaign)}>View</button>
+      </div>
+    );
+  },
 }));
 
 jest.mock('@/components/PhoneNumbersTable', () => ({
@@ -101,6 +106,12 @@ jest.mock('@/components/DashboardSidebar', () => ({
       <button data-testid="nav-phone" onClick={() => onNavigate('phone-number')}>phone</button>
       <button data-testid="nav-whatsapp" onClick={() => onNavigate('whatsapp-number')}>whatsapp</button>
       <button data-testid="nav-agent-knowledge" onClick={() => onNavigate('agent-knowledge')}>agent-knowledge</button>
+      <button data-testid="nav-api-keys" onClick={() => onNavigate('api-keys')}>api-keys</button>
+      <button data-testid="nav-credentials" onClick={() => onNavigate('credentials')}>credentials</button>
+      <button data-testid="nav-billing" onClick={() => onNavigate('billing')}>billing</button>
+      <button data-testid="nav-transactions" onClick={() => onNavigate('transactions')}>transactions</button>
+      <button data-testid="nav-documentation" onClick={() => onNavigate('documentation')}>documentation</button>
+      <button data-testid="nav-whats-new" onClick={() => onNavigate('whats-new')}>whats-new</button>
       <button data-testid="nav-unknown" onClick={() => onNavigate('unknown-view')}>unknown</button>
     </div>
   ),
@@ -469,5 +480,84 @@ describe('DashboardPage render and handlers', () => {
 
     confirmSpy.mockRestore();
     alertSpy.mockRestore();
+  });
+
+  it('opens campaign modal when edit campaign button is clicked', async () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-campaigns'));
+
+    // Wait for campaigns to load
+    await waitFor(() => {
+      expect(screen.getByTestId('CampaignsTable')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('edit-campaign'));
+    expect(screen.getByTestId('CampaignModal')).toHaveTextContent('isOpen=true');
+  });
+
+  it('opens campaign contacts modal when view campaign button is clicked', async () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-campaigns'));
+
+    // Wait for campaigns to load
+    await waitFor(() => {
+      expect(screen.getByTestId('CampaignsTable')).toBeInTheDocument();
+    });
+
+    const viewButton = screen.getByTestId('view-campaign');
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
+    
+    // Modal opens asynchronously - verify modal exists
+    expect(screen.getByTestId('CampaignContactsModal')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for agent-knowledge view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-agent-knowledge'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for api-keys view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-api-keys'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for credentials view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-credentials'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for billing view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-billing'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for transactions view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-transactions'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for documentation view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-documentation'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
+  });
+
+  it('shows coming soon for whats-new view', () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByTestId('nav-whats-new'));
+
+    expect(screen.getByText('This feature is coming soon...')).toBeInTheDocument();
   });
 });

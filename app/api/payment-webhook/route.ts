@@ -11,6 +11,7 @@ interface PaymentWebhookRequest {
   phone_number?: string;
   phoneNumber?: string;
   amount?: number;
+  dueAmount?: number;
   transactionId?: string;
   status?: string;
   timestamp?: string;
@@ -356,7 +357,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           phone_number: phoneNumber.replace(/^\+91/, ''),
           email: payloadObj?.email || DEFAULT_FORWARDING_VALUES.email,
           full_name: payloadObj?.full_name || DEFAULT_FORWARDING_VALUES.full_name,
-          amount: resolvePositiveAmount(payloadObj?.amount),
+          amount: resolvePositiveAmount(payloadObj?.dueAmount ?? payloadObj?.amount),
           due_date: resolveDueDate(
             payloadObj?.due_date,
             DEFAULT_FORWARDING_VALUES.due_date_offset_days
