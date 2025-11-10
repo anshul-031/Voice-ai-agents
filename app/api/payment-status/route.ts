@@ -59,14 +59,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const transactionId = url.searchParams.get('transaction_id');
     const merRefId = url.searchParams.get('mer_ref_id');
     const accountId = url.searchParams.get('account_id');
+    // Support phone lookup (either phone_number or phoneNumber)
+    const phoneLookup = url.searchParams.get('phone_number') || url.searchParams.get('phoneNumber');
     const _paymentStatus = url.searchParams.get('payment_status'); // Optional filter
     const _paymentDate = url.searchParams.get('payment_date'); // Optional filter
     const _description = url.searchParams.get('description'); // Optional filter
 
-    // At least one identifier is required
+    // At least one identifier is required (now including phone number)
     if ((!transactionId || transactionId.trim().length === 0) &&
         (!merRefId || merRefId.trim().length === 0) &&
-        (!accountId || accountId.trim().length === 0)) {
+        (!accountId || accountId.trim().length === 0) &&
+        (!phoneLookup || phoneLookup.trim().length === 0)) {
       return NextResponse.json(
         {
           status_code: 400,
@@ -84,8 +87,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     //   console.log('[Payment Status] Using in-memory storage (MongoDB not configured)');
     // }
 
-    // Find payment data by any of the identifiers
-    const paymentData = await findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim());
+  // Find payment data by any of the identifiers (precedence: transaction_id > mer_ref_id > account_id > phone_number)
+  const paymentData = await findPaymentData(transactionId?.trim(), merRefId?.trim(), accountId?.trim(), phoneLookup?.trim());
 
     if (!paymentData) {
       return NextResponse.json(
@@ -111,6 +114,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         transaction_id: paymentData.transaction_id,
         mer_ref_id: paymentData.mer_ref_id,
         account_id: paymentData.account_id,
+        phone_number: paymentData.phone_number || paymentData.phoneNumber,
         payment_status: paymentData.payment_status,
         payment_date: new Date(paymentData.payment_date as unknown as string | Date).toISOString(),
         description: paymentData.description,
@@ -239,7 +243,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * Find payment data by any of the identifiers
  */
-async function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string): Promise<PaymentData | null> {
+async function findPaymentData(transactionId?: string, merRefId?: string, accountId?: string, phoneNumber?: string): Promise<PaymentData | null> {
   try {
     // Read payment data from JSON file
     const payments = await readPaymentData();
@@ -263,6 +267,14 @@ async function findPaymentData(transactionId?: string, merRefId?: string, accoun
     // Finally try to find by account_id
     if (accountId) {
       const payment = payments.find(p => p.account_id === accountId);
+      if (payment) {
+        return payment;
+      }
+    }
+
+    // Lastly try to find by phone number (supports both stored formats)
+    if (phoneNumber) {
+      const payment = payments.find(p => p.phone_number === phoneNumber || p.phoneNumber === phoneNumber);
       if (payment) {
         return payment;
       }
