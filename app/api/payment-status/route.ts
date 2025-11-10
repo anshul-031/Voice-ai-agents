@@ -11,6 +11,8 @@ interface PaymentData {
   transaction_id: string;
   mer_ref_id?: string;
   account_id?: string;
+  phone_number?: string;
+  phoneNumber?: string;
   payment_status: 'successful' | 'failed' | 'pending' | 'processing';
   payment_date: string;
   description: string;
@@ -28,6 +30,7 @@ const PAYMENT_DATA_FILE = path.join(process.env.NODE_ENV === 'production' ? '/tm
  * - transaction_id: Payment Transaction Id
  * - mer_ref_id: Reference Id
  * - account_id: Account Id (Customer Id)
+ * - phone_number: Customer Phone Number
  * - payment_status: Payment Status (optional filter)
  * - payment_date: Payment Date (optional filter)
  * - description: Description (optional filter)
@@ -40,6 +43,7 @@ const PAYMENT_DATA_FILE = path.join(process.env.NODE_ENV === 'production' ? '/tm
  *     "transaction_id": "txn_123",
  *     "mer_ref_id": "ref_456",
  *     "account_id": "acc_789",
+ *     "phone_number": "9953969666",
  *     "payment_status": "successful",
  *     "payment_date": "2025-10-27T10:30:00.000Z",
  *     "description": "Payment processed successfully",
@@ -136,6 +140,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  *   "transaction_id": "txn_123",
  *   "mer_ref_id": "ref_456",
  *   "account_id": "acc_789",
+ *   "phone_number": "9953969666",
  *   "payment_status": "successful",
  *   "payment_date": "2025-10-27T10:30:00.000Z",
  *   "description": "Payment processed successfully",
@@ -184,11 +189,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     console.log('[Payment Status] Validation passed, preparing payment data...');
 
+    // Normalize phone number (support both formats)
+    const phoneNumber = body.phone_number || body.phoneNumber;
+
     // Prepare payment data
     const paymentData = {
       transaction_id: body.transaction_id,
       mer_ref_id: body.mer_ref_id,
       account_id: body.account_id,
+      phone_number: phoneNumber,
       payment_status: body.payment_status,
       payment_date: body.payment_date, // Keep as string from request
       description: body.description,

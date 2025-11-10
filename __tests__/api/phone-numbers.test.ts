@@ -568,5 +568,22 @@ describe('/api/phone-numbers', () => {
       expect(data.error).toBe('Failed to delete phone number');
       expect(data.details).toBe('Unknown error');
     });
+
+    it('should handle DELETE with null findByIdAndDelete result', async () => {
+      mockPhoneNumber.findByIdAndDelete.mockResolvedValue(null);
+
+      const request = new NextRequest('http://localhost/api/phone-numbers?id=nonexistent', {
+        method: 'DELETE',
+      });
+
+      const response = await DELETE(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.success).toBe(false);
+    });
+  });
+
+  describe('Additional edge cases', () => {
   });
 });

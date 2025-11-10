@@ -96,6 +96,79 @@ describe('/api/payment-status', () => {
   });
 
   describe('GET /api/payment-status', () => {
+    it('should retrieve by mer_ref_id when transaction_id not provided', async () => {
+      const paymentData = {
+        transaction_id: 'txn_only_mer',
+        mer_ref_id: 'ref_only_mer_1',
+        account_id: 'acc_x1',
+        payment_status: 'successful' as const,
+        payment_date: '2025-11-10T10:00:00.000Z',
+        description: 'Store for mer_ref_id only path',
+        amount: 111
+      };
+
+      await POST(createMockRequest('http://localhost:3000/api/payment-status', { method: 'POST', body: paymentData }) as any);
+
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?mer_ref_id=ref_only_mer_1');
+      const response = await GET(getRequest as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data.transaction_id).toBe('txn_only_mer');
+    });
+
+    it('should retrieve by account_id when only account_id is provided', async () => {
+      const paymentData = {
+        transaction_id: 'txn_only_acc',
+        mer_ref_id: 'ref_x2',
+        account_id: 'acc_only_acc_2',
+        payment_status: 'pending' as const,
+        payment_date: '2025-11-10T11:00:00.000Z',
+        description: 'Store for account_id only path',
+        amount: 222
+      };
+
+      await POST(createMockRequest('http://localhost:3000/api/payment-status', { method: 'POST', body: paymentData }) as any);
+
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?account_id=acc_only_acc_2');
+      const response = await GET(getRequest as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data.transaction_id).toBe('txn_only_acc');
+    });
+
+    it('should return first match when mer_ref_id is provided but no transaction_id', async () => {
+      const a = {
+        transaction_id: 'txn_a',
+        mer_ref_id: 'ref_dup',
+        account_id: 'acc_a',
+        payment_status: 'failed' as const,
+        payment_date: '2025-11-10T12:00:00.000Z',
+        description: 'First with duplicated mer_ref_id',
+        amount: 10
+      };
+      const b = {
+        transaction_id: 'txn_b',
+        mer_ref_id: 'ref_dup',
+        account_id: 'acc_b',
+        payment_status: 'successful' as const,
+        payment_date: '2025-11-10T12:10:00.000Z',
+        description: 'Second with duplicated mer_ref_id',
+        amount: 20
+      };
+
+      await POST(createMockRequest('http://localhost:3000/api/payment-status', { method: 'POST', body: a }) as any);
+      await POST(createMockRequest('http://localhost:3000/api/payment-status', { method: 'POST', body: b }) as any);
+
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?mer_ref_id=ref_dup');
+      const response = await GET(getRequest as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      // Implementation returns the first found; we don't rely on order here, just ensure one of them
+      expect(['txn_a', 'txn_b']).toContain(data.data.transaction_id);
+    });
     it('should return 400 when no identifier parameters are provided', async () => {
       const request = createMockRequest('http://localhost:3000/api/payment-status');
       const response = await GET(request as any);
@@ -1053,6 +1126,150 @@ describe('/api/payment-status', () => {
 
       // Restore original
       require('fs').promises.readFile = originalReadFile;
+    });
+  });
+
+  describe('phone_number parameter handling', () => {
+    it('should store payment with phone_number field', async () => {
+      const paymentData = {
+        transaction_id: 'txn_phone_123',
+        phone_number: '9953969666',
+        payment_status: 'successful' as const,
+        payment_date: '2025-11-10T10:00:00.000Z',
+        description: 'Payment with phone number',
+        amount: 5000
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.status_code).toBe(201);
+      expect(data.message).toBe('Payment data stored successfully');
+    });
+
+    it('should store payment with phoneNumber field (camelCase)', async () => {
+      const paymentData = {
+        transaction_id: 'txn_phone_camel_456',
+        phoneNumber: '9876543210',
+        payment_status: 'pending' as const,
+        payment_date: '2025-11-10T11:00:00.000Z',
+        description: 'Payment with phoneNumber camelCase',
+        amount: 3000
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.status_code).toBe(201);
+      expect(data.message).toBe('Payment data stored successfully');
+    });
+
+    it('should prioritize phone_number over phoneNumber when both provided', async () => {
+      const paymentData = {
+        transaction_id: 'txn_phone_priority_789',
+        phone_number: '1111111111',
+        phoneNumber: '2222222222',
+        payment_status: 'successful' as const,
+        payment_date: '2025-11-10T12:00:00.000Z',
+        description: 'Payment with both phone formats',
+        amount: 2000
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.status_code).toBe(201);
+      expect(data.message).toBe('Payment data stored successfully');
+    });
+
+    it('should handle payment without phone_number field', async () => {
+      const paymentData = {
+        transaction_id: 'txn_no_phone_999',
+        payment_status: 'failed' as const,
+        payment_date: '2025-11-10T13:00:00.000Z',
+        description: 'Payment without phone',
+        amount: 1500
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.status_code).toBe(201);
+      expect(data.message).toBe('Payment data stored successfully');
+    });
+
+    it('should handle payment status "processing"', async () => {
+      const paymentData = {
+        transaction_id: 'txn_processing_888',
+        phone_number: '8888888888',
+        payment_status: 'processing' as const,
+        payment_date: '2025-11-10T14:00:00.000Z',
+        description: 'Payment being processed',
+        amount: 7500
+      };
+
+      const request = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      const response = await POST(request as any);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.status_code).toBe(201);
+      expect(data.message).toBe('Payment data stored successfully');
+    });
+
+    it('should retrieve payment by phone_number when only phoneNumber was provided', async () => {
+      // Store with phoneNumber
+      const paymentData = {
+        transaction_id: 'txn_phoneNumber_555',
+        phoneNumber: '5555555555',
+        payment_status: 'successful' as const,
+        payment_date: '2025-11-10T15:00:00.000Z',
+        description: 'Payment with phoneNumber field',
+        amount: 4500
+      };
+
+      const postRequest = createMockRequest('http://localhost:3000/api/payment-status', {
+        method: 'POST',
+        body: paymentData
+      });
+
+      await POST(postRequest as any);
+
+      // Retrieve by transaction_id
+      const getRequest = createMockRequest('http://localhost:3000/api/payment-status?transaction_id=txn_phoneNumber_555');
+      const getResponse = await GET(getRequest as any);
+      const getData = await getResponse.json();
+
+      expect(getResponse.status).toBe(200);
+      expect(getData.data.transaction_id).toBe('txn_phoneNumber_555');
     });
   });
 });

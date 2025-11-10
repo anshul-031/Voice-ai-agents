@@ -322,7 +322,11 @@ export async function DELETE(request: NextRequest) {
 
         if (!result) {
             return NextResponse.json(
-                { error: 'Phone number not found' },
+                {
+                    // Align error response schema with test expectations and other handlers
+                    success: false,
+                    error: 'Phone number not found'
+                },
                 { status: 404 },
             );
         }

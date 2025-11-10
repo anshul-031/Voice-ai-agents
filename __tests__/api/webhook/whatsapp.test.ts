@@ -143,6 +143,29 @@ describe('/api/webhook/whatsapp', () => {
             expect(data.error).toBe('Invalid token');
         });
 
+        it('should fallback to generic error message when WhatsApp API error lacks message', async () => {
+            process.env.WHATSAPP_TOKEN = 'test-token-123';
+
+            // Simulate error response without nested error.message
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: async () => ({ error: { type: 'Unknown', code: 999 } }),
+            });
+
+            const request = new NextRequest('http://localhost:3000/api/webhook/whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({ phoneNumber: '919953969666' }),
+            });
+
+            const response = await POST(request);
+            const data = await response.json();
+
+            expect(response.status).toBe(500);
+            expect(data.success).toBe(false);
+            expect(data.error).toBe('WhatsApp API error');
+        });
+
         it('should handle network errors gracefully', async () => {
             process.env.WHATSAPP_TOKEN = 'test-token-123';
             
@@ -236,6 +259,58 @@ describe('/api/webhook/whatsapp', () => {
             expect(data.endpoint).toBe('/api/webhook/whatsapp');
             expect(data.method).toBe('POST');
             expect(data.requiredFields).toEqual(['phoneNumber']);
+        });
+    });
+
+    describe('Additional branch coverage', () => {
+        it('should handle webhook with 12-digit phone number with country code', async () => {
+            const mockResponse = {
+                messaging_product: 'whatsapp',
+                contacts: [{ input: '919876543210', wa_id: '919876543210' }],
+                messages: [{ id: 'wamid.test456' }],
+            };
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => mockResponse,
+            });
+
+            const request = new NextRequest('http://localhost:3000/api/webhook/whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({ phoneNumber: '919876543210' }),
+            });
+
+            const response = await POST(request);
+            const data = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+        });
+
+        it('should handle 10-digit phone number without country code', async () => {
+            const mockResponse = {
+                messaging_product: 'whatsapp',
+                contacts: [{ input: '919988776655', wa_id: '919988776655' }],
+                messages: [{ id: 'wamid.test999' }],
+            };
+
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => mockResponse,
+            });
+
+            const request = new NextRequest('http://localhost:3000/api/webhook/whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({ phoneNumber: '9988776655' }),
+            });
+
+            const response = await POST(request);
+            const data = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
         });
     });
 });
