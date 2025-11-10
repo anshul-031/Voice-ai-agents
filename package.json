@@ -22,7 +22,8 @@
     "test:unit:components": "jest --testPathPattern=__tests__/components",
     "test:unit:hooks": "jest --testPathPattern=__tests__/hooks",
     "test:unit:api": "jest --testPathPattern=__tests__/api",
-    "pr":"npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage"
+    "pr": "npm i && npm run lint && npm run typecheck && npm run build && npm run test:coverage && npm run check:coverage",
+    "update-webhooks": "tsx scripts/update-webhook-urls.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -46,12 +47,14 @@
     "@types/react": "^19",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
