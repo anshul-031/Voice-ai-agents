@@ -22,10 +22,18 @@ const buildRequestOrigin = (request: NextRequest) => {
 };
 
 const resolveOrigins = (request: NextRequest) => {
+    // Prefer the origin from the incoming request so API responses reflect
+    // the domain the client used (this enables dynamic webhook URLs).
+    // Fallback to NEXT_PUBLIC_APP_URL only when the request origin is missing
+    // or equals a placeholder.
     const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
-    const baseHttp = envOrigin && !isPlaceholderHost(envOrigin)
-        ? envOrigin
-        : buildRequestOrigin(request);
+    const requestOrigin = buildRequestOrigin(request);
+
+    const baseHttp = requestOrigin && !isPlaceholderHost(requestOrigin)
+        ? requestOrigin
+        : envOrigin && !isPlaceholderHost(envOrigin)
+            ? envOrigin
+            : requestOrigin; // last resort to keep behavior stable
 
     const httpOrigin = stripTrailingSlash(baseHttp);
     const wsOrigin = httpOrigin.startsWith('https')

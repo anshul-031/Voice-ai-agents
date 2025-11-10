@@ -52,26 +52,42 @@ export async function POST(
             CallSid: exotelData.CallSid,
             From: exotelData.From,
             To: exotelData.To,
-
             Status: exotelData.Status,
+            Direction: exotelData.Direction,
+            CallType: exotelData.CallType,
         });
 
         // Extract phone ID from the route parameter
         // Find the phone number configuration
-        const phoneNumber = await PhoneNumber.findOne({
-            $or: [
-                { _id: phoneId },
-                { webhookUrl: { $regex: phoneId } },
-            ],
+        // Check webhookIdentifier first (most common case)
+        let phoneNumber = await PhoneNumber.findOne({
+            webhookIdentifier: phoneId,
         });
+
+        // Fallback: search by URL pattern if not found by identifier
+        if (!phoneNumber) {
+            phoneNumber = await PhoneNumber.findOne({
+                webhookUrl: { $regex: phoneId },
+            });
+        }
 
         if (!phoneNumber) {
             console.error('[Exotel Webhook] Phone number not found for ID:', phoneId);
-            return NextResponse.json(
-                { error: 'Phone number not found' },
-                { status: 404 },
+            // Return XML error response for Exotel
+            return new NextResponse(
+                generateErrorResponse('Phone number configuration not found'),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/xml' },
+                },
             );
         }
+
+        console.log('[Exotel Webhook] Found phone number:', {
+            id: phoneNumber._id,
+            number: phoneNumber.phoneNumber,
+            linkedAgentId: phoneNumber.linkedAgentId,
+        });
 
         // Update last used timestamp
         phoneNumber.lastUsed = new Date();
@@ -91,11 +107,21 @@ export async function POST(
 
         if (!agent) {
             console.error('[Exotel Webhook] No agent available');
-            return NextResponse.json(
-                { error: 'No agent configured' },
-                { status: 500 },
+            // Return XML error response for Exotel
+            return new NextResponse(
+                generateErrorResponse('No agent configured for this number'),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/xml' },
+                },
             );
         }
+
+        console.log('[Exotel Webhook] Using agent:', {
+            id: agent._id,
+            name: agent.name,
+            prompt: `${agent.prompt?.substring(0, 50)}...`,
+        });
 
         // Generate a unique session ID for this call
         const sessionId = `exotel_${exotelData.CallSid || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -110,9 +136,10 @@ export async function POST(
             timestamp: new Date(),
         });
 
-        // Generate TwiML/Exotel response
-        // This tells Exotel what to do with the call
-        const response = generateExotelResponse(agent, sessionId, phoneNumber.websocketUrl);
+        // Generate Exotel Passthru XML response
+        const response = generateExotelResponse(agent, sessionId);
+
+        console.log('[Exotel Webhook] Generated XML response (first 300 chars):', response.substring(0, 300));
 
         return new NextResponse(response, {
             status: 200,
@@ -123,42 +150,69 @@ export async function POST(
 
     } catch (error) {
         console.error('[Exotel Webhook] Error handling webhook:', error);
-        return NextResponse.json(
+        // Return XML error response for Exotel
+        return new NextResponse(
+            generateErrorResponse('Internal server error occurred'),
             {
-                error: 'Failed to process webhook',
-                details: error instanceof Error ? error.message : 'Unknown error',
+                status: 200,
+                headers: { 'Content-Type': 'application/xml' },
             },
-            { status: 500 },
         );
     }
 }
 
 /**
- * Generate Exotel XML response
- * This response tells Exotel how to handle the call
+ * Generate error response in Exotel XML format
  */
-function generateExotelResponse(agent: IVoiceAgent, sessionId: string, websocketUrl?: string): string {
-    // Exotel uses similar TwiML-like XML format
-    // This is a basic example - you'll need to customize based on your Exotel setup
-
-    const greeting = agent.prompt.includes('नमस्ते')
-        ? 'नमस्ते। कृपया प्रतीक्षा करें।'
-        : 'Hello, please wait while we connect you.';
-
+function generateErrorResponse(message: string): string {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="woman" language="hi-IN">${greeting}</Say>
-    ${websocketUrl ? `
-    <Connect>
-        <Stream url="${websocketUrl}">
-            <Parameter name="sessionId" value="${sessionId}" />
-            <Parameter name="agentId" value="${agent._id}" />
-        </Stream>
-    </Connect>
-    ` : `
-    <Say voice="woman" language="hi-IN">We are experiencing technical difficulties. Please try again later.</Say>
+    <Say>We apologize for the inconvenience. ${message}. Please try again later.</Say>
     <Hangup/>
-    `}
+</Response>`;
+}
+
+/**
+ * Generate Exotel Passthru XML response
+ *
+ * Exotel Passthru supports these verbs:
+ * - Say: Text-to-speech playback
+ * - Play: Play audio file from URL
+ * - Dial: Dial another number
+ * - Record: Record the call
+ * - Gather: Collect DTMF input
+ * - Hangup: End the call
+ * - Pause: Wait for specified seconds
+ * - Redirect: Redirect to another URL
+ *
+ * Documentation: https://developer.exotel.com/api/#passthru-applet
+ */
+function generateExotelResponse(agent: IVoiceAgent, sessionId: string): string {
+    // Determine language from agent prompt
+    const isHindi = agent.prompt?.includes('नमस्ते') || agent.prompt?.includes('हिंदी');
+
+    const greeting = isHindi
+        ? 'नमस्ते। मैं आपकी सहायता के लिए यहां हूं।'
+        : 'Hello, I am here to assist you today.';
+
+    const waitMessage = isHindi
+        ? 'कृपया एक पल प्रतीक्षा करें।'
+        : 'Please wait a moment while I connect you.';
+
+    // Simple response that plays greeting and hangs up
+    // In production, you would:
+    // 1. Use <Gather> to collect user input
+    // 2. Use <Redirect> to send to another endpoint for processing
+    // 3. Use <Dial> to connect to another number
+    // 4. Use <Record> to record the conversation
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say>${greeting}</Say>
+    <Pause length="1"/>
+    <Say>${waitMessage}</Say>
+    <Pause length="2"/>
+    <Say>This is a test response. Your call has been successfully connected. Session ID: ${sessionId.substring(0, 20)}</Say>
+    <Hangup/>
 </Response>`;
 }
 
