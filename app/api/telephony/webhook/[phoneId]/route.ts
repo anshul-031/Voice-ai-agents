@@ -59,13 +59,17 @@ export async function POST(
 
         // Extract phone ID from the route parameter
         // Find the phone number configuration
-        const phoneNumber = await PhoneNumber.findOne({
-            $or: [
-                { webhookIdentifier: phoneId },
-                { _id: phoneId },
-                { webhookUrl: { $regex: phoneId } },
-            ],
+        // Check webhookIdentifier first (most common case)
+        let phoneNumber = await PhoneNumber.findOne({
+            webhookIdentifier: phoneId,
         });
+
+        // Fallback: search by URL pattern if not found by identifier
+        if (!phoneNumber) {
+            phoneNumber = await PhoneNumber.findOne({
+                webhookUrl: { $regex: phoneId },
+            });
+        }
 
         if (!phoneNumber) {
             console.error('[Exotel Webhook] Phone number not found for ID:', phoneId);
