@@ -50,7 +50,7 @@ describe('/api/payment-status phone lookup', () => {
       transaction_id: 'txn_phone_lookup_2',
       mer_ref_id: 'ref_phone_2',
       account_id: 'acc_phone_2',
-      phoneNumber: '9876543210',
+      phoneNumber: '8765432109',
       payment_status: 'pending' as const,
       payment_date: new Date('2025-11-10T10:05:00.000Z').toISOString(),
       description: 'Phone camelCase store',
@@ -59,12 +59,12 @@ describe('/api/payment-status phone lookup', () => {
 
     await POST(createMockRequest('http://localhost:3000/api/payment-status', { method: 'POST', body }) as any);
 
-    const getReq = createMockRequest('http://localhost:3000/api/payment-status?phoneNumber=9876543210');
+    const getReq = createMockRequest('http://localhost:3000/api/payment-status?phoneNumber=8765432109');
     const res = await GET(getReq as any);
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.data.transaction_id).toBe('txn_phone_lookup_2');
-    expect(data.data.phone_number).toBe('9876543210');
+    expect(data.data.phone_number).toBe('8765432109');
   });
 });

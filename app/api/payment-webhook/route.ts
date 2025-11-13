@@ -15,6 +15,9 @@ interface PaymentWebhookRequest {
   transactionId?: string;
   status?: string;
   timestamp?: string;
+  templateID?: string;
+  templateId?: string;
+  template_id?: string;
 }
 
 interface PaymentWebhookResponse {
@@ -77,6 +80,30 @@ function asPlainObject(value: unknown): Record<string, any> | undefined {
     return value as Record<string, any>;
   }
   return undefined;
+}
+
+/**
+ * Resolve template name and language code from incoming templateID
+ * Rules:
+ * - If templateID is "pl_payment_link_ml", use it and set lang to "ml"
+ * - Otherwise use default "pl_pmt_od_template" with lang "en"
+ */
+function resolveTemplateAndLang(
+  templateID?: string
+): { template_name: string; pref_lang_code: string } {
+  const normalized = (templateID || '').trim();
+  if (normalized === 'pl_payment_link_ml') {
+    console.log('[Payment Webhook] Template detected: pl_payment_link_ml with lang ml');
+    return {
+      template_name: 'pl_payment_link_ml',
+      pref_lang_code: 'ml',
+    };
+  }
+  console.log('[Payment Webhook] Using default template: pl_pmt_od_template with lang en');
+  return {
+    template_name: DEFAULT_FORWARDING_VALUES.template_name,
+    pref_lang_code: DEFAULT_FORWARDING_VALUES.pref_lang_code,
+  };
 }
 
 // --- External API Forwarding Helpers ---
@@ -353,6 +380,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ...(asPlainObject(payloadObj?.custom_field) || {}),
         };
 
+        // Resolve template and lang code from incoming templateID (supports multiple casings)
+        const incomingTemplateID =
+          payloadObj?.templateID ?? payloadObj?.templateId ?? payloadObj?.template_id;
+        const { template_name, pref_lang_code } = resolveTemplateAndLang(incomingTemplateID);
+        console.log('[Payment Webhook] Resolved template and lang:', {
+          incomingTemplateID: incomingTemplateID || 'none',
+          template_name,
+          pref_lang_code,
+        });
+
         const requestBody: Record<string, any> = {
           phone_number: phoneNumber.replace(/^\+91/, ''),
           email: payloadObj?.email || DEFAULT_FORWARDING_VALUES.email,
@@ -367,10 +404,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             typeof payloadObj?.send_notification === 'boolean'
               ? payloadObj.send_notification
               : DEFAULT_FORWARDING_VALUES.send_notification,
-          template_name: payloadObj?.template_name || DEFAULT_FORWARDING_VALUES.template_name,
+          template_name,
           merchant_reference_number:
             payloadObj?.merchant_reference_number ?? DEFAULT_FORWARDING_VALUES.merchant_reference_number,
-          pref_lang_code: payloadObj?.pref_lang_code || DEFAULT_FORWARDING_VALUES.pref_lang_code,
+          pref_lang_code,
           notification_channel: notificationChannel,
           custom_field: customField,
         };
